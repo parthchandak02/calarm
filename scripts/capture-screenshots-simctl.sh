@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DEVICE="${SCREENSHOT_DEVICE:-iPhone 17 Pro Max}"
-BUNDLE_ID="pchandak.calarm"
+BUNDLE_ID="com.calarmapp.calarm"
 OUT_DIR="fastlane/screenshots/en-US"
 BUILD_PATH="build/screenshot-sim"
 DERIVED="$BUILD_PATH/DerivedData"

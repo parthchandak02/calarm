@@ -1,4 +1,4 @@
-app_identifier("pchandak.calarm")
+app_identifier("com.calarmapp.calarm")
 apple_id(ENV["APPLE_ID"]) # optional if using API key only
 team_id("M49XY93NTP")
 

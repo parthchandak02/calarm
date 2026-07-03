@@ -28,7 +28,7 @@ All of the above are covered by `.gitignore` or project conventions.
 
 These identify the app / Apple Developer account but are **not secrets** (they also appear in signed IPAs):
 
-- Bundle IDs: `pchandak.calarm`, `pchandak.calarm.CalarmWidgetExtension`
+- Bundle IDs: `com.calarmapp.calarm`, `com.calarmapp.calarm.CalarmWidgetExtension`
 - Apple Developer Team ID in `Calarm.xcodeproj` and `fastlane/Appfile` (required for local signing)
 
 ## App Store publishing

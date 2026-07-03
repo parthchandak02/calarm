@@ -1,5 +1,5 @@
 # App Store Connect metadata paths — used by deliver / upload_to_app_store
-app_identifier("pchandak.calarm")
+app_identifier("com.calarmapp.calarm")
 team_id("M49XY93NTP")
 
 # Numeric Apple ID from App Store Connect (set in fastlane/.env after creating the app record)
