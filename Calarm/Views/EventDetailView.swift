@@ -66,6 +66,12 @@ struct EventDetailView: View {
         .font(CalarmFont.body)
         .calarmNavigationStyle(theme: theme)
         .id(themeStore.themeToken)
+        .accessibilityIdentifier("event.detail")
+        .onAppear {
+            if ScreenshotMode.isEnabled, ScreenshotMode.scene == .addAlarm, eventID == ScreenshotDemoData.featuredEventID {
+                showingAddAlarm = true
+            }
+        }
     }
 
     @ViewBuilder

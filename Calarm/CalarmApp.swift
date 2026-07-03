@@ -12,6 +12,9 @@ struct CalarmApp: App {
     @StateObject private var themeStore = ThemeStore()
 
     init() {
+        if ScreenshotMode.isEnabled {
+            ScreenshotDemoData.applyDemoPreferencesSync()
+        }
         CalarmPersistence.migrateIfNeeded()
     }
 

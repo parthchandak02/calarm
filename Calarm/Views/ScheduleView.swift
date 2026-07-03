@@ -73,6 +73,20 @@ struct ScheduleView: View {
             }
         }
         .font(CalarmFont.body)
+        .accessibilityIdentifier("schedule.screen")
+        .onAppear(perform: applyScreenshotSceneIfNeeded)
+    }
+
+    private func applyScreenshotSceneIfNeeded() {
+        guard ScreenshotMode.isEnabled else { return }
+        switch ScreenshotMode.scene {
+        case .schedule:
+            break
+        case .settings:
+            showingSettings = true
+        case .eventDetail, .addAlarm:
+            selectedEvent = EventRoute(id: ScreenshotDemoData.featuredEventID)
+        }
     }
 
     private var scheduleList: some View {
@@ -101,6 +115,7 @@ struct ScheduleView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .accessibilityIdentifier("schedule.list")
         .id(themeStore.themeToken)
     }
 

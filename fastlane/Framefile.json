@@ -1,0 +1,40 @@
+{
+  "default": {
+    "background": "./fastlane/screenshot-assets/background.png",
+    "padding": 80,
+    "show_complete_frame": false,
+    "title": {
+      "color": "#FFFFFF",
+      "font": "./fastlane/screenshot-assets/GeistPixel-Square.ttf"
+    },
+    "keyword": {
+      "color": "#FFFFFFCC"
+    }
+  },
+  "data": [
+    {
+      "filter": "01_Schedule",
+      "keyword": {
+        "text": "Your week, with alarms ready"
+      }
+    },
+    {
+      "filter": "02_Event_Alarms",
+      "keyword": {
+        "text": "Multiple alarms per event"
+      }
+    },
+    {
+      "filter": "03_Settings",
+      "keyword": {
+        "text": "Defaults, snooze, and themes"
+      }
+    },
+    {
+      "filter": "04_Add_Alarm",
+      "keyword": {
+        "text": "Pick when to be reminded"
+      }
+    }
+  ]
+}

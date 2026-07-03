@@ -33,7 +33,8 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 
 ### Per release
 
-- [ ] **Screenshots** — `fastlane/screenshots/en-US/` (min. one 6.9" iPhone set)
+- [x] **Screenshot automation** — `SCREENSHOT_MODE` demo data + `./scripts/generate-app-store-screenshots.sh`
+- [x] **GitHub Pages** — enabled (`main` → `/docs`); privacy + support URLs live after deploy
 - [ ] **TestFlight QA** on physical iPhone
 - [ ] **Submit for Review** — `bundle exec fastlane ios release submit:true screenshots:true`
 

@@ -45,6 +45,7 @@ struct SettingsSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationBackground(theme.background)
+        .accessibilityIdentifier("settings.sheet")
         .id(themeStore.themeToken)
     }
 

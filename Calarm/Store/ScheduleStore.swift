@@ -66,6 +66,13 @@ final class ScheduleStore: ObservableObject {
     }
 
     func bootstrap() async {
+        if ScreenshotMode.isEnabled {
+            authorizationStatus = .fullAccess
+            alarmAuthorization = .authorized
+            events = ScreenshotDemoData.events()
+            return
+        }
+
         await requestAlarmAuthorizationIfNeeded()
 
         if authorizationStatus == .fullAccess {

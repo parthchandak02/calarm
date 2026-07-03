@@ -1,0 +1,29 @@
+# fastlane snapshot configuration for CALarm App Store screenshots
+# Docs: https://docs.fastlane.tools/actions/snapshot/
+
+devices([
+  "iPhone 17 Pro Max"
+])
+
+languages([
+  "en-US"
+])
+
+scheme("Calarm")
+
+output_directory("./fastlane/screenshots")
+
+clear_previous_screenshots(true)
+
+override_status_bar(true)
+
+launch_arguments([
+  "SCREENSHOT_MODE"
+])
+
+# Run only screenshot UI tests (faster than full test suite)
+only_testing([
+  "CalarmUITests/ScreenshotTests"
+])
+
+number_of_retries(1)

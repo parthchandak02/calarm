@@ -115,7 +115,9 @@ Dependencies/
 
 fastlane/report.xml
 fastlane/Preview.html
-fastlane/screenshots/**/*.png
+fastlane/screenshots/**/*
+!fastlane/screenshots/en-US/
+!fastlane/screenshots/en-US/*.png
 fastlane/test_output
 
 # Code Injection
