@@ -1,0 +1,13 @@
+# App Store Connect metadata paths — used by deliver / upload_to_app_store
+app_identifier("pchandak.calarm")
+team_id("M49XY93NTP")
+
+# Numeric Apple ID from App Store Connect (set in fastlane/.env after creating the app record)
+apple_id(ENV["ASC_APP_APPLE_ID"]) if ENV["ASC_APP_APPLE_ID"] && !ENV["ASC_APP_APPLE_ID"].empty?
+
+metadata_path("fastlane/metadata")
+screenshots_path("fastlane/screenshots")
+
+# Conservative defaults for a free utility app
+precheck_include_in_app_purchases(false)
+force(true)

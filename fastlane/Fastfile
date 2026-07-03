@@ -1,4 +1,4 @@
-# Fastlane lanes for Calarm App Store submission
+# Fastlane lanes for CALarm App Store submission
 # Usage: bundle install && bundle exec fastlane ios <lane>
 
 default_platform(:ios)
@@ -26,7 +26,51 @@ def asc_api_key
   end
 end
 
+def deliver_options
+  opts = {
+    app_identifier: "pchandak.calarm",
+    skip_binary_upload: true,
+    force: true,
+    precheck_include_in_app_purchases: false
+  }
+  if ENV["ASC_APP_APPLE_ID"] && !ENV["ASC_APP_APPLE_ID"].empty?
+    opts[:apple_id] = ENV["ASC_APP_APPLE_ID"]
+  end
+  opts
+end
+
 platform :ios do
+  desc "Create App Store Connect app + register bundle IDs (Apple ID + 2FA; does not use API key)"
+  lane :bootstrap_asc do
+    apple_id = ENV["APPLE_ID"]
+    UI.user_error!("Set APPLE_ID in fastlane/.env (your Apple ID email)") if apple_id.nil? || apple_id.empty?
+
+    team_id = CredentialsManager::AppfileConfig.try_fetch_value(:team_id)
+
+    produce(
+      username: apple_id,
+      app_identifier: "pchandak.calarm",
+      app_name: "CALarm",
+      sku: "calarm-ios-001",
+      app_version: "1.0",
+      language: "en-US",
+      team_id: team_id
+    )
+
+    produce(
+      username: apple_id,
+      app_identifier: "pchandak.calarm.CalarmWidgetExtension",
+      app_name: "CALarm Widget",
+      sku: "calarm-widget-001",
+      skip_itc: true,
+      team_id: team_id
+    )
+
+    asc_id = lane_context[SharedValues::PRODUCE_APPLE_ID]
+    UI.success("ASC app created. Set ASC_APP_APPLE_ID=#{asc_id} in fastlane/.env")
+    UI.message("Next: enable GitHub Pages (docs/), complete App Privacy in ASC, then run upload_beta")
+  end
+
   desc "Archive Release build and export App Store IPA"
   lane :build_release do
     clear_derived_data(derived_data_path: "build/DerivedData")
@@ -60,20 +104,20 @@ platform :ios do
       api_key: api_key,
       ipa: "build/export/Calarm.ipa",
       skip_waiting_for_build_processing: false,
-      distribute_external: false
+      distribute_external: false,
+      changelog: File.read("fastlane/metadata/en-US/release_notes.txt")
     )
   end
 
   desc "Upload metadata only (no binary) — descriptions, keywords, URLs"
-  lane :upload_metadata do
+  lane :upload_metadata do |options|
     api_key = asc_api_key
+    skip_screenshots = options[:screenshots] != true
 
     deliver(
+      **deliver_options,
       api_key: api_key,
-      skip_binary_upload: true,
-      skip_screenshots: true,
-      force: true,
-      precheck_include_in_app_purchases: false
+      skip_screenshots: skip_screenshots
     )
   end
 
@@ -83,12 +127,15 @@ platform :ios do
     build_release unless File.exist?("build/export/Calarm.ipa")
 
     submit = options[:submit] == true
+    skip_screenshots = options[:screenshots] != true
 
     upload_to_app_store(
       api_key: api_key,
+      app_identifier: "pchandak.calarm",
+      apple_id: ENV["ASC_APP_APPLE_ID"],
       ipa: "build/export/Calarm.ipa",
       skip_metadata: false,
-      skip_screenshots: true,
+      skip_screenshots: skip_screenshots,
       submit_for_review: submit,
       automatic_release: false,
       force: true,
@@ -101,6 +148,7 @@ platform :ios do
     api_key = asc_api_key
     precheck(
       api_key: api_key,
+      app_identifier: "pchandak.calarm",
       include_in_app_purchases: false
     )
   end
@@ -110,6 +158,7 @@ platform :ios do
     api_key = asc_api_key
     latest = app_store_build_number(
       api_key: api_key,
+      app_identifier: "pchandak.calarm",
       live: false
     )
     increment_build_number(

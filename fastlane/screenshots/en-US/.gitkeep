@@ -1,0 +1,8 @@
+# Placeholder — add iPhone 6.9" (1320×2868) screenshots here before upload.
+# Capture with: ./scripts/capture-screenshots.sh
+#
+# Suggested scenes:
+# 01_schedule.png      — week view with events
+# 02_event_alarms.png  — event detail with multiple alarms
+# 03_settings.png      — settings (default alarm, snooze, theme)
+# 04_alarm_picker.png  — add-alarm list picker

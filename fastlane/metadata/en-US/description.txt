@@ -1,11 +1,12 @@
-Calarm connects your calendar to iOS 26 AlarmKit countdown alarms. See your upcoming week, choose how early each alarm should ring, and follow the countdown in Live Activities and the Dynamic Island.
+CALarm connects your calendar to iOS 26 AlarmKit countdown alarms. See your upcoming week, add multiple alarms per event, and follow each countdown in Live Activities and the Dynamic Island.
 
 FEATURES
 • 7-day calendar schedule grouped by day
-• Per-event alarm offsets with a sensible default
+• Multiple alarms per event with fixed lead times (1 min to 1 day before)
+• Configurable default alarm and snooze duration
 • AlarmKit countdown timers with pause and resume
 • Live Activities and Dynamic Island integration
 • Light, dark, and system appearance with pickable accent colors
 • On-device calendar data — nothing leaves your phone
 
-Calarm requires iOS 26 or later and permission to read your calendar and schedule alarms.
+CALarm requires iOS 26 or later and permission to read your calendar and schedule alarms.

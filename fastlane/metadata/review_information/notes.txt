@@ -1,0 +1,11 @@
+CALarm requires iOS 26 or later for AlarmKit.
+
+No login or account is required. Calendar data stays on the device; nothing is uploaded to our servers.
+
+To test:
+1. Grant Calendar access when prompted.
+2. Grant Alarms permission when prompted (Settings → CALarm if denied).
+3. Open the week schedule, tap an event, and add one or more alarm offsets.
+4. Observe the countdown in a Live Activity on the Lock Screen or Dynamic Island.
+
+There is no demo account. The app works entirely with the reviewer’s on-device calendar.

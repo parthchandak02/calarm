@@ -58,10 +58,12 @@
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSAlarmKitUsageDescription</key>
-	<string>Calarm schedules countdown alarms for your upcoming events and shows them in Live Activities and the Dynamic Island.</string>
+	<string>CALarm schedules countdown alarms for your upcoming events and shows them in Live Activities and the Dynamic Island.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Calarm reads your calendar to show upcoming events and let you set reminder alarms before each event. Calendar data stays on your device.</string>
+	<string>CALarm reads your calendar to show upcoming events and let you set reminder alarms before each event. Calendar data stays on your device.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>GeistPixel-Square.ttf</string>
