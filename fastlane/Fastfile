@@ -153,6 +153,15 @@ platform :ios do
     )
   end
 
+  desc "Generate App Store screenshots via fastlane snapshot (simulator + demo data)"
+  lane :screenshots do |options|
+    snapshot
+    if options[:frame] == true
+      frameit(silver: true, path: "fastlane/screenshots")
+    end
+    UI.success("Screenshots saved to fastlane/screenshots/en-US/")
+  end
+
   desc "Bump build number to App Store Connect latest + 1"
   lane :bump_build do
     api_key = asc_api_key

@@ -69,19 +69,13 @@ Register widget bundle ID in [Identifiers](https://developer.apple.com/account/r
 
 ### 0.4 Host privacy + support URLs
 
-Metadata points to GitHub Pages:
+**GitHub Pages is enabled** on this repo (`main` → `/docs`).
 
-- Privacy: `https://parthchandak02.github.io/calarm/privacy.html`
-- Support: `https://parthchandak02.github.io/calarm/support.html`
+- Privacy: https://parthchandak02.github.io/calarm/privacy.html
+- Support: https://parthchandak02.github.io/calarm/support.html
+- Landing: https://parthchandak02.github.io/calarm/
 
-**Enable Pages (one time):**
-
-1. GitHub repo → **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `main` · Folder: **`/docs`**
-4. Save — wait ~1–2 min, then open the URLs above (must return 200)
-
-Update contact email in `docs/privacy.html` and `docs/support.html` if needed.
+After pushing doc changes, wait 1–2 minutes for Pages to rebuild.
 
 ### 0.5 App Store Connect questionnaires (browser only)
 
@@ -146,24 +140,15 @@ Install the TestFlight build on your iPhone. Verify:
 
 ---
 
-## Phase 3 — Screenshots (human, ~15 min)
+## Phase 3 — Screenshots (automated, ~1 min)
 
-Minimum for App Store submit: **one iPhone 6.9" set** (1320×2868).
+See **[docs/app-store/SCREENSHOTS.md](SCREENSHOTS.md)** for full details.
 
 ```bash
-# Boot large iPhone simulator (iOS 26)
-xcrun simctl boot "iPhone 17 Pro Max" 2>/dev/null || true
-open -a Simulator
-./deploy.sh 1
-
-# Navigate to each scene, then:
-chmod +x scripts/capture-screenshots.sh
-./scripts/capture-screenshots.sh 01_schedule
-./scripts/capture-screenshots.sh 02_event_alarms
-./scripts/capture-screenshots.sh 03_settings
+./scripts/generate-app-store-screenshots.sh
 ```
 
-Suggested scenes: week schedule · event + alarms · settings/themes.
+Uses simulator + fictional demo data (`SCREENSHOT_MODE`) — no personal calendar content.
 
 Upload metadata + screenshots:
 
@@ -212,7 +197,7 @@ Or in App Store Connect: select the TestFlight build → **Submit for Review**.
 | App Privacy questionnaire | No public API |
 | Age rating (first time) | ASC UI wizard |
 | Enable GitHub Pages | GitHub repo settings |
-| Screenshots | No UI test snapshot target yet — manual fastest for v1 |
+| Screenshots | **Automated** — `./scripts/generate-app-store-screenshots.sh` |
 | First Distribution signing | Often needs Xcode GUI once |
 | Respond to App Review | Human if rejected |
 
