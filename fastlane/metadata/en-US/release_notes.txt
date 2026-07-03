@@ -1,1 +1,1 @@
-Initial App Store release.
+Initial App Store release of CALarm — calendar-aware AlarmKit countdown alarms for iOS 26.

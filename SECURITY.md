@@ -1,6 +1,6 @@
 # Security & privacy (repository)
 
-Last audited: 2026-06-30 (post–history purge)
+Last audited: 2026-06-30 (post–history purge; App Store prep pass)
 
 ## What this app stores on device
 
@@ -30,6 +30,13 @@ These identify the app / Apple Developer account but are **not secrets** (they a
 
 - Bundle IDs: `pchandak.calarm`, `pchandak.calarm.CalarmWidgetExtension`
 - Apple Developer Team ID in `Calarm.xcodeproj` and `fastlane/Appfile` (required for local signing)
+
+## App Store publishing
+
+- API keys and `.p8` files stay in `fastlane/.env` (gitignored) and outside the repo.
+- `ExportOptions.plist` is local-only; use `ExportOptions.plist.example` as a template.
+- Privacy/support pages in `docs/` are public by design once GitHub Pages is enabled.
+- Contact email on support/privacy pages is intentional for App Store Connect URL validation.
 
 ## Git history purge (2026-06-30)
 

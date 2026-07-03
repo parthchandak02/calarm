@@ -89,11 +89,12 @@ See **[SECURITY.md](SECURITY.md)** for repository security practices and what mu
 
 ## App Store submission
 
-See **[APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md)** for the full pre-publish checklist.
+See **[docs/app-store/PUBLISH_PLAYBOOK.md](docs/app-store/PUBLISH_PLAYBOOK.md)** for the full terminal-first publish guide, and **[APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md)** for the checklist.
 
 ```bash
+cp fastlane/.env.example fastlane/.env    # add ASC API key + APPLE_ID
+./scripts/preflight-release.sh
 ./release.sh                              # Archive + export IPA
-cp fastlane/.env.example fastlane/.env    # add ASC API key
 bundle install && bundle exec fastlane ios upload_beta
 ```
 
