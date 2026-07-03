@@ -45,7 +45,7 @@ xcodebuild -project Calarm.xcodeproj -scheme Calarm \
 
 APP=$(find build-device -name Calarm.app -path '*iphoneos*' -type d | head -1)
 xcrun devicectl device install app --device "$DEVICE_ID" "$APP"
-xcrun devicectl device process launch --device "$DEVICE_ID" pchandak.calarm
+xcrun devicectl device process launch --device "$DEVICE_ID" com.calarmapp.calarm
 ```
 
 Or: `./deploy.sh 2` (must use `-sdk iphoneos` for physical device, not simulator SDK).
@@ -76,7 +76,7 @@ List only **human-only** blockers at the end (privacy URL hosting, screenshots, 
 
 ## Calarm-specific guardrails
 
-- Bundle: `pchandak.calarm`, iOS 26+ (set your Team in Xcode Signing & Capabilities)
+- Bundle: `com.calarmapp.calarm`, iOS 26+ (set your Team in Xcode Signing & Capabilities)
 - Calendar sync: `EKEventStoreChanged` in `CalendarService` — no BG fetch needed
 - Do not re-add `UIBackgroundModes` without implementing BGTask handlers
 - AlarmKit `AlarmConfiguration` should wire `stopIntent` with matching alarm UUID string

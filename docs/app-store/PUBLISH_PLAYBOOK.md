@@ -53,8 +53,8 @@ bundle exec fastlane ios bootstrap_asc
 ```
 
 This creates:
-- `pchandak.calarm` (main app in ASC)
-- `pchandak.calarm.CalarmWidgetExtension` (portal only)
+- `com.calarmapp.calarm` (main app in ASC)
+- `com.calarmapp.calarm.CalarmWidgetExtension` (portal only)
 
 Copy the printed numeric ID into `ASC_APP_APPLE_ID` in `fastlane/.env`.
 
@@ -62,10 +62,10 @@ Copy the printed numeric ID into `ASC_APP_APPLE_ID` in `fastlane/.env`.
 
 1. [App Store Connect → Apps → +](https://appstoreconnect.apple.com/apps)
 2. Platform: iOS · Name: **CALarm** · Language: English (U.S.)
-3. Bundle ID: `pchandak.calarm` · SKU: `calarm-ios-001`
+3. Bundle ID: `com.calarmapp.calarm` · SKU: `calarm-ios-001`
 4. Note the numeric Apple ID from the URL → `ASC_APP_APPLE_ID`
 
-Register widget bundle ID in [Identifiers](https://developer.apple.com/account/resources/identifiers/list) if missing: `pchandak.calarm.CalarmWidgetExtension`.
+Register widget bundle ID in [Identifiers](https://developer.apple.com/account/resources/identifiers/list) if missing: `com.calarmapp.calarm.CalarmWidgetExtension`.
 
 ### 0.4 Host privacy + support URLs
 

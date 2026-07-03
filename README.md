@@ -50,8 +50,8 @@ calarm/
 
 | Target | Bundle ID |
 |--------|-----------|
-| Calarm | `pchandak.calarm` |
-| Widget extension | `pchandak.calarm.CalarmWidgetExtension` |
+| Calarm | `com.calarmapp.calarm` |
+| Widget extension | `com.calarmapp.calarm.CalarmWidgetExtension` |
 
 ## Features
 
