@@ -13,7 +13,7 @@ Your job is to get the repo as close to submission-ready as possible **without**
 |------|-------|
 | Main bundle ID | `pchandak.calarm` |
 | Widget bundle ID | `pchandak.calarm.CalarmWidgetExtension` |
-| Team ID | `M49XY93NTP` |
+| Team ID | Set in Xcode / `fastlane/Appfile` (do not paste device UDIDs in docs) |
 | Min iOS | 26.0 |
 | Scheme / target | `Calarm` |
 | Version | `MARKETING_VERSION` / `CFBundleShortVersionString` |
@@ -49,7 +49,7 @@ Apply minimal, accurate fixes:
 ### Phase 3: Validate build (if Xcode available)
 
 ```bash
-cd .
+cd "$(git rev-parse --show-toplevel)"
 xcodebuild -project Calarm.xcodeproj -scheme Calarm -configuration Release \
   -destination 'generic/platform=iOS' -archivePath build/Calarm.xcarchive archive
 

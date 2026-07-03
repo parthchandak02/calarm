@@ -7,7 +7,7 @@ Last updated: 2026-06-30. Use with the `calarm-app-store-prep` subagent.
 - [x] **Privacy manifest** — `Calarm/PrivacyInfo.xcprivacy` (UserDefaults CA92.1, calendar data collection, no tracking)
 - [x] **Info.plist cleanup** — removed unused `UIBackgroundModes` and `BGTaskSchedulerPermittedIdentifiers` (no BGTask handlers in code)
 - [x] **Permission strings** — accurate AlarmKit + calendar usage descriptions
-- [x] **Export options** — `ExportOptions.plist` (`app-store-connect`, team `M49XY93NTP`)
+- [x] **Export options** — `ExportOptions.plist` (`app-store-connect`, your team ID)
 - [x] **Release script** — `release.sh` (Archive Release + export IPA)
 - [x] **fastlane scaffold** — `Fastfile`, `Appfile`, `metadata/en-US/*`, `.env.example`
 - [x] **Gemfile** — fastlane via Bundler
@@ -27,7 +27,7 @@ Last updated: 2026-06-30. Use with the `calarm-app-store-prep` subagent.
 
 ### Account & App Store Connect
 
-- [ ] **Apple Developer Program** — active paid membership ($99/yr) on team `M49XY93NTP`
+- [ ] **Apple Developer Program** — active paid membership ($99/yr) on your team
 - [ ] **Create app record** — [App Store Connect](https://appstoreconnect.apple.com) → Apps → + → New App
   - Platform: iOS
   - Name: Calarm (or your chosen store name)
@@ -42,7 +42,7 @@ Last updated: 2026-06-30. Use with the `calarm-app-store-prep` subagent.
   - Role: App Manager or Admin
   - Download `.p8` once → save outside repo
   - Copy Key ID + Issuer ID → `fastlane/.env` (from `fastlane/.env.example`)
-- [ ] **Distribution signing** — Xcode → Calarm target → Signing & Capabilities → Team `M49XY93NTP`, Automatic signing, Release uses Distribution profile
+- [ ] **Distribution signing** — Xcode → Calarm target → Signing & Capabilities → your Team, Automatic signing, Release uses Distribution profile
   - Optional: `fastlane match appstore` for team/CI signing (not configured yet)
 
 ### Legal & privacy URLs

@@ -136,7 +136,11 @@ ExportOptions.plist
 .env
 .env.local
 .env.*.local
+fastlane/.env
 fastlane/*.env
+!fastlane/.env.example
+*.p8
+AuthKey_*.p8
 
 ## Xcode Cloud
 .xcode-cloud

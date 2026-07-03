@@ -2,7 +2,6 @@
 //  CalarmWidgetExtension.swift
 //  CalarmWidgetExtension
 //
-//
 
 import SwiftUI
 import WidgetKit

@@ -2,7 +2,6 @@
 //  AppIntent.swift
 //  CalarmWidgetExtension
 //
-//
 
 import AppIntents
 import WidgetKit

@@ -2,7 +2,6 @@
 //  CalarmWidgetExtensionControl.swift
 //  CalarmWidgetExtension
 //
-//
 
 import AppIntents
 import SwiftUI

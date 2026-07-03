@@ -25,7 +25,7 @@ open Calarm.xcodeproj
 ```
 
 1. Select the **Calarm** scheme and your iPhone or an iOS 26 simulator.
-2. Confirm **Signing & Capabilities** → Team is set (project uses `M49XY93NTP`).
+2. Confirm **Signing & Capabilities** → Team is set to your Apple Developer team.
 3. Press **Run** (⌘R).
 
 ### Deploy from terminal
@@ -75,6 +75,8 @@ Calendar events themselves are **not** copied into app storage; Calarm reads the
 `CalarmPersistence.migrateIfNeeded()` runs at launch with a schema version so older installs upgrade safely. Data is cleared only if the user deletes the app.
 
 `PrivacyInfo.xcprivacy` declares UserDefaults access (`CA92.1` — app functionality only).
+
+See **[SECURITY.md](SECURITY.md)** for repository security practices and what must not be committed.
 
 ## Troubleshooting
 

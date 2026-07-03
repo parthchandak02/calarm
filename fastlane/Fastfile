@@ -40,7 +40,7 @@ platform :ios do
       output_name: "Calarm.ipa",
       export_options: {
         method: "app-store-connect",
-        teamID: "M49XY93NTP",
+        teamID: CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
         uploadSymbols: true,
         signingStyle: "automatic"
       },
