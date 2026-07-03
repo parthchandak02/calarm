@@ -1,6 +1,6 @@
 # Security & privacy (repository)
 
-Last audited: 2026-07-03
+Last audited: 2026-06-30 (post–history purge)
 
 ## What this app stores on device
 
@@ -31,6 +31,18 @@ These identify the app / Apple Developer account but are **not secrets** (they a
 - Bundle IDs: `pchandak.calarm`, `pchandak.calarm.CalarmWidgetExtension`
 - Apple Developer Team ID in `Calarm.xcodeproj` and `fastlane/Appfile` (required for local signing)
 
+## Git history purge (2026-06-30)
+
+The following were removed from **all commits** via `git filter-repo` and force-pushed to `origin/main`:
+
+- Physical device UDID (`00008150-…`) from agent docs
+- Personal machine paths (`/Users/parthchandak/…`)
+- Xcode “Created by …” file headers in widget sources
+
+**If you cloned before this purge:** delete your local clone and re-clone, or run `git fetch origin && git reset --hard origin/main`. Old commit SHAs (`bb30337`, `719d2b6`, etc.) are invalid on the remote.
+
+Forks and local copies made before the force-push may still contain the old history until their owners rebase or delete the fork.
+
 ## Reporting
 
-If you find credentials or personal device data in the git history, open an issue or rotate the affected Apple API key / treat the UDID as non-secret but remove from future commits.
+If you find credentials or personal device data in the repository, rotate affected Apple API keys and open an issue. Do not commit device UDIDs or local machine paths in docs or scripts.
