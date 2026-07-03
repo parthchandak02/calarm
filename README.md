@@ -57,8 +57,24 @@ calarm/
 
 - AlarmKit countdown timers with pre-alert and post-alert windows
 - Live Activities in Dynamic Island
-- Calendar-driven alarm instructions (e.g. `alarm15` in event titles)
-- Pause / resume / snooze via App Intents
+- Calendar-driven per-event alarm offsets (configurable in app)
+- Pause / resume via App Intents and Live Activity controls
+
+## Data persistence
+
+User preferences are stored locally with **`UserDefaults.standard`** via `CalarmPersistence`:
+
+| Data | Storage | Survives app update? |
+|------|---------|----------------------|
+| Per-event alarm offsets | JSON map keyed by calendar event ID | Yes |
+| Default alarm offset & snooze | String / integer keys | Yes |
+| Theme (appearance + accent) | String keys | Yes |
+
+Calendar events themselves are **not** copied into app storage; Calarm reads them from EventKit each launch. Alarm preferences are keyed by EventKit `eventIdentifier`, so they reconnect after updates as long as the calendar event still exists.
+
+`CalarmPersistence.migrateIfNeeded()` runs at launch with a schema version so older installs upgrade safely. Data is cleared only if the user deletes the app.
+
+`PrivacyInfo.xcprivacy` declares UserDefaults access (`CA92.1` — app functionality only).
 
 ## Troubleshooting
 
@@ -68,6 +84,20 @@ calarm/
 | Signing errors | Open project → Signing & Capabilities → pick your Team |
 | AlarmKit denied | Settings → Calarm → allow alarms; enable Developer Mode on device |
 | No iOS 26 simulator | Xcode → Settings → Platforms → download iOS 26 |
+
+## App Store submission
+
+See **[APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md)** for the full pre-publish checklist.
+
+```bash
+./release.sh                              # Archive + export IPA
+cp fastlane/.env.example fastlane/.env    # add ASC API key
+bundle install && bundle exec fastlane ios upload_beta
+```
+
+Subagents:
+- `calarm-app-store-prep` — metadata, fastlane, ASC checklist
+- `calarm-ship-ready` — code polish, device deploy, final QA
 
 ## Docs
 

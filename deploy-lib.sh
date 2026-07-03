@@ -130,15 +130,56 @@ run_with_timeout() {
     fi
 }
 
-# Domain blocking (for the xcodebuild fix)
+# Domains blocked during this deploy run (so we only sudo-unblock what we added).
+DEPLOY_HOSTS_BLOCKED=()
+
+hosts_entry_exists() {
+    local domain="$1"
+    grep -Eq "[[:space:]]${domain}([[:space:]]|$)" /etc/hosts 2>/dev/null
+}
+
+# Domain blocking (for the xcodebuild fix). Uses sudo only when an entry is missing.
+# Set SKIP_HOSTS_BLOCK=1 to skip entirely (no password prompt).
 block_domain() {
     local domain="$1"
-    log_warning "Temporarily blocking $domain to prevent hanging..."
-    echo "127.0.0.1 $domain" | sudo tee -a /etc/hosts > /dev/null
+
+    if [ "${SKIP_HOSTS_BLOCK:-0}" = "1" ]; then
+        log_info "Skipping hosts block for $domain (SKIP_HOSTS_BLOCK=1)"
+        return 0
+    fi
+
+    if hosts_entry_exists "$domain"; then
+        log_info "Hosts entry for $domain already present — skipping sudo"
+        return 0
+    fi
+
+    log_warning "Temporarily blocking $domain to prevent xcodebuild hangs (sudo required once)..."
+    if echo "127.0.0.1 $domain" | sudo tee -a /etc/hosts > /dev/null; then
+        DEPLOY_HOSTS_BLOCKED+=("$domain")
+    else
+        log_warning "Could not block $domain — continuing without hosts block"
+    fi
 }
 
 unblock_domain() {
     local domain="$1"
+
+    if [ "${SKIP_HOSTS_BLOCK:-0}" = "1" ]; then
+        return 0
+    fi
+
+    local was_blocked=false
+    for blocked in "${DEPLOY_HOSTS_BLOCKED[@]}"; do
+        if [ "$blocked" = "$domain" ]; then
+            was_blocked=true
+            break
+        fi
+    done
+
+    if [ "$was_blocked" = false ]; then
+        return 0
+    fi
+
     log_info "Restoring access to $domain..."
     sudo sed -i '' "/$domain/d" /etc/hosts
 }

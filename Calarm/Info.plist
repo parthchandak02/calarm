@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Calarm</string>
+	<string>CALarm</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,16 +26,16 @@
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<true/>
-        <key>UISceneConfigurations</key>
-        <dict>
-            <key>UIWindowSceneSessionRoleApplication</key>
-            <array>
-                <dict>
-                    <key>UISceneConfigurationName</key>
-                    <string>Default Configuration</string>
-                </dict>
-            </array>
-        </dict>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+				</dict>
+			</array>
+		</dict>
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
@@ -43,13 +43,11 @@
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -58,43 +56,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- AlarmKit and Live Activity Support -->
 	<key>NSSupportsLiveActivities</key>
 	<true/>
-	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
-	<true/>
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>background-fetch</string>
-        <string>processing</string>
-    </array>
-	<!-- Background Task Identifiers -->
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>pchandak.calarm.calendarRefresh</string>
-		<string>pchandak.calarm.alarmScheduling</string>
-		<string>pchandak.calarm.liveActivityTrigger</string>
-	</array>
-	<!-- iOS 26 Continued Processing Support -->
-	<key>NSSupportsLiveActivitiesContinuedProcessing</key>
-	<true/>
-	<!-- Notification Content Extensions -->
-	<key>NSSupportsCalendarEventNotifications</key>
-	<true/>
-	<!-- AlarmKit Usage Description -->
 	<key>NSAlarmKitUsageDescription</key>
-	<string>This app uses AlarmKit to create countdown timer alarms with Live Activities.</string>
-	<!-- Calendar Access Permission -->
+	<string>Calarm schedules countdown alarms for your upcoming events and shows them in Live Activities and the Dynamic Island.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>This app needs access to your calendar to automatically create alarms for calendar events that contain alarm instructions (e.g., 'alarm15' for 15-minute reminders).</string>
-	<!-- App Intents Support -->
-	<key>NSUserActivityTypes</key>
+	<string>Calarm reads your calendar to show upcoming events and let you set reminder alarms before each event. Calendar data stays on your device.</string>
+	<key>UIAppFonts</key>
 	<array>
-		<string>OpenAlarmAppIntent</string>
-		<string>SnoozeAlarmIntent</string>
-		<string>StopAlarmIntent</string>
-		<string>PauseAlarmIntent</string>
-		<string>ResumeAlarmIntent</string>
+		<string>GeistPixel-Square.ttf</string>
 	</array>
 </dict>
 </plist>

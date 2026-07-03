@@ -38,7 +38,16 @@ xcuserdata/
 
 ## compatibility with Xcode 3 and earlier (ignoring not required starting Xcode 4)
 build/
+build-device/
+build-sim/
 DerivedData/
+*.log
+.ios-platform-download.log
+.xcode-install.log
+calarm-header*.png
+
+## Cursor local artifacts (optional agent configs can be committed separately)
+# .cursor/
 *.moved-aside
 *.pbxuser
 !default.pbxuser

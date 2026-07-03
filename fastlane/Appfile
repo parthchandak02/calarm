@@ -1,0 +1,5 @@
+app_identifier("pchandak.calarm")
+apple_id(ENV["APPLE_ID"]) # optional if using API key only
+team_id("M49XY93NTP")
+
+# itc_team_id("") # App Store Connect team ID if different from dev team

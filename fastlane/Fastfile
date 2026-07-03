@@ -1,0 +1,121 @@
+# Fastlane lanes for Calarm App Store submission
+# Usage: bundle install && bundle exec fastlane ios <lane>
+
+default_platform(:ios)
+
+def asc_api_key
+  if ENV["ASC_KEY_PATH"] && !ENV["ASC_KEY_PATH"].empty?
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      duration: 1200,
+      in_house: false
+    )
+  elsif ENV["ASC_KEY_CONTENT"] && !ENV["ASC_KEY_CONTENT"].empty?
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: ENV["ASC_KEY_BASE64"] == "true",
+      duration: 1200,
+      in_house: false
+    )
+  else
+    UI.user_error!("Set ASC_KEY_ID, ASC_ISSUER_ID, and ASC_KEY_PATH (or ASC_KEY_CONTENT) in fastlane/.env")
+  end
+end
+
+platform :ios do
+  desc "Archive Release build and export App Store IPA"
+  lane :build_release do
+    clear_derived_data(derived_data_path: "build/DerivedData")
+
+    build_app(
+      project: "Calarm.xcodeproj",
+      scheme: "Calarm",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/export",
+      output_name: "Calarm.ipa",
+      export_options: {
+        method: "app-store-connect",
+        teamID: "M49XY93NTP",
+        uploadSymbols: true,
+        signingStyle: "automatic"
+      },
+      skip_package_ipa: false,
+      clean: true
+    )
+
+    UI.success("IPA ready at build/export/Calarm.ipa")
+  end
+
+  desc "Upload IPA to TestFlight (no review submission)"
+  lane :upload_beta do
+    api_key = asc_api_key
+    build_release unless File.exist?("build/export/Calarm.ipa")
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "build/export/Calarm.ipa",
+      skip_waiting_for_build_processing: false,
+      distribute_external: false
+    )
+  end
+
+  desc "Upload metadata only (no binary) — descriptions, keywords, URLs"
+  lane :upload_metadata do
+    api_key = asc_api_key
+
+    deliver(
+      api_key: api_key,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Upload IPA + metadata and optionally submit for review"
+  lane :release do |options|
+    api_key = asc_api_key
+    build_release unless File.exist?("build/export/Calarm.ipa")
+
+    submit = options[:submit] == true
+
+    upload_to_app_store(
+      api_key: api_key,
+      ipa: "build/export/Calarm.ipa",
+      skip_metadata: false,
+      skip_screenshots: true,
+      submit_for_review: submit,
+      automatic_release: false,
+      force: true,
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Run fastlane precheck against metadata"
+  lane :precheck_metadata do
+    api_key = asc_api_key
+    precheck(
+      api_key: api_key,
+      include_in_app_purchases: false
+    )
+  end
+
+  desc "Bump build number to App Store Connect latest + 1"
+  lane :bump_build do
+    api_key = asc_api_key
+    latest = app_store_build_number(
+      api_key: api_key,
+      live: false
+    )
+    increment_build_number(
+      build_number: (latest + 1).to_s,
+      xcodeproj: "Calarm.xcodeproj"
+    )
+    UI.success("Build number set to #{latest + 1}")
+  end
+end

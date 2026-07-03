@@ -2,29 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- AlarmKit Framework Entitlement -->
-	<key>com.apple.developer.alarmkit</key>
-	<true/>
-	
-	<!-- Live Activities Support -->
-	<key>com.apple.developer.usernotifications.live-activities</key>
-	<true/>
-	
-	<!-- Push Notifications for Live Activities -->
-	<key>com.apple.developer.usernotifications.push-notifications</key>
-	<true/>
-	
-	<!-- App Groups for sharing data with widgets -->
-    
-	
-	<!-- Background App Refresh -->
-    <key>com.apple.developer.background-modes</key>
-    <array>
-        <string>fetch</string>
-        <string>processing</string>
-    </array>
-	
-	<!-- App Intents -->
+	<!-- App Intents (optional; add via Xcode Signing & Capabilities if needed) -->
 	<key>com.apple.developer.siri</key>
 	<true/>
 </dict>

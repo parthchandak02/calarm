@@ -35,6 +35,11 @@ if [ $# -eq 1 ]; then
             DEPLOYMENT_TARGET="device"
             log_info "🎯 Target: Physical Device (argument: 2)"
             ;;
+        "install")
+            DEPLOYMENT_TARGET="device"
+            INSTALL_ONLY="true"
+            log_info "🎯 Install-only: Physical Device (skip rebuild)"
+            ;;
         "monitor"|"m")
             MONITOR_MODE="live"
             ;;
@@ -120,7 +125,9 @@ elif [ $# -gt 2 ]; then
     echo
     echo "Usage:"
     echo "  ./deploy.sh 1        Deploy to iOS Simulator"
-    echo "  ./deploy.sh 2        Deploy to Physical Device"
+            echo "  ./deploy.sh 2        Deploy to Physical Device"
+            echo "  SKIP_HOSTS_BLOCK=1 ./deploy.sh 2   Deploy without sudo /etc/hosts edits"
+            echo "  ./deploy.sh install  Install last build to device (no rebuild, no sudo)"
     echo "  ./deploy.sh monitor  Monitor Live Activities (15 sec)"
     echo "  ./deploy.sh status   Check Live Activity status"
     echo "  ./deploy.sh          Auto-detect (legacy mode)"
@@ -206,11 +213,14 @@ if [ "$DEPLOYMENT_TARGET" = "device" ] || [ -z "$DEVICE_TYPE" ]; then
         fi
         echo "$DEVICE_LIST"
         
-        # Extract device ID from xctrace output (format: "Device Name (Version) (ID)")
-        DEVICE_ID=$(echo "$DEVICE_LIST" | head -n1 | grep -o '([A-F0-9-]*[A-F0-9])' | tail -n1 | sed 's/[()]//g')
+        # xctrace UDID for xcodebuild destination
+        BUILD_DEVICE_ID=$(echo "$DEVICE_LIST" | head -n1 | grep -o '([A-F0-9-]*[A-F0-9])' | tail -n1 | sed 's/[()]//g')
+        # devicectl identifier for install/launch (Wi-Fi or USB)
+        INSTALL_DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null | awk '/connected/ && /iPhone|iPad/ {print $3; exit}')
+        DEVICE_ID="${INSTALL_DEVICE_ID:-$BUILD_DEVICE_ID}"
         DEVICE_TYPE="device"
-        DESTINATION="platform=iOS,id=$DEVICE_ID"
-        log_success "Using physical device: $DEVICE_ID"
+        DESTINATION="platform=iOS,id=$BUILD_DEVICE_ID"
+        log_success "Build target: $BUILD_DEVICE_ID | Install target: $DEVICE_ID"
     else
         log_error "No physical devices found"
         if [ "$DEPLOYMENT_TARGET" = "device" ]; then
@@ -228,50 +238,68 @@ if [ -z "$DEVICE_ID" ] || [ -z "$DEVICE_TYPE" ]; then
 fi
 
 # Clean build
-echo_section "🧹 Cleaning previous builds"
-    rm -rf "$BUILD_PATH"
-log_success "Cleaned build directory"
-
-# Build with Xcode bug workaround
-echo_section "🔨 Building $APP_NAME"
-
-# Block domains to prevent hanging (known Xcode 16+ bug fix)
-block_domain "developerservices2.apple.com"
-if [ "$DEVICE_TYPE" = "device" ]; then
-    # Additional domains that can cause hanging for physical device builds
-    block_domain "developer.apple.com"
-    block_domain "idmsa.apple.com"
-    trap 'unblock_domain "developerservices2.apple.com"; unblock_domain "developer.apple.com"; unblock_domain "idmsa.apple.com"' EXIT
-else
-    trap 'unblock_domain "developerservices2.apple.com"' EXIT
-fi
-
-# Build command with timeout and anti-hang flags
-ANTI_HANG_FLAGS="-skipPackageSignatureValidation -skipMacroValidation -disableAutomaticPackageResolution"
-
-if [ "$VERBOSE" = "true" ]; then
-    BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -target \"$TARGET\" -sdk iphonesimulator -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=\"$BUILD_PATH\" -verbose build"
-else
-    BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -target \"$TARGET\" -sdk iphonesimulator -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=\"$BUILD_PATH\" build"
-fi
-
-log_step "Building with 5-minute timeout protection..."
-if [ "$VERBOSE" = "true" ]; then
-    log_info "Running: $BUILD_CMD"
-fi
-
-if run_with_timeout 300 eval "$BUILD_CMD"; then
-    log_success "Build completed successfully!"
-else
-    exit_code=$?
-    if [ $exit_code -eq 124 ]; then
-        log_error "Build timed out after 5 minutes"
-        echo
-        log_info "The build process hung. Try opening the project in Xcode first to resolve any issues."
-    else
-        log_error "Build failed with exit code $exit_code"
+if [ "${INSTALL_ONLY:-false}" = "true" ]; then
+    echo_section "⏭️  Skipping rebuild (install-only)"
+    if [ -z "$BUILD_PATH" ] || [ "$BUILD_PATH" = "./build" ]; then
+        if [ -d "./build-device/Build/Products/Debug-iphoneos/$APP_NAME.app" ]; then
+            BUILD_PATH="./build-device"
+            log_info "Using existing build at $BUILD_PATH"
+        fi
     fi
-    exit 1
+else
+    echo_section "🧹 Cleaning previous builds"
+    rm -rf "$BUILD_PATH"
+    log_success "Cleaned build directory"
+
+    # Build with Xcode bug workaround
+    echo_section "🔨 Building $APP_NAME"
+
+    # Block domains to prevent hanging (known Xcode 16+ bug fix)
+    block_domain "developerservices2.apple.com"
+    if [ "$DEVICE_TYPE" = "device" ]; then
+        # Additional domains that can cause hanging for physical device builds
+        block_domain "developer.apple.com"
+        block_domain "idmsa.apple.com"
+        trap 'unblock_domain "developerservices2.apple.com"; unblock_domain "developer.apple.com"; unblock_domain "idmsa.apple.com"' EXIT
+    else
+        trap 'unblock_domain "developerservices2.apple.com"' EXIT
+    fi
+
+    # Build command with timeout and anti-hang flags
+    ANTI_HANG_FLAGS="-skipPackageSignatureValidation -skipMacroValidation -disableAutomaticPackageResolution"
+
+    if [ "$DEVICE_TYPE" = "simulator" ]; then
+        SDK="iphonesimulator"
+        SIGN_FLAGS='CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO'
+    else
+        SDK="iphoneos"
+        SIGN_FLAGS=""
+    fi
+
+    if [ "$VERBOSE" = "true" ]; then
+        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" -verbose build"
+    else
+        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" build"
+    fi
+
+    log_step "Building with 5-minute timeout protection..."
+    if [ "$VERBOSE" = "true" ]; then
+        log_info "Running: $BUILD_CMD"
+    fi
+
+    if run_with_timeout 300 eval "$BUILD_CMD"; then
+        log_success "Build completed successfully!"
+    else
+        exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+            log_error "Build timed out after 5 minutes"
+            echo
+            log_info "The build process hung. Try opening the project in Xcode first to resolve any issues."
+        else
+            log_error "Build failed with exit code $exit_code"
+        fi
+        exit 1
+    fi
 fi
 
 # Find built app
