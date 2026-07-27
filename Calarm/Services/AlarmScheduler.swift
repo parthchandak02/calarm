@@ -13,7 +13,9 @@ final class AlarmScheduler {
     private typealias AlarmConfiguration = AlarmManager.AlarmConfiguration<AlarmAppMetadata>
 
     func reschedule(events: [ScheduleEvent], snoozeSeconds: TimeInterval, force: Bool = false) async {
-        if !force, hasActiveAlarms() {
+        // Only skip while an alarm is actively alerting — countdown state must still be rescheduled
+        // when calendar events change so Live Activity assignment stays correct.
+        if !force, hasAlertingAlarms() {
             return
         }
 
@@ -40,28 +42,15 @@ final class AlarmScheduler {
         }
     }
 
-    func reschedule(event: ScheduleEvent, among events: [ScheduleEvent], snoozeSeconds: TimeInterval) async {
-        await cancelAll(for: event.id)
-
-        let allInstances = events.flatMap { ev in
-            ev.scheduledAlarms.map { (event: ev, alarm: $0) }
-        }.sorted { $0.alarm.fireDate < $1.alarm.fireDate }
-
-        let nextLiveActivityKey = allInstances.first.map { liveActivityKey(eventID: $0.event.id, offset: $0.alarm.offset) }
-
-        for alarm in event.scheduledAlarms {
-            let key = liveActivityKey(eventID: event.id, offset: alarm.offset)
-            await schedule(
-                event,
-                offset: alarm.offset,
-                withLiveActivity: key == nextLiveActivityKey,
-                snoozeSeconds: snoozeSeconds
-            )
+    /// Cancel AlarmKit alarms for events no longer in the schedule.
+    func cancelRemoved(eventIDs: Set<String>) async {
+        for eventID in eventIDs {
+            await cancelAll(for: eventID)
         }
     }
 
     func cancelAll(for eventID: String) async {
-        for offset in AlarmOffsetOption.allCases {
+        for offset in AlarmOffsetOption.schedulableOffsets {
             await cancel(eventID: eventID, offset: offset)
         }
     }
@@ -70,15 +59,13 @@ final class AlarmScheduler {
         try? AlarmManager.shared.cancel(id: stableAlarmID(for: eventID, offset: offset))
     }
 
-    private func hasActiveAlarms() -> Bool {
+    private func hasAlertingAlarms() -> Bool {
         guard let alarms = try? AlarmManager.shared.alarms else { return false }
         return alarms.contains { alarm in
-            switch alarm.state {
-            case .countdown, .alerting:
+            if case .alerting = alarm.state {
                 return true
-            default:
-                return false
             }
+            return false
         }
     }
 
@@ -88,6 +75,7 @@ final class AlarmScheduler {
         withLiveActivity: Bool,
         snoozeSeconds: TimeInterval
     ) async {
+        guard offset.isSchedulable else { return }
         let alarmID = stableAlarmID(for: event.id, offset: offset)
         let idString = alarmID.uuidString
         let fireDate = offset.fireDate(for: event.startDate)
@@ -144,7 +132,8 @@ final class AlarmScheduler {
                 presentation: presentation,
                 metadata: AlarmAppMetadata(
                     title: event.title,
-                    offsetLabel: offset.title
+                    offsetLabel: offset.title,
+                    eventID: event.id
                 ),
                 tintColor: resolvedAccentColor()
             )
@@ -197,9 +186,11 @@ final class AlarmScheduler {
 nonisolated struct AlarmAppMetadata: AlarmMetadata, Sendable, Codable {
     let title: String
     let offsetLabel: String?
+    let eventID: String?
 
-    nonisolated init(title: String = "Alarm", offsetLabel: String? = nil) {
+    nonisolated init(title: String = "Alarm", offsetLabel: String? = nil, eventID: String? = nil) {
         self.title = title
         self.offsetLabel = offsetLabel
+        self.eventID = eventID
     }
 }

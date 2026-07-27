@@ -4,6 +4,8 @@ Last updated: 2026-06-30. Read this end-to-end before your first upload.
 
 This repo is **terminal-first** after a short one-time human setup. Everything after that is `./scripts/preflight-release.sh` → `./release.sh` → `bundle exec fastlane ios upload_beta`.
 
+**CLI stack:** [TERMINAL_TOOLS.md](./TERMINAL_TOOLS.md) — `asc` (App Store Connect), `apple-docs-pp-cli` (framework docs), `fastlane` (upload lanes), `spaceship` (portal cleanup).
+
 ---
 
 ## What is already done (agent/repo)

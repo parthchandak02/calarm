@@ -67,6 +67,52 @@ run_with_progress() {
     fi
 }
 
+# Return installed build number for a bundle id on a physical device (empty if missing).
+device_installed_build() {
+    local device_id="$1"
+    local bundle_id="$2"
+    xcrun devicectl device info apps --device "$device_id" 2>/dev/null \
+        | awk -v bundle="$bundle_id" '$2 == bundle { print $4; exit }'
+}
+
+# Ensure the device has the expected build; reinstall via devicectl if stale.
+verify_device_install() {
+    local device_id="$1"
+    local bundle_id="$2"
+    local expected_build="$3"
+    local app_path="$4"
+
+    local installed
+    installed="$(device_installed_build "$device_id" "$bundle_id")"
+
+    if [[ -z "$installed" ]]; then
+        log_warning "App not listed on device after install — trying devicectl install"
+    elif [[ "$installed" == "$expected_build" ]]; then
+        log_success "Verified on device: $bundle_id build $installed"
+        return 0
+    else
+        log_warning "Stale build on device ($installed) — expected $expected_build"
+    fi
+
+    if [[ -z "$app_path" || ! -f "$app_path/Info.plist" ]]; then
+        log_error "Cannot force reinstall — built .app not found"
+        return 1
+    fi
+
+    log_step "Force reinstall via devicectl"
+    if xcrun devicectl device install app --device "$device_id" "$app_path"; then
+        installed="$(device_installed_build "$device_id" "$bundle_id")"
+        if [[ "$installed" == "$expected_build" ]]; then
+            log_success "Verified after force reinstall: build $installed"
+            return 0
+        fi
+    fi
+
+    log_error "Device still shows build '${installed:-unknown}' — expected $expected_build"
+    log_info "Delete CALarm from the home screen, unlock the phone, then run ./deploy.sh 2 again"
+    return 1
+}
+
 # Utility functions
 check_command() {
     if ! command -v "$1" &> /dev/null; then

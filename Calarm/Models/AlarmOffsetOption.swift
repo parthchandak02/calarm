@@ -7,6 +7,8 @@ import Foundation
 
 /// Fixed alarm lead times supported by Calarm.
 enum AlarmOffsetOption: String, Codable, CaseIterable, Identifiable, Hashable {
+    /// Settings-only: new calendar events start with alarms off.
+    case noAlarm
     case atEventTime
     case oneMinute
     case fiveMinutes
@@ -17,8 +19,23 @@ enum AlarmOffsetOption: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// Options shown when picking a default for new events (includes "No alarm").
+    static var defaultPreferenceOptions: [AlarmOffsetOption] {
+        [.noAlarm] + schedulableOffsets
+    }
+
+    /// Offsets that can be scheduled on an event.
+    static var schedulableOffsets: [AlarmOffsetOption] {
+        allCases.filter { $0 != .noAlarm }
+    }
+
+    var isSchedulable: Bool {
+        self != .noAlarm
+    }
+
     var title: String {
         switch self {
+        case .noAlarm: "No alarm"
         case .atEventTime: "At event time"
         case .oneMinute: "1 minute before"
         case .fiveMinutes: "5 minutes before"
@@ -32,6 +49,7 @@ enum AlarmOffsetOption: String, Codable, CaseIterable, Identifiable, Hashable {
     /// Seconds before the event start when this alarm should fire.
     var leadTime: TimeInterval {
         switch self {
+        case .noAlarm: 0
         case .atEventTime: 0
         case .oneMinute: 60
         case .fiveMinutes: 5 * 60
@@ -67,6 +85,11 @@ enum AlarmOffsetOption: String, Codable, CaseIterable, Identifiable, Hashable {
         return candidates.min(by: {
             abs($0.1 - minutes) < abs($1.1 - minutes)
         })?.0 ?? .tenMinutes
+    }
+
+    /// Used when the user enables an alarm but the default preference is "No alarm".
+    var enablingFallback: AlarmOffsetOption {
+        isSchedulable ? self : .tenMinutes
     }
 }
 

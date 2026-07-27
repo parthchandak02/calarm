@@ -26,6 +26,9 @@ struct CalarmApp: App {
                 .task {
                     await scheduleStore.bootstrap()
                 }
+                .onOpenURL { url in
+                    scheduleStore.handleIncomingURL(url)
+                }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     Task { await scheduleStore.refreshOnForeground() }
                 }

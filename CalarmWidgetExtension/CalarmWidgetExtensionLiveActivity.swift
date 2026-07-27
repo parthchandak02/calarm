@@ -6,16 +6,28 @@ import WidgetKit
 // MARK: - AlarmKit Live Activity Implementation (Official WWDC 2025 Pattern)
 
 // AlarmMetadata for our alarm app - must match exactly with main app
-nonisolated struct EmptyAlarmMetadata: AlarmMetadata, Sendable, Codable {
+nonisolated struct AlarmAppMetadata: AlarmMetadata, Sendable, Codable {
     let title: String
-    
-    nonisolated init(title: String = "Alarm") {
+    let offsetLabel: String?
+    let eventID: String?
+
+    nonisolated init(title: String = "Alarm", offsetLabel: String? = nil, eventID: String? = nil) {
         self.title = title
+        self.offsetLabel = offsetLabel
+        self.eventID = eventID
     }
 }
 
-// Type alias to match main app
-typealias AlarmAppMetadata = EmptyAlarmMetadata
+private enum CalarmLiveActivityLink {
+    static func eventURL(eventID: String) -> URL? {
+        guard !eventID.isEmpty else { return nil }
+        var components = URLComponents()
+        components.scheme = "calarm"
+        components.host = "event"
+        components.queryItems = [URLQueryItem(name: "id", value: eventID)]
+        return components.url
+    }
+}
 
 // MARK: - Live Activity Widget
 struct CalarmWidgetExtensionLiveActivity: Widget {
@@ -27,12 +39,12 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                 Image(systemName: "alarm.fill")
                     .font(.headline)
                     .foregroundColor(.red)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.attributes.metadata?.title ?? "Alarm")
                         .font(.headline)
                         .foregroundColor(.primary)
-                    
+
                     // Show countdown using official AlarmKit state
                     switch context.state.mode {
                     case .countdown(let countdown):
@@ -57,13 +69,14 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Spacer()
             }
             .padding()
             .background(Color.black.opacity(0.05))
             .cornerRadius(8)
-            
+            .widgetURL(eventURL(for: context))
+
         } dynamicIsland: { context in
             // Dynamic Island Configuration - Minimal and compact
             DynamicIsland {
@@ -76,7 +89,7 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                             .font(.headline)
                     }
                 }
-                
+
                 DynamicIslandExpandedRegion(.trailing) {
                     // Show countdown state
                     switch context.state.mode {
@@ -102,13 +115,13 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
             } compactLeading: {
                 // Compact leading - just icon
                 Image(systemName: "alarm.fill")
                     .font(.caption)
                     .foregroundColor(.red)
-                    
+
             } compactTrailing: {
                 // Show compact countdown timer in Dynamic Island
                 switch context.state.mode {
@@ -136,14 +149,20 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                         .font(.caption2)
                         .foregroundColor(.red)
                 }
-                
+
             } minimal: {
                 // Minimal view - just small icon
                 Image(systemName: "alarm.fill")
                     .font(.caption2)
                     .foregroundColor(.red)
             }
+            .widgetURL(eventURL(for: context))
         }
+    }
+
+    private func eventURL(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> URL? {
+        guard let eventID = context.attributes.metadata?.eventID else { return nil }
+        return CalarmLiveActivityLink.eventURL(eventID: eventID)
     }
 }
 

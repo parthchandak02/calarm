@@ -215,12 +215,10 @@ if [ "$DEPLOYMENT_TARGET" = "device" ] || [ -z "$DEVICE_TYPE" ]; then
         
         # xctrace UDID for xcodebuild destination
         BUILD_DEVICE_ID=$(echo "$DEVICE_LIST" | head -n1 | grep -o '([A-F0-9-]*[A-F0-9])' | tail -n1 | sed 's/[()]//g')
-        # devicectl identifier for install/launch (Wi-Fi or USB)
-        INSTALL_DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null | awk '/connected/ && /iPhone|iPad/ {print $3; exit}')
-        DEVICE_ID="${INSTALL_DEVICE_ID:-$BUILD_DEVICE_ID}"
+        DEVICE_ID="$BUILD_DEVICE_ID"
         DEVICE_TYPE="device"
         DESTINATION="platform=iOS,id=$BUILD_DEVICE_ID"
-        log_success "Build target: $BUILD_DEVICE_ID | Install target: $DEVICE_ID"
+        log_success "USB/device target: $BUILD_DEVICE_ID (keep iPhone unlocked during install)"
     else
         log_error "No physical devices found"
         if [ "$DEPLOYMENT_TARGET" = "device" ]; then
@@ -251,6 +249,9 @@ else
     rm -rf "$BUILD_PATH"
     log_success "Cleaned build directory"
 
+    log_step "Stamping date-based build number (CFBundleVersion)"
+    "$SCRIPT_DIR/scripts/stamp-build-version.sh"
+
     # Build with Xcode bug workaround
     echo_section "🔨 Building $APP_NAME"
 
@@ -276,19 +277,35 @@ else
         SIGN_FLAGS=""
     fi
 
-    if [ "$VERBOSE" = "true" ]; then
-        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" -verbose build"
+    if [ "$DEVICE_TYPE" = "simulator" ]; then
+        BUILD_ACTION="build"
     else
-        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" build"
+        BUILD_ACTION="install"
+        log_info "Device deploy uses xcodebuild install (USB/network — keep iPhone unlocked)"
     fi
 
-    log_step "Building with 5-minute timeout protection..."
+    if [ "$VERBOSE" = "true" ]; then
+        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" -allowProvisioningUpdates -verbose $BUILD_ACTION"
+    else
+        BUILD_CMD="xcodebuild -project \"$PROJECT_NAME\" -scheme \"$TARGET\" -sdk $SDK -configuration \"$CONFIGURATION\" -destination \"$DESTINATION\" $ANTI_HANG_FLAGS $SIGN_FLAGS -derivedDataPath \"$BUILD_PATH\" -allowProvisioningUpdates $BUILD_ACTION"
+    fi
+
+    INSTALL_TIMEOUT=420
+    if [ "$DEVICE_TYPE" = "simulator" ]; then
+        INSTALL_TIMEOUT=300
+    fi
+
+    log_step "Running xcodebuild $BUILD_ACTION with ${INSTALL_TIMEOUT}s timeout..."
     if [ "$VERBOSE" = "true" ]; then
         log_info "Running: $BUILD_CMD"
     fi
 
-    if run_with_timeout 300 eval "$BUILD_CMD"; then
-        log_success "Build completed successfully!"
+    if run_with_timeout "$INSTALL_TIMEOUT" eval "$BUILD_CMD"; then
+        if [ "$DEVICE_TYPE" = "device" ]; then
+            log_success "Build and install completed successfully!"
+        else
+            log_success "Build completed successfully!"
+        fi
     else
         exit_code=$?
         if [ $exit_code -eq 124 ]; then
@@ -308,11 +325,19 @@ if [ "$DEVICE_TYPE" = "simulator" ]; then
     APP_PATH=$(find "$BUILD_PATH" -name "$APP_NAME.app" -path "*iphonesimulator*" -type d | head -n1)
 else
     APP_PATH=$(find "$BUILD_PATH" -name "$APP_NAME.app" -path "*iphoneos*" -type d | head -n1)
+    if [ -z "$APP_PATH" ] && [ "${INSTALL_ONLY:-false}" != "true" ]; then
+        APP_PATH=$(find "$BUILD_PATH" -path "*InstallationBuildProductsLocation*" -name "$APP_NAME.app" -type d | head -n1)
+    fi
 fi
 
 check_file "$APP_PATH/Info.plist" || {
-    log_error "Built app not found in $BUILD_PATH"
-    exit 1
+    if [ "$DEVICE_TYPE" = "device" ] && [ "${INSTALL_ONLY:-false}" != "true" ]; then
+        log_warning "Could not locate .app bundle after install — app should still be on device"
+        APP_PATH=""
+    else
+        log_error "Built app not found in $BUILD_PATH"
+        exit 1
+    fi
 }
 
 log_success "Found app at: $APP_PATH"
@@ -349,28 +374,26 @@ if [ "$DEVICE_TYPE" = "simulator" ]; then
     fi
     
 else
-    # Physical device
-    [ "$VERBOSE" = "true" ] && log_info "Running: xcrun devicectl device install app --device '$DEVICE_ID' '$APP_PATH'"
-    if xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"; then
-        log_success "Installation successful!"
+    # Physical device — xcodebuild install already deployed when BUILD_ACTION=install
+    BUNDLE_ID="com.calarmapp.calarm"
+    if [ -n "$APP_PATH" ]; then
+        BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP_PATH/Info.plist" 2>/dev/null || echo "$BUNDLE_ID")
+        BUILD_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_PATH/Info.plist" 2>/dev/null || echo "?")
+        MARKETING_VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Info.plist" 2>/dev/null || echo "?")
+        log_success "Installed $MARKETING_VER ($BUILD_VER) on device"
     else
-        log_error "Device installation failed"
-        echo
-        log_info "Common solutions:"
-        echo "  📱 Ensure device is unlocked and trusted"
-        echo "  🔧 Check Developer Mode is enabled"
-        echo "  🔑 Verify your Apple ID is signed in to Xcode"
-        exit 1
+        log_success "Install completed on device"
     fi
-    
-    # Launch on device
-    BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP_PATH/Info.plist" 2>/dev/null || echo "")
+
     if [ -n "$BUNDLE_ID" ]; then
         [ "$VERBOSE" = "true" ] && log_info "Bundle ID: $BUNDLE_ID"
+        if [[ -n "${BUILD_VER:-}" && "$BUILD_VER" != "?" ]]; then
+            verify_device_install "$DEVICE_ID" "$BUNDLE_ID" "$BUILD_VER" "$APP_PATH" || exit 1
+        fi
         if xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID" >/dev/null 2>&1; then
             log_success "App launched successfully!"
         else
-            log_warning "Launch completed - check your device"
+            log_warning "Install succeeded — launch CALarm from your home screen if it did not open"
         fi
     else
         log_warning "Could not determine bundle identifier automatically"

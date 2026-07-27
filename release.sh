@@ -16,6 +16,9 @@ EXPORT_OPTIONS="ExportOptions.plist"
 echo "==> Cleaning prior release artifacts"
 rm -rf build/Calarm.xcarchive build/export
 
+echo "==> Stamping build number"
+"$SCRIPT_DIR/scripts/stamp-build-version.sh"
+
 echo "==> Archiving Release (generic iOS device)"
 xcodebuild \
   -project "$PROJECT" \
@@ -23,6 +26,7 @@ xcodebuild \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
+  -allowProvisioningUpdates \
   archive
 
 echo "==> Exporting App Store IPA"
@@ -30,7 +34,8 @@ xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
-  -exportOptionsPlist "$EXPORT_OPTIONS"
+  -exportOptionsPlist "$EXPORT_OPTIONS" \
+  -allowProvisioningUpdates
 
 IPA=$(find "$EXPORT_PATH" -name "*.ipa" | head -n1)
 if [[ -z "${IPA:-}" ]]; then
