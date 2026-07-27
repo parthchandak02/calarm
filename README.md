@@ -89,18 +89,29 @@ See **[SECURITY.md](SECURITY.md)** for repository security practices and what mu
 
 ## App Store submission
 
-See **[docs/app-store/PUBLISH_PLAYBOOK.md](docs/app-store/PUBLISH_PLAYBOOK.md)** for the full terminal-first publish guide, and **[APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md)** for the checklist.
+**Pipeline:** `./scripts/ship.sh doctor` → `./scripts/ship.sh beta`
+
+| Doc | Purpose |
+|-----|---------|
+| [PUBLISH_PLAYBOOK.md](docs/app-store/PUBLISH_PLAYBOOK.md) | Full publish guide |
+| [TERMINAL_TOOLS.md](docs/app-store/TERMINAL_TOOLS.md) | `asc`, fastlane, apple-docs |
+| [pipeline/BOOTSTRAP_NEW_APP.md](pipeline/BOOTSTRAP_NEW_APP.md) | Reuse this pipeline for other Xcode apps |
+| [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) | Checklist |
 
 ```bash
-cp fastlane/.env.example fastlane/.env    # add ASC API key + APPLE_ID
-./scripts/preflight-release.sh
-./release.sh                              # Archive + export IPA
-bundle install && bundle exec fastlane ios upload_beta
+# One-time (after downloading API .p8 to ~/Keys/)
+./scripts/configure-credentials.sh <ISSUER_ID>
+
+./scripts/ship.sh doctor    # health check
+./scripts/ship.sh beta      # build + TestFlight
+./scripts/ship.sh metadata  # descriptions, URLs, screenshots
 ```
 
 Subagents:
 - `calarm-app-store-prep` — metadata, fastlane, ASC checklist
 - `calarm-ship-ready` — code polish, device deploy, final QA
+
+**Cursor skills** (`.cursor/skills/`): repo-specific playbooks for AlarmKit scheduling, device deploy verification, TestFlight, Live Activity deep links, build stamping, release pipeline, and app icon processing. See [skills README](.cursor/skills/README.md).
 
 ## Docs
 

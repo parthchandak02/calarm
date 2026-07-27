@@ -56,9 +56,13 @@ struct ScheduleView: View {
             .background(theme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingSettings) {
-                SettingsSheet()
-                    .environmentObject(store)
-                    .environmentObject(themeStore)
+                SettingsSheet(
+                    defaultAlarmOffset: store.defaultAlarmOffset,
+                    defaultSnooze: store.defaultSnooze,
+                    onDefaultAlarmOffsetChange: { store.updateDefaultAlarmOffset($0) },
+                    onDefaultSnoozeChange: { store.updateDefaultSnooze($0) }
+                )
+                .environmentObject(themeStore)
             }
             .navigationDestination(item: $selectedEvent) { route in
                 EventDetailView(eventID: route.id)
@@ -74,7 +78,25 @@ struct ScheduleView: View {
         }
         .font(CalarmFont.body)
         .accessibilityIdentifier("schedule.screen")
-        .onAppear(perform: applyScreenshotSceneIfNeeded)
+        .onAppear {
+            applyScreenshotSceneIfNeeded()
+            presentPendingEventDeepLinkIfNeeded()
+        }
+        .onChange(of: store.pendingEventDeepLinkID) { _, _ in
+            presentPendingEventDeepLinkIfNeeded()
+        }
+        .onChange(of: store.events.count) { _, _ in
+            presentPendingEventDeepLinkIfNeeded()
+        }
+    }
+
+    private func presentPendingEventDeepLinkIfNeeded() {
+        guard let eventID = store.pendingEventDeepLinkID,
+              store.event(with: eventID) != nil else {
+            return
+        }
+        selectedEvent = EventRoute(id: eventID)
+        store.acknowledgeEventDeepLink()
     }
 
     private func applyScreenshotSceneIfNeeded() {

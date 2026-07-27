@@ -141,6 +141,7 @@ ExportOptions.plist
 fastlane/.env
 fastlane/*.env
 !fastlane/.env.example
+.asc/
 *.p8
 AuthKey_*.p8
 

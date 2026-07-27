@@ -17,16 +17,21 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [x] **GitHub Pages** — enabled (`main` → `/docs`); landing + privacy + support
 - [x] **App Store screenshots (6.9")** — four PNGs in `fastlane/screenshots/en-US/`
 - [x] **Publish playbook** — `docs/app-store/PUBLISH_PLAYBOOK.md`
+- [x] **Ship pipeline** — `scripts/ship.sh`, `scripts/ios-doctor.sh`, `ios-app.config.sh`
+- [x] **Multi-app bootstrap** — `pipeline/install-into-repo.sh`, `pipeline/BOOTSTRAP_NEW_APP.md`
+- [x] **API key on disk** — `~/Keys/AuthKey_XG7C686F45.p8`, `fastlane/.env` (partial)
+- [x] **asc + apple-docs CLIs** — installed (`brew install asc`, Printing Press)
 - [x] **App icon** — 1024×1024 in `AppIcon.appiconset`
 
 ## Human-only (you must do these)
 
 ### One-time setup
 
+- [ ] **Issuer ID in `fastlane/.env`** — run `./scripts/configure-credentials.sh <ISSUER_ID>` ([YOUR_ACTIONS.md](docs/app-store/YOUR_ACTIONS.md))
+- [ ] **Siri capability** on `com.calarmapp.calarm` — portal or `./scripts/bootstrap-portal.sh`
 - [ ] **Apple Developer Program** — active paid membership
-- [ ] **API key** — create in ASC, save `.p8` outside repo, fill `fastlane/.env`
-- [ ] **Create app record** — `bundle exec fastlane ios bootstrap_asc` OR App Store Connect UI
-- [ ] **Set `ASC_APP_APPLE_ID`** in `fastlane/.env`
+- [x] **API key `.p8`** — `~/Keys/AuthKey_XG7C686F45.p8`
+- [ ] **Set `ASC_APP_APPLE_ID`** — auto-filled by `configure-credentials.sh` or ASC URL
 - [ ] **Verify GitHub Pages URLs** — https://parthchandak02.github.io/calarm/privacy.html (after deploy)
 - [ ] **App Privacy questionnaire** — ASC (match `PrivacyInfo.xcprivacy`)
 - [ ] **Age rating** — ASC questionnaire
@@ -41,6 +46,16 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 ## Quick commands
 
 ```bash
+./scripts/configure-credentials.sh <ISSUER_ID>   # one-time after API key
+./scripts/ship.sh doctor
+./scripts/ship.sh beta                           # TestFlight
+./scripts/ship.sh metadata
+./scripts/ship.sh all
+```
+
+Legacy / granular:
+
+```bash
 ./scripts/preflight-release.sh
 bundle exec fastlane ios bootstrap_asc      # first time only
 ./release.sh
@@ -48,3 +63,5 @@ bundle exec fastlane ios upload_beta
 bundle exec fastlane ios upload_metadata screenshots:true
 bundle exec fastlane ios release submit:true screenshots:true
 ```
+
+**New app?** See [pipeline/BOOTSTRAP_NEW_APP.md](pipeline/BOOTSTRAP_NEW_APP.md).

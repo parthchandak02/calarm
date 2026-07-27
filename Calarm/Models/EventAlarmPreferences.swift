@@ -6,6 +6,8 @@
 import Foundation
 
 struct EventOverride: Codable, Equatable {
+    /// `nil` = no per-event override (use default-for-new-events policy).
+    /// `[]` = user explicitly turned alarms off for this event.
     var alarmOffsets: [String]?
     /// Legacy single-offset storage (migrated on read).
     var legacyOffsetMinutes: Int?
@@ -27,7 +29,7 @@ final class EventAlarmPreferences {
                     toMinutes: CalarmPersistence.integer(forKey: CalarmPersistence.Key.legacyDefaultOffsetMinutes)
                 )
             }
-            return .tenMinutes
+            return .noAlarm
         }
         set {
             CalarmPersistence.setString(newValue.rawValue, forKey: CalarmPersistence.Key.defaultAlarmOffset)
@@ -48,6 +50,8 @@ final class EventAlarmPreferences {
 
     func alarmOffsets(for eventID: String) -> [AlarmOffsetOption] {
         let override = overrides(for: eventID)
+        let hasStoredOverride = allOverrides()[eventID] != nil
+
         if let rawValues = override.alarmOffsets {
             return rawValues.compactMap(AlarmOffsetOption.init(rawValue:))
         }
@@ -55,9 +59,19 @@ final class EventAlarmPreferences {
             return [AlarmOffsetOption.nearest(toMinutes: minutes)]
         }
         if override.legacyEnabled == true {
-            return [defaultAlarmOffset]
+            return defaultOffsetsForNewEvents
         }
-        return []
+        if hasStoredOverride {
+            return []
+        }
+        return defaultOffsetsForNewEvents
+    }
+
+    private var defaultOffsetsForNewEvents: [AlarmOffsetOption] {
+        if defaultAlarmOffset == .noAlarm {
+            return []
+        }
+        return [defaultAlarmOffset]
     }
 
     func setAlarmOffsets(_ offsets: [AlarmOffsetOption], for eventID: String) {
@@ -65,11 +79,11 @@ final class EventAlarmPreferences {
         override.legacyEnabled = nil
         override.legacyOffsetMinutes = nil
         let unique = offsets.reduce(into: [AlarmOffsetOption]()) { result, offset in
-            if !result.contains(offset) {
+            if offset.isSchedulable, !result.contains(offset) {
                 result.append(offset)
             }
         }
-        override.alarmOffsets = unique.isEmpty ? nil : unique.map(\.rawValue)
+        override.alarmOffsets = unique.map(\.rawValue)
         save(override, for: eventID)
     }
 

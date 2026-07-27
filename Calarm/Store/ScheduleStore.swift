@@ -16,6 +16,7 @@ final class ScheduleStore: ObservableObject {
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var isLoading = false
     @Published private(set) var alarmAuthorization: AlarmManager.AuthorizationState = .notDetermined
+    @Published private(set) var pendingEventDeepLinkID: String?
 
     let calendarService = CalendarService()
     private let preferences = EventAlarmPreferences()
@@ -121,10 +122,12 @@ final class ScheduleStore: ObservableObject {
             preferences.removeOverride(for: removedID)
         }
 
+        await alarmScheduler.cancelRemoved(eventIDs: previousIDs.subtracting(currentIDs))
+
         await alarmScheduler.reschedule(
             events: events,
             snoozeSeconds: defaultSnooze.seconds,
-            force: false
+            force: true
         )
     }
 
@@ -135,15 +138,15 @@ final class ScheduleStore: ObservableObject {
             preferences.setAlarmOffsets([], for: eventID)
             events[index].alarmOffsets = []
         } else {
-            preferences.addAlarmOffset(defaultAlarmOffset, for: eventID)
+            preferences.addAlarmOffset(defaultAlarmOffset.enablingFallback, for: eventID)
             events[index].alarmOffsets = preferences.alarmOffsets(for: eventID)
         }
 
         Task {
             await alarmScheduler.reschedule(
-                event: events[index],
-                among: events,
-                snoozeSeconds: defaultSnooze.seconds
+                events: events,
+                snoozeSeconds: defaultSnooze.seconds,
+                force: true
             )
         }
     }
@@ -157,9 +160,9 @@ final class ScheduleStore: ObservableObject {
 
         Task {
             await alarmScheduler.reschedule(
-                event: events[index],
-                among: events,
-                snoozeSeconds: defaultSnooze.seconds
+                events: events,
+                snoozeSeconds: defaultSnooze.seconds,
+                force: true
             )
         }
     }
@@ -172,22 +175,30 @@ final class ScheduleStore: ObservableObject {
 
         Task {
             await alarmScheduler.reschedule(
-                event: events[index],
-                among: events,
-                snoozeSeconds: defaultSnooze.seconds
+                events: events,
+                snoozeSeconds: defaultSnooze.seconds,
+                force: true
             )
         }
     }
 
     func availableAlarmOffsets(for eventID: String) -> [AlarmOffsetOption] {
-        guard let event = event(with: eventID) else { return AlarmOffsetOption.allCases }
+        guard let event = event(with: eventID) else { return AlarmOffsetOption.schedulableOffsets }
         let configured = Set(event.alarmOffsets)
-        return AlarmOffsetOption.allCases.filter { !configured.contains($0) }
+        return AlarmOffsetOption.schedulableOffsets.filter { !configured.contains($0) }
     }
 
     func updateDefaultAlarmOffset(_ offset: AlarmOffsetOption) {
         defaultAlarmOffset = offset
         preferences.defaultAlarmOffset = offset
+
+        Task {
+            await alarmScheduler.reschedule(
+                events: events,
+                snoozeSeconds: defaultSnooze.seconds,
+                force: true
+            )
+        }
     }
 
     func updateDefaultSnooze(_ snooze: SnoozeDurationOption) {
@@ -207,6 +218,15 @@ final class ScheduleStore: ObservableObject {
         events.first { $0.id == id }
     }
 
+    func handleIncomingURL(_ url: URL) {
+        guard let eventID = CalarmDeepLink.eventID(from: url) else { return }
+        pendingEventDeepLinkID = eventID
+    }
+
+    func acknowledgeEventDeepLink() {
+        pendingEventDeepLinkID = nil
+    }
+
     var schedulableEvents: [ScheduleEvent] {
         events.filter { !$0.isAlarmInPast }
     }
@@ -220,8 +240,9 @@ final class ScheduleStore: ObservableObject {
         var changed = false
 
         if enabled {
+            let offset = defaultAlarmOffset.enablingFallback
             for index in events.indices where !events[index].isAlarmInPast && events[index].alarmOffsets.isEmpty {
-                preferences.addAlarmOffset(defaultAlarmOffset, for: events[index].id)
+                preferences.addAlarmOffset(offset, for: events[index].id)
                 events[index].alarmOffsets = preferences.alarmOffsets(for: events[index].id)
                 changed = true
             }

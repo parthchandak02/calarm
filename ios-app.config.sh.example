@@ -1,0 +1,22 @@
+# Copy to ios-app.config.sh and edit for each Xcode app.
+
+APP_DISPLAY_NAME="MyApp"
+APP_ASC_NAME="MyApp"
+BUNDLE_ID="com.example.myapp"
+WIDGET_BUNDLE_ID=""          # leave empty if no widget extension
+UITESTS_BUNDLE_ID="com.example.myapp.UITests"
+
+TEAM_ID="XXXXXXXXXX"
+ASC_SKU="myapp-ios-001"
+ASC_WIDGET_SKU=""
+
+XCODE_PROJECT="MyApp.xcodeproj"
+XCODE_SCHEME="MyApp"
+IPA_NAME="MyApp.ipa"
+ARCHIVE_NAME="MyApp.xcarchive"
+
+REQUIRED_CAPABILITIES="SIRI"   # comma-separated, or empty
+
+MARKETING_URL="https://example.github.io/myapp/"
+PRIVACY_URL="https://example.github.io/myapp/privacy.html"
+SUPPORT_URL="https://example.github.io/myapp/support.html"

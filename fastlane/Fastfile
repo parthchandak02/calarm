@@ -88,6 +88,8 @@ platform :ios do
         uploadSymbols: true,
         signingStyle: "automatic"
       },
+      xcargs: "-allowProvisioningUpdates",
+      export_xcargs: "-allowProvisioningUpdates",
       skip_package_ipa: false,
       clean: true
     )
@@ -98,14 +100,18 @@ platform :ios do
   desc "Upload IPA to TestFlight (no review submission)"
   lane :upload_beta do
     api_key = asc_api_key
-    build_release unless File.exist?("build/export/Calarm.ipa")
+    ipa_path = File.expand_path("../build/export/Calarm.ipa", __dir__)
+    build_release unless File.exist?(ipa_path)
+
+    changelog_path = File.expand_path("metadata/en-US/release_notes.txt", __dir__)
+    changelog = File.exist?(changelog_path) ? File.read(changelog_path) : "Bug fixes and improvements."
 
     upload_to_testflight(
       api_key: api_key,
-      ipa: "build/export/Calarm.ipa",
+      ipa: ipa_path,
       skip_waiting_for_build_processing: false,
       distribute_external: false,
-      changelog: File.read("fastlane/metadata/en-US/release_notes.txt")
+      changelog: changelog
     )
   end
 
