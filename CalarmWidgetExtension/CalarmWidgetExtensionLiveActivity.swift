@@ -21,18 +21,10 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
             }
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "alarm.fill")
-                            .foregroundStyle(tintColor(for: context))
-                        Text(context.attributes.metadata?.title ?? "Alarm")
-                            .font(.headline)
-                            .lineLimit(1)
-                    }
-                }
-
-                DynamicIslandExpandedRegion(.trailing) {
-                    countdownLabel(for: context, style: .expanded)
+                // Keep expanded content in one region so iOS does not stretch a sparse
+                // leading/trailing layout into a full-width empty pill.
+                DynamicIslandExpandedRegion(.center) {
+                    expandedIslandContent(for: context)
                 }
             } compactLeading: {
                 Image(systemName: "alarm.fill")
@@ -45,9 +37,32 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     .font(.caption2)
                     .foregroundStyle(tintColor(for: context))
             }
+            .contentMargins(.horizontal, 8, for: .compactTrailing)
+            .contentMargins(.horizontal, 12, for: .expanded)
             .keylineTint(tintColor(for: context))
             .widgetURL(deepLinkURL(for: context))
         }
+    }
+
+    @ViewBuilder
+    private func expandedIslandContent(
+        for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
+    ) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "alarm.fill")
+                .foregroundStyle(tintColor(for: context))
+
+            Text(context.attributes.metadata?.title ?? "Alarm")
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            countdownLabel(for: context, style: .expanded)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -97,7 +112,8 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                     .contentTransition(.numericText())
-                    .frame(maxWidth: style == .compact ? .infinity : nil, alignment: .trailing)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: style == .compact ? 58 : nil, alignment: .trailing)
             }
         case .paused:
             Text("Paused")

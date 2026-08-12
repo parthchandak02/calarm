@@ -1,1 +1,1 @@
-Build 20260812: Lock screen Live Activity cards now dismiss when calendar events end. Cancels stale AlarmKit alarms after fire time passes. Theme accent on Dynamic Island, single next-alarm countdown, and improved alarm persistence.
+Build 20260812: Fixes an oversized Dynamic Island countdown pill by tightening compact timer width and using a single centered expanded layout. Lock screen Live Activities dismiss when events end; stale alarms cancel after fire time; only the next alarm shows a Live Activity countdown.
