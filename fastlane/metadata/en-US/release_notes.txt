@@ -1,1 +1,1 @@
-Build 20260812: Dynamic Island uses your theme accent (via AlarmAttributes.tintColor), stable monospaced countdown sizing, and minimal Island shows the alarm icon only. Theme changes refresh the Live Activity color.
+Build 20260812: Only the next upcoming alarm shows a lock-screen countdown; other event alarms stay silent until they fire. Smarter reschedule avoids wiping alarms on every app open. Dynamic Island uses your theme accent with stable monospaced countdown sizing. Alarms still break through Do Not Disturb like the Clock app.

@@ -91,6 +91,16 @@ enum AlarmOffsetOption: String, Codable, CaseIterable, Identifiable, Hashable {
     var enablingFallback: AlarmOffsetOption {
         isSchedulable ? self : .tenMinutes
     }
+
+    /// Longest lead time among schedulable offsets (for calendar fetch horizon).
+    static var maxLeadTime: TimeInterval {
+        schedulableOffsets.map(\.leadTime).max() ?? 0
+    }
+
+    static var recommendedCalendarFetchDays: Int {
+        let leadDays = Int(ceil(maxLeadTime / 86_400))
+        return min(30, max(7, leadDays + 7))
+    }
 }
 
 enum SnoozeDurationOption: Int, CaseIterable, Identifiable, Codable {

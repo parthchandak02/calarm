@@ -30,6 +30,17 @@ case "$CMD" in
     ;;
   beta)
     "$SCRIPT_DIR/ios-doctor.sh"
+    log_step "Unit tests"
+    xcodebuild test \
+      -project "$XCODE_PROJECT" \
+      -scheme "$XCODE_SCHEME" \
+      -destination 'platform=iOS Simulator,name=iPhone 17' \
+      -only-testing:CalarmTests \
+      | xcbeautify 2>/dev/null || xcodebuild test \
+      -project "$XCODE_PROJECT" \
+      -scheme "$XCODE_SCHEME" \
+      -destination 'platform=iOS Simulator,name=iPhone 17' \
+      -only-testing:CalarmTests
     log_step "TestFlight upload (fastlane)"
     bundle exec fastlane ios upload_beta
     ;;

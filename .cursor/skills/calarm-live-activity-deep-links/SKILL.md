@@ -9,45 +9,33 @@ description: >-
 
 ## Platform behavior (not a bug)
 
-Tapping Dynamic Island / Lock Screen Live Activity **always opens the app** — Apple design. CALarm cannot disable this; use deep links to land on the right screen.
+Tapping Dynamic Island / Lock Screen Live Activity **always opens the app** — Apple design. Use deep links to land on the right occurrence.
 
 ## URL scheme
 
 ```
-calarm://event?id=<EventKit eventIdentifier>
+calarm://event?id=<eventIdentifier>&start=<unixTimestamp>
 ```
 
-- Registered in `Calarm/Info.plist` (`CFBundleURLTypes`)
-- Built by `Calarm/Utilities/CalarmDeepLink.swift`
-- Parsed in `ScheduleStore.handleIncomingURL`
+- Shared builder: `CalarmShared/CalarmDeepLink.swift`
+- `occurrenceID` = `EventOccurrenceID.rawValue` stored in `AlarmAppMetadata.eventID`
+- Legacy `?id=` only (no `start`) resolves to first matching occurrence
 
 ## Widget extension
 
-`CalarmWidgetExtensionLiveActivity.swift`:
-
-- `.widgetURL(eventURL(for: context))` on Lock Screen view and `DynamicIsland`
-- `eventID` comes from `AlarmAppMetadata` set in `AlarmScheduler`
+`CalarmWidgetExtensionLiveActivity.swift` — `.widgetURL(CalarmDeepLink.eventURL(occurrenceID:))`
 
 ## App routing
 
-1. `CalarmApp.onOpenURL` → `scheduleStore.handleIncomingURL`
-2. Sets `pendingEventDeepLinkID`
-3. `ScheduleView.presentPendingEventDeepLinkIfNeeded()` → `EventDetailView`
+1. `CalarmApp.onOpenURL` → `handleIncomingURL` → `pendingEventDeepLinkID` + `pendingDeepLinkRoute`
+2. `ScheduleView.presentPendingEventDeepLinkIfNeeded()` → `EventDetailView`
+3. Missing event → alert + clear pending link
 
-## Metadata requirement
+## Metadata migration
 
-Alarms scheduled **before** deep-link support lack `eventID` in metadata. User must toggle alarm or pull-to-refresh to reschedule.
+`occurrenceMetadataMigrationDone` flag triggers one `reschedule(force: true)` on first launch after upgrade.
 
-## OpenAlarmApp intent
+## Related skills
 
-`AlarmAppIntents.swift` — `openAppWhenRun = true` for custom alert "Open" button, **not** for Island tap (system default).
-
-## Test
-
-1. Enable alarm on upcoming event.
-2. Wait for Island countdown.
-3. Tap pill → app opens to that event's detail.
-
-## Related skill
-
-`calarm-stacked-live-activities` — only one Island pill should be visible.
+- `calarm-stacked-live-activities` — one Island pill
+- `calarm-occurrence-identity` — occurrence ID format

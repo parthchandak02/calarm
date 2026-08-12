@@ -3,6 +3,7 @@
 //  Calarm
 //
 
+import AlarmKit
 import EventKit
 import SwiftUI
 import UIKit
@@ -39,6 +40,12 @@ struct ScheduleView: View {
                     onSettings: { showingSettings = true }
                 )
 
+                if let next = store.nextUpcomingAlarm, let fire = next.nextAlarmDate {
+                    nextAlarmBanner(event: next, fireDate: fire)
+                }
+
+                statusBanners
+
                 ZStack {
                     theme.background.ignoresSafeArea()
 
@@ -62,6 +69,7 @@ struct ScheduleView: View {
                     onDefaultAlarmOffsetChange: { store.updateDefaultAlarmOffset($0) },
                     onDefaultSnoozeChange: { store.updateDefaultSnooze($0) }
                 )
+                .environmentObject(store)
                 .environmentObject(themeStore)
             }
             .navigationDestination(item: $selectedEvent) { route in
@@ -75,6 +83,33 @@ struct ScheduleView: View {
                         .tint(theme.accent)
                 }
             }
+            .confirmationDialog(
+                "Turn on all alarms?",
+                isPresented: $store.showBulkEnableConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Use 10 minutes before") {
+                    store.confirmBulkEnableWithFallback()
+                }
+                Button("Cancel", role: .cancel) {
+                    store.cancelBulkEnableConfirmation()
+                }
+            } message: {
+                Text("Your default is “No alarm.” Turn on all upcoming events with a 10-minute reminder?")
+            }
+            .alert(
+                "Event unavailable",
+                isPresented: Binding(
+                    get: { store.deepLinkFailureMessage != nil },
+                    set: { if !$0 { store.acknowledgeEventDeepLink() } }
+                )
+            ) {
+                Button("OK", role: .cancel) {
+                    store.acknowledgeEventDeepLink()
+                }
+            } message: {
+                Text(store.deepLinkFailureMessage ?? "")
+            }
         }
         .font(CalarmFont.body)
         .accessibilityIdentifier("schedule.screen")
@@ -85,17 +120,102 @@ struct ScheduleView: View {
         .onChange(of: store.pendingEventDeepLinkID) { _, _ in
             presentPendingEventDeepLinkIfNeeded()
         }
-        .onChange(of: store.events.count) { _, _ in
+        .onChange(of: store.eventsIdentityToken) { _, _ in
             presentPendingEventDeepLinkIfNeeded()
+            store.resolveDeepLinkIfNeeded()
+        }
+        .onChange(of: store.isLoading) { _, isLoading in
+            if !isLoading {
+                store.resolveDeepLinkIfNeeded()
+            }
+        }
+    }
+
+    private func nextAlarmBanner(event: ScheduleEvent, fireDate: Date) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "alarm.fill")
+                .font(.caption)
+                .foregroundStyle(theme.accent)
+            Text("Next: \(event.title)")
+                .font(CalarmFont.captionSemibold)
+                .lineLimit(1)
+            Text("·")
+                .foregroundStyle(theme.textSecondary)
+            Text(fireDate, style: .relative)
+                .font(CalarmFont.caption)
+                .foregroundStyle(theme.textSecondary)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, CalarmTheme.rowPaddingH)
+        .padding(.vertical, 8)
+        .background(theme.accent.opacity(0.08))
+    }
+
+    @ViewBuilder
+    private var statusBanners: some View {
+        VStack(spacing: 0) {
+            if store.alarmAuthorization == .denied {
+                permissionBanner(
+                    title: "Alarm permission is off",
+                    message: "Enable Alarms for CALarm in Settings to schedule countdown alarms.",
+                    actionTitle: "Open Settings"
+                ) {
+                    openSettings()
+                }
+            }
+
+            if let failure = store.scheduleFailures.first {
+                permissionBanner(
+                    title: "Couldn’t schedule an alarm",
+                    message: "\(failure.eventTitle): \(failure.message)",
+                    actionTitle: "Dismiss"
+                ) {
+                    store.clearScheduleFailures()
+                }
+            }
+        }
+    }
+
+    private func permissionBanner(
+        title: String,
+        message: String,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(CalarmFont.captionSemibold)
+                .foregroundStyle(theme.textPrimary)
+            Text(message)
+                .font(CalarmFont.caption)
+                .foregroundStyle(theme.textSecondary)
+            Button(actionTitle, action: action)
+                .font(CalarmFont.captionSemibold)
+                .foregroundStyle(theme.accent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, CalarmTheme.rowPaddingH)
+        .padding(.vertical, 10)
+        .background(theme.surfaceStroke.opacity(0.35))
+    }
+
+    private func openSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
         }
     }
 
     private func presentPendingEventDeepLinkIfNeeded() {
-        guard let eventID = store.pendingEventDeepLinkID,
-              store.event(with: eventID) != nil else {
-            return
-        }
-        selectedEvent = EventRoute(id: eventID)
+        guard let pendingID = store.pendingEventDeepLinkID else { return }
+        let resolved: ScheduleEvent? = {
+            if let route = store.pendingDeepLinkRoute {
+                return store.event(matching: route)
+            }
+            return store.event(with: pendingID)
+        }()
+        guard let event = resolved else { return }
+        selectedEvent = EventRoute(id: event.id)
         store.acknowledgeEventDeepLink()
     }
 
@@ -119,6 +239,7 @@ struct ScheduleView: View {
                         EventRow(
                             event: event,
                             isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
+                            hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
                             onToggle: { store.toggleAlarm(for: event.id) },
                             onTap: { selectedEvent = EventRoute(id: event.id) }
                         )
@@ -162,13 +283,9 @@ struct ScheduleView: View {
                 .padding(.horizontal, 24)
 
             if store.authorizationStatus == .denied {
-                Button("Open Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(theme.accent)
+                Button("Open Settings", action: openSettings)
+                    .buttonStyle(.borderedProminent)
+                    .tint(theme.accent)
             } else {
                 Button("Allow Calendar Access") {
                     Task { await store.requestCalendarAccess() }
@@ -184,7 +301,7 @@ struct ScheduleView: View {
         if store.authorizationStatus == .denied {
             return "Enable calendar access in Settings to see your schedule and set event alarms."
         }
-        return "CALarm shows upcoming calendar events for the next 7 days. Turn on an alarm per event when you want a reminder."
+        return "CALarm shows upcoming calendar events. Turn on an alarm per event when you want a reminder."
     }
 
     private var emptyState: some View {
@@ -195,7 +312,7 @@ struct ScheduleView: View {
             Text("No upcoming events")
                 .font(CalarmFont.headline)
                 .foregroundStyle(theme.textPrimary)
-            Text("Nothing scheduled in the next 7 days.")
+            Text("Nothing scheduled in the selected calendar window.")
                 .font(CalarmFont.subheadline)
                 .foregroundStyle(theme.textSecondary)
         }
@@ -208,6 +325,7 @@ private struct EventRow: View {
 
     let event: ScheduleEvent
     let isNextAlarm: Bool
+    let hasTooSoonWarning: Bool
     let onToggle: () -> Void
     let onTap: () -> Void
 
@@ -258,6 +376,12 @@ private struct EventRow: View {
                         Text("Past")
                             .font(CalarmFont.captionSemibold)
                             .foregroundStyle(.red.opacity(0.75))
+                    }
+
+                    if hasTooSoonWarning {
+                        Text("Too soon")
+                            .font(CalarmFont.captionSemibold)
+                            .foregroundStyle(.orange)
                     }
                 }
             }
