@@ -1,3 +1,1 @@
-Initial App Store release of CALarm — calendar-aware AlarmKit countdown alarms for iOS 26.
-
-Build 20260726: Fix stacked Dynamic Island timers and missed alarms — full reschedule on every change, only one Live Activity for next alarm.
+Build 20260812: Only the next upcoming alarm shows a lock-screen countdown; other event alarms stay silent until they fire. Smarter reschedule avoids wiping alarms on every app open. Alarms still break through Do Not Disturb like the Clock app.
