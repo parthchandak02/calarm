@@ -10,6 +10,8 @@ Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the a
 | [calarm-build-version-stamp](calarm-build-version-stamp/SKILL.md) | CFBundleVersion date format, Settings build display |
 | [calarm-testflight-fastlane](calarm-testflight-fastlane/SKILL.md) | TestFlight upload, ASC API, fastlane lanes |
 | [calarm-live-activity-deep-links](calarm-live-activity-deep-links/SKILL.md) | Island tap behavior, `calarm://` deep links |
+| [calarm-occurrence-identity](calarm-occurrence-identity/SKILL.md) | Recurring events, per-occurrence IDs, preference migration |
+| [calarm-trust-diagnostics](calarm-trust-diagnostics/SKILL.md) | Permission banners, test alarm, schedule failures |
 | [calarm-release-pipeline](calarm-release-pipeline/SKILL.md) | ship.sh, ios-doctor, pipeline bootstrap |
 | [calarm-app-icon-alpha](calarm-app-icon-alpha/SKILL.md) | App icon transparency rejection, logo processing |
 

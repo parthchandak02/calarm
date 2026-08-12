@@ -3,15 +3,20 @@
 //  Calarm
 //
 
+import AlarmKit
+import EventKit
 import SwiftUI
 
 struct SettingsSheet: View {
     @EnvironmentObject private var themeStore: ThemeStore
+    @EnvironmentObject private var store: ScheduleStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var defaultAlarmOffset: AlarmOffsetOption
     @State private var defaultSnooze: SnoozeDurationOption
+    @State private var testAlarmMessage: String?
+    @State private var isSchedulingTestAlarm = false
 
     private let onDefaultAlarmOffsetChange: (AlarmOffsetOption) -> Void
     private let onDefaultSnoozeChange: (SnoozeDurationOption) -> Void
@@ -32,10 +37,20 @@ struct SettingsSheet: View {
         themeStore.theme(colorScheme: colorScheme)
     }
 
+    private var isSimulator: Bool {
+        #if targetEnvironment(simulator)
+        true
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
+                    diagnosticsSection
+                    calendarsSection
                     defaultAlarmSection
                     snoozeSection
                     appearanceSection
@@ -52,15 +67,6 @@ struct SettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .calarmToolbarChrome(theme: theme)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 2) {
-                        Text("Settings")
-                            .font(CalarmFont.bodyMedium)
-                        Text("Build \(AppBuildInfo.formattedBuildStamp)")
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(theme.textSecondary)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .font(CalarmFont.bodyMedium)
@@ -75,6 +81,154 @@ struct SettingsSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(theme.background)
         .accessibilityIdentifier("settings.sheet")
+        .alert("Test alarm", isPresented: Binding(
+            get: { testAlarmMessage != nil },
+            set: { if !$0 { testAlarmMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { testAlarmMessage = nil }
+        } message: {
+            Text(testAlarmMessage ?? "")
+        }
+    }
+
+    private var calendarsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader(title: "Calendars", theme: theme)
+
+            Text("Choose which calendars CALarm reads for upcoming events.")
+                .font(CalarmFont.subheadline)
+                .foregroundStyle(theme.textSecondary)
+
+            if store.calendarService.availableCalendars.isEmpty {
+                Text(store.authorizationStatus == .fullAccess ? "No calendars found." : "Grant calendar access to choose calendars.")
+                    .font(CalarmFont.caption)
+                    .foregroundStyle(theme.textSecondary)
+            } else {
+                SettingsOptionList(theme: theme) {
+                    ForEach(Array(store.calendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
+                        Toggle(isOn: Binding(
+                            get: { calendar.isEnabled },
+                            set: { enabled in
+                                store.calendarService.setCalendarEnabled(calendar.id, enabled: enabled)
+                                Task { await store.reload() }
+                            }
+                        )) {
+                            Text(calendar.title)
+                                .font(CalarmFont.bodyMedium)
+                                .foregroundStyle(theme.textPrimary)
+                        }
+                        .tint(theme.accent)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+
+                        if index < store.calendarService.availableCalendars.count - 1 {
+                            Divider().overlay(theme.surfaceStroke)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var diagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader(title: "Diagnostics", theme: theme)
+
+            SettingsOptionList(theme: theme) {
+                diagnosticRow("Calendar", value: calendarStatusLabel)
+                Divider().overlay(theme.surfaceStroke)
+                diagnosticRow("Alarms", value: alarmStatusLabel)
+                Divider().overlay(theme.surfaceStroke)
+                diagnosticRow("Next ring", value: nextRingLabel)
+                Divider().overlay(theme.surfaceStroke)
+                diagnosticRow("Last reschedule", value: lastRescheduleLabel)
+
+                Divider().overlay(theme.surfaceStroke)
+
+                Button {
+                    guard !isSimulator else {
+                        testAlarmMessage = "Test alarms must be run on a physical iPhone — the Simulator cannot ring."
+                        return
+                    }
+                    isSchedulingTestAlarm = true
+                    Task {
+                        testAlarmMessage = await store.scheduleTestAlarm()
+                            ?? "Test alarm scheduled — it should ring in about 8 seconds."
+                        isSchedulingTestAlarm = false
+                    }
+                } label: {
+                    HStack {
+                        Text(isSchedulingTestAlarm ? "Scheduling…" : "Test alarm (8 seconds)")
+                            .font(CalarmFont.bodyMedium)
+                            .foregroundStyle(theme.textPrimary)
+                        Spacer()
+                        Image(systemName: "bell.badge")
+                            .foregroundStyle(isSimulator ? theme.textSecondary : theme.accent)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                }
+                .disabled(isSchedulingTestAlarm)
+                .accessibilityIdentifier("settings.testAlarm")
+            }
+
+            if isSimulator {
+                Text("Alarm sound and AlarmKit behavior require a physical device.")
+                    .font(CalarmFont.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+        }
+    }
+
+    private func diagnosticRow(_ title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(CalarmFont.bodyMedium)
+                .foregroundStyle(theme.textPrimary)
+            Spacer()
+            Text(value)
+                .font(CalarmFont.caption)
+                .foregroundStyle(theme.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+
+    private var calendarStatusLabel: String {
+        switch store.authorizationStatus {
+        case .fullAccess: "Allowed"
+        case .denied: "Denied"
+        case .restricted: "Restricted"
+        case .writeOnly: "Write only"
+        @unknown default: "Unknown"
+        }
+    }
+
+    private var alarmStatusLabel: String {
+        switch store.alarmAuthorization {
+        case .authorized: "Allowed"
+        case .denied: "Denied"
+        case .notDetermined: "Not asked"
+        @unknown default: "Unknown"
+        }
+    }
+
+    private var nextRingLabel: String {
+        guard let next = store.nextUpcomingAlarm, let fire = next.nextAlarmDate else {
+            return "None scheduled"
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return "\(next.title) · \(formatter.string(from: fire))"
+    }
+
+    private var lastRescheduleLabel: String {
+        guard let summary = store.lastRescheduleSummary else { return "—" }
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        return "\(formatter.string(from: summary.finishedAt)) · \(summary.scheduledCount) ok"
     }
 
     private var appearanceSection: some View {
