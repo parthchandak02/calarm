@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		G00100012E60000100FAAD85 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = G00100022E60000100FAAD85 /* GoogleSignIn */; };
 		D5333C0D2E42902300FAAD85 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5333C0C2E42902200FAAD85 /* WidgetKit.framework */; };
 		D5333C0F2E42902300FAAD85 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5333C0E2E42902300FAAD85 /* SwiftUI.framework */; };
 		D5333C212E42902400FAAD85 /* CalarmWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D5333C0A2E42902200FAAD85 /* CalarmWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -115,6 +116,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				G00100012E60000100FAAD85 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -200,6 +202,7 @@
 			);
 			name = Calarm;
 			packageProductDependencies = (
+				G00100022E60000100FAAD85 /* GoogleSignIn */,
 			);
 			productName = Calarm;
 			productReference = D5333BAA2E41600E00FAAD85 /* Calarm.app */;
@@ -310,6 +313,9 @@
 			productRefGroup = D5333BAB2E41600E00FAAD85 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				G00100032E60000100FAAD85 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			targets = (
 				D5333BA92E41600E00FAAD85 /* Calarm */,
 				D5333C092E42902200FAAD85 /* CalarmWidgetExtension */,
@@ -528,7 +534,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Calarm/Calarm.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -562,7 +568,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Calarm/Calarm.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -595,7 +601,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CalarmWidgetExtension/Info.plist;
@@ -625,7 +631,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CalarmWidgetExtension/Info.plist;
@@ -653,7 +659,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -671,7 +677,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -690,7 +696,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -709,7 +715,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260812.1541;
+				CURRENT_PROJECT_VERSION = 20260812.1547;
 				DEVELOPMENT_TEAM = M49XY93NTP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -772,6 +778,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		G00100032E60000100FAAD85 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		G00100022E60000100FAAD85 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = G00100032E60000100FAAD85 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D5333BA22E41600E00FAAD85 /* Project object */;
 }

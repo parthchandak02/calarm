@@ -7,6 +7,7 @@ import AlarmKit
 import Combine
 import EventKit
 import Foundation
+import UIKit
 
 @MainActor
 final class ScheduleStore: ObservableObject {
@@ -26,6 +27,7 @@ final class ScheduleStore: ObservableObject {
     @Published private(set) var eventsIdentityToken: String = ""
 
     let calendarService = CalendarService()
+    let googleCalendarService = GoogleCalendarService()
     private let preferences = EventAlarmPreferences()
     private let alarmScheduler = AlarmScheduler()
     private let rescheduleCoordinator = RescheduleCoordinator()
@@ -70,6 +72,8 @@ final class ScheduleStore: ObservableObject {
             .assign(to: &$authorizationStatus)
 
         calendarService.$isLoading
+            .combineLatest(googleCalendarService.$isLoading)
+            .map { $0 || $1 }
             .receive(on: DispatchQueue.main)
             .assign(to: &$isLoading)
 
@@ -103,7 +107,11 @@ final class ScheduleStore: ObservableObject {
         await requestAlarmAuthorizationIfNeeded()
         await runMetadataMigrationIfNeeded()
 
-        if authorizationStatus == .fullAccess {
+        if googleCalendarService.isConnected {
+            try? await googleCalendarService.refreshCalendarList()
+        }
+
+        if authorizationStatus == .fullAccess || googleCalendarService.isConnected {
             await reload()
         }
     }
@@ -117,44 +125,85 @@ final class ScheduleStore: ObservableObject {
 
     func refreshOnForeground() async {
         calendarService.checkAuthorizationStatus()
+        calendarService.refreshRemoteSourcesIfNeeded()
         alarmAuthorization = AlarmManager.shared.authorizationState
-        if authorizationStatus == .fullAccess {
+        if authorizationStatus == .fullAccess || googleCalendarService.isConnected {
             await reload()
         }
     }
 
+    func connectGoogleCalendar(from viewController: UIViewController) async throws {
+        try await googleCalendarService.connect(presenting: viewController)
+        await reload()
+    }
+
+    func disconnectGoogleCalendar() {
+        googleCalendarService.disconnect()
+        Task { await reload() }
+    }
+
     func reload() async {
-        guard authorizationStatus == .fullAccess else { return }
+        let canLoadEventKit = authorizationStatus == .fullAccess
+        let canLoadGoogle = googleCalendarService.isConnected
+        guard canLoadEventKit || canLoadGoogle else { return }
 
         reloadTask?.cancel()
         let task = Task {
-            calendarService.refreshCalendarList()
+            if canLoadEventKit {
+                calendarService.refreshCalendarList()
+            }
+
             let previousIDs = Set(events.map(\.id))
             let fetchDays = AlarmOffsetOption.recommendedCalendarFetchDays
-            let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
-            preferences.migrateLegacyKeys(for: ekEvents)
-            let currentIDs = Set(ekEvents.compactMap { ekEvent -> String? in
-                guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
-                return EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate).rawValue
-            })
 
-            events = ekEvents.compactMap { ekEvent in
-                guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
-                let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)
-                let trimmed = ekEvent.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                let title = trimmed.isEmpty ? "Untitled" : trimmed
-                return ScheduleEvent(
-                    id: occurrence.rawValue,
-                    title: title,
-                    startDate: ekEvent.startDate,
-                    endDate: ekEvent.endDate,
-                    location: ekEvent.location,
-                    calendarTitle: ekEvent.calendar.title,
-                    alarmOffsets: preferences.alarmOffsets(for: occurrence.rawValue)
-                )
+            var mergedEvents: [ScheduleEvent] = []
+
+            if canLoadEventKit {
+                let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
+                preferences.migrateLegacyKeys(for: ekEvents)
+                let googleConnected = canLoadGoogle
+                mergedEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
+                    guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
+                    if googleConnected, calendarService.isGoogleMirroredCalendar(ekEvent.calendar) {
+                        return nil
+                    }
+                    let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)
+                    let trimmed = ekEvent.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let title = trimmed.isEmpty ? "Untitled" : trimmed
+                    return ScheduleEvent(
+                        id: occurrence.rawValue,
+                        title: title,
+                        startDate: ekEvent.startDate,
+                        endDate: ekEvent.endDate,
+                        location: ekEvent.location,
+                        calendarTitle: ekEvent.calendar.title,
+                        source: .eventKit,
+                        alarmOffsets: preferences.alarmOffsets(for: occurrence.rawValue)
+                    )
+                })
             }
+
+            if canLoadGoogle {
+                let googleEvents = await googleCalendarService.fetchUpcomingEvents(days: fetchDays)
+                mergedEvents.append(contentsOf: googleEvents.map { googleEvent in
+                    ScheduleEvent(
+                        id: googleEvent.occurrenceID,
+                        title: googleEvent.title,
+                        startDate: googleEvent.startDate,
+                        endDate: googleEvent.endDate,
+                        location: googleEvent.location,
+                        calendarTitle: googleEvent.calendarTitle,
+                        source: .google,
+                        alarmOffsets: preferences.alarmOffsets(for: googleEvent.occurrenceID)
+                    )
+                })
+            }
+
+            mergedEvents.sort { $0.startDate < $1.startDate }
+            events = mergedEvents
             refreshEventsIdentityToken()
 
+            let currentIDs = Set(mergedEvents.map(\.id))
             for removedID in previousIDs.subtracting(currentIDs) {
                 preferences.removeOverride(for: removedID)
             }
@@ -267,7 +316,7 @@ final class ScheduleStore: ObservableObject {
         if event(with: pendingID) != nil {
             return
         }
-        if !isLoading, authorizationStatus == .fullAccess {
+        if !isLoading, authorizationStatus == .fullAccess || googleCalendarService.isConnected {
             deepLinkFailureMessage = "This event isn’t on your calendar anymore."
             acknowledgeEventDeepLink()
         }
