@@ -314,6 +314,11 @@ final class ScheduleStore: ObservableObject {
         scheduleFailures = []
     }
 
+    func refreshAfterThemeChange() {
+        lastScheduledFingerprint = nil
+        requestReschedule(force: true)
+    }
+
     private func applySetAllAlarmsEnabled(_ enabled: Bool, offset: AlarmOffsetOption) {
         var changed = false
 

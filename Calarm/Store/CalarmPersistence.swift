@@ -11,7 +11,7 @@ import Foundation
 
 enum CalarmPersistence {
     /// Bump when migration steps are added.
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
 
     enum Key {
         static let storageSchemaVersion = "calarm.storage.schemaVersion"
@@ -21,6 +21,8 @@ enum CalarmPersistence {
         static let defaultSnoozeMinutes = "calarm.defaultSnoozeMinutes"
         static let eventOverrides = "calarm.eventOverrides"
         static let legacyDefaultOffsetMinutes = "calarm.defaultOffsetMinutes"
+        static let occurrenceMetadataMigrationDone = "calarm.migration.occurrenceMetadata"
+        static let enabledCalendarIDs = "calarm.enabledCalendarIDs"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.
@@ -74,6 +76,14 @@ enum CalarmPersistence {
 
     static func remove(forKey key: String) {
         defaults.removeObject(forKey: key)
+    }
+
+    static func bool(forKey key: String) -> Bool {
+        defaults.bool(forKey: key)
+    }
+
+    static func setBool(_ value: Bool, forKey key: String) {
+        defaults.set(value, forKey: key)
     }
 
     private static func migrateLegacyDefaultOffsetMinutes() {

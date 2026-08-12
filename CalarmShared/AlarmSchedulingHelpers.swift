@@ -28,16 +28,21 @@ enum AlarmSchedulingHelpers {
         return base.addingTimeInterval(TimeInterval(collisionIndex * 2))
     }
 
-    /// Stable fingerprint of desired AlarmKit schedules (occurrence, offset, fire time, snooze).
+    /// Stable fingerprint of desired AlarmKit schedules (occurrence, offset, fire time, snooze, accent).
     static func schedulingFingerprint(
         instances: [(occurrenceID: String, offsetRawValue: String, fireDate: Date)],
         nextLiveActivityKey: String?,
-        snoozeRawValue: String
+        snoozeRawValue: String,
+        accentRawValue: String
     ) -> String {
         let rows = instances.map {
             "\($0.occurrenceID).\($0.offsetRawValue).\(Int($0.fireDate.timeIntervalSince1970))"
         }.sorted()
-        return (rows + ["la:\(nextLiveActivityKey ?? "none")", "snooze:\(snoozeRawValue)"]).joined(separator: "|")
+        return (rows + [
+            "la:\(nextLiveActivityKey ?? "none")",
+            "snooze:\(snoozeRawValue)",
+            "accent:\(accentRawValue)"
+        ]).joined(separator: "|")
     }
 
     static func collisionGroupsSortedByFireDate(

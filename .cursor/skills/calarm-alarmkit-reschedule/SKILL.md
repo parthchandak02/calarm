@@ -15,41 +15,48 @@ description: >-
 ## Correct pattern
 
 ```swift
-await alarmScheduler.reschedule(
-    events: events,
-    snoozeSeconds: defaultSnooze.seconds,
-    force: true
-)
+rescheduleCoordinator.requestReschedule {
+    await performReschedule(force: true)
+}
 ```
 
-Call from: `reload()`, `toggleAlarm`, `addAlarmOffset`, `removeAlarmOffset`, `updateDefaultAlarmOffset`, `setAllAlarmsEnabled`, `updateDefaultSnooze`.
+Underlying call:
+
+```swift
+await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.seconds, force: true)
+```
 
 ## Live Activity assignment
 
 - Compute `nextLiveActivityKey` from **all** instances sorted by `fireDate`.
 - Only the earliest upcoming instance gets `withLiveActivity: true`.
-- All others get alert-only `AlarmPresentation` (no countdown Live Activity UI).
+- All others get alert-only presentation.
 
 ## Guard behavior
 
-- `hasAlertingAlarms()` — skip reschedule **only** while `.alerting` (actively ringing).
-- **Do not** block on `.countdown` — calendar changes must reschedule during countdown.
+- `hasAlertingAlarms()` — skip reschedule **only** while `.alerting`.
+- **Do not** block on `.countdown`.
 
-## Cancel removed events
+## Coordinator + alarmUpdates
 
-On `reload()`, call `cancelRemoved(eventIDs:)` for calendar IDs that disappeared before rescheduling.
+- `RescheduleCoordinator` serializes overlapping reschedule/reload tasks.
+- `AlarmUpdatesObserver` listens to `AlarmManager.shared.alarmUpdates`.
+
+## Collision policy
+
+`AlarmSchedulingHelpers.collisionGroupsSortedByFireDate` staggers duplicate fire times by 2s.
 
 ## Stable IDs
 
-Alarm UUID = SHA256 prefix of `calarm.{eventID}.{offset.rawValue}`. Required for idempotent cancel/schedule.
+`calarm.{occurrenceID}.{offset}` via `EventOccurrenceID.rawValue`.
 
 ## Files
 
 - `Calarm/Services/AlarmScheduler.swift`
+- `Calarm/Services/RescheduleCoordinator.swift`
 - `Calarm/Store/ScheduleStore.swift`
-- `Calarm/Intents/AlarmAppIntents.swift`
 
 ## Anti-patterns
 
-- `reschedule(event:among:)` that only touches one event (causes stacked Live Activities).
-- `reload()` with `force: false` while any countdown exists (silently skips updates).
+- Partial per-event reschedule (stacked Live Activities).
+- Raw `Task { reschedule }` without coordinator (races).

@@ -7,16 +7,25 @@ import Combine
 import EventKit
 import Foundation
 
+struct CalendarSummary: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let colorHex: String
+    var isEnabled: Bool
+}
+
 @MainActor
 final class CalendarService: ObservableObject {
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var isLoading = false
+    @Published private(set) var availableCalendars: [CalendarSummary] = []
 
     private let eventStore = EKEventStore()
     private var reloadTask: Task<Void, Never>?
 
     init() {
         checkAuthorizationStatus()
+        refreshCalendarList()
     }
 
     deinit {
@@ -31,11 +40,37 @@ final class CalendarService: ObservableObject {
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
             authorizationStatus = granted ? .fullAccess : .denied
+            if granted {
+                refreshCalendarList()
+            }
             return granted
         } catch {
             authorizationStatus = .denied
             return false
         }
+    }
+
+    func refreshCalendarList() {
+        guard authorizationStatus == .fullAccess else {
+            availableCalendars = []
+            return
+        }
+        availableCalendars = eventStore.calendars(for: .event)
+            .map { calendar in
+                CalendarSummary(
+                    id: calendar.calendarIdentifier,
+                    title: calendar.title,
+                    colorHex: calendar.cgColor?.components?.description ?? "",
+                    isEnabled: CalendarFilterPreferences.isEnabled(calendarID: calendar.calendarIdentifier)
+                )
+            }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    func setCalendarEnabled(_ calendarID: String, enabled: Bool) {
+        let allIDs = eventStore.calendars(for: .event).map(\.calendarIdentifier)
+        CalendarFilterPreferences.setEnabled(enabled, calendarID: calendarID, allCalendarIDs: allIDs)
+        refreshCalendarList()
     }
 
     func fetchUpcomingEvents(days: Int = 7) async -> [EKEvent] {
@@ -46,12 +81,20 @@ final class CalendarService: ObservableObject {
 
         let start = Date()
         let end = Calendar.current.date(byAdding: .day, value: days, to: start) ?? start
-        let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: nil)
+        let calendars = filteredCalendars()
+        let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: calendars)
 
         return eventStore
             .events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
+    }
+
+    private func filteredCalendars() -> [EKCalendar]? {
+        let enabled = CalendarFilterPreferences.enabledCalendarIDs
+        if enabled.isEmpty { return nil }
+        let calendars = eventStore.calendars(for: .event).filter { enabled.contains($0.calendarIdentifier) }
+        return calendars.isEmpty ? nil : calendars
     }
 
     func onCalendarChanged(_ handler: @escaping () async -> Void) -> AnyCancellable {

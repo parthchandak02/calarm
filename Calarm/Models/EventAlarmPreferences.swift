@@ -3,6 +3,7 @@
 //  Calarm
 //
 
+import EventKit
 import Foundation
 
 struct EventOverride: Codable, Equatable {
@@ -48,9 +49,30 @@ final class EventAlarmPreferences {
         }
     }
 
-    func alarmOffsets(for eventID: String) -> [AlarmOffsetOption] {
-        let override = overrides(for: eventID)
-        let hasStoredOverride = allOverrides()[eventID] != nil
+    /// Copy legacy bare `eventIdentifier` overrides to each in-window occurrence, then remove legacy keys.
+    func migrateLegacyKeys(for ekEvents: [EKEvent]) {
+        var all = allOverrides()
+        let legacyKeys = all.keys.filter { EventOccurrenceID.isLegacyBareIdentifier($0) }
+        guard !legacyKeys.isEmpty else { return }
+
+        for legacyKey in legacyKeys {
+            guard let override = all[legacyKey] else { continue }
+            let matching = ekEvents.filter { $0.eventIdentifier == legacyKey }
+            for ekEvent in matching {
+                guard let eventIdentifier = ekEvent.eventIdentifier else { continue }
+                let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)
+                if all[occurrence.rawValue] == nil {
+                    all[occurrence.rawValue] = override
+                }
+            }
+            all.removeValue(forKey: legacyKey)
+        }
+        persist(all)
+    }
+
+    func alarmOffsets(for occurrenceID: String) -> [AlarmOffsetOption] {
+        let override = overrides(for: occurrenceID)
+        let hasStoredOverride = allOverrides()[occurrenceID] != nil
 
         if let rawValues = override.alarmOffsets {
             return rawValues.compactMap(AlarmOffsetOption.init(rawValue:))
@@ -74,8 +96,8 @@ final class EventAlarmPreferences {
         return [defaultAlarmOffset]
     }
 
-    func setAlarmOffsets(_ offsets: [AlarmOffsetOption], for eventID: String) {
-        var override = overrides(for: eventID)
+    func setAlarmOffsets(_ offsets: [AlarmOffsetOption], for occurrenceID: String) {
+        var override = overrides(for: occurrenceID)
         override.legacyEnabled = nil
         override.legacyOffsetMinutes = nil
         let unique = offsets.reduce(into: [AlarmOffsetOption]()) { result, offset in
@@ -84,40 +106,40 @@ final class EventAlarmPreferences {
             }
         }
         override.alarmOffsets = unique.map(\.rawValue)
-        save(override, for: eventID)
+        save(override, for: occurrenceID)
     }
 
-    func addAlarmOffset(_ offset: AlarmOffsetOption, for eventID: String) {
-        var current = alarmOffsets(for: eventID)
+    func addAlarmOffset(_ offset: AlarmOffsetOption, for occurrenceID: String) {
+        var current = alarmOffsets(for: occurrenceID)
         guard !current.contains(offset) else { return }
         current.append(offset)
-        setAlarmOffsets(current, for: eventID)
+        setAlarmOffsets(current, for: occurrenceID)
     }
 
-    func removeAlarmOffset(_ offset: AlarmOffsetOption, for eventID: String) {
-        let current = alarmOffsets(for: eventID).filter { $0 != offset }
-        setAlarmOffsets(current, for: eventID)
+    func removeAlarmOffset(_ offset: AlarmOffsetOption, for occurrenceID: String) {
+        let current = alarmOffsets(for: occurrenceID).filter { $0 != offset }
+        setAlarmOffsets(current, for: occurrenceID)
     }
 
-    func removeOverride(for eventID: String) {
+    func removeOverride(for occurrenceID: String) {
         var all = allOverrides()
-        all.removeValue(forKey: eventID)
+        all.removeValue(forKey: occurrenceID)
         persist(all)
     }
 
-    private func overrides(for eventID: String) -> EventOverride {
-        allOverrides()[eventID] ?? EventOverride()
+    private func overrides(for occurrenceID: String) -> EventOverride {
+        allOverrides()[occurrenceID] ?? EventOverride()
     }
 
-    private func save(_ override: EventOverride, for eventID: String) {
+    private func save(_ override: EventOverride, for occurrenceID: String) {
         var all = allOverrides()
         let isEmpty = override.alarmOffsets == nil
             && override.legacyEnabled == nil
             && override.legacyOffsetMinutes == nil
         if isEmpty {
-            all.removeValue(forKey: eventID)
+            all.removeValue(forKey: occurrenceID)
         } else {
-            all[eventID] = override
+            all[occurrenceID] = override
         }
         persist(all)
     }

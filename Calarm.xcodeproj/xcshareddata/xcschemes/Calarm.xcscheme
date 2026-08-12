@@ -41,6 +41,17 @@
                ReferencedContainer = "container:Calarm.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E2C100012E52000100FAAD85"
+               BuildableName = "CalarmTests.xctest"
+               BlueprintName = "CalarmTests"
+               ReferencedContainer = "container:Calarm.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
