@@ -121,8 +121,9 @@ final class AlarmScheduler {
                 secondaryButton: snoozeButton,
                 secondaryButtonBehavior: .countdown
             )
-            let pauseButton = AlarmButton(text: "Pause", textColor: .red, systemImageName: "pause")
-            let resumeButton = AlarmButton(text: "Resume", textColor: .red, systemImageName: "play")
+            let accent = resolvedAccentColor()
+            let pauseButton = AlarmButton(text: "Pause", textColor: accent, systemImageName: "pause")
+            let resumeButton = AlarmButton(text: "Resume", textColor: accent, systemImageName: "play")
             let presentation = AlarmPresentation(
                 alert: alertPresentation,
                 countdown: AlarmPresentation.Countdown(title: "CALarm Test", pauseButton: pauseButton),
@@ -168,10 +169,12 @@ final class AlarmScheduler {
         let rows = desired.map {
             ($0.occurrenceID, $0.offset.rawValue, $0.fireDate)
         }
+        let accentRaw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent) ?? CalarmAccent.orange.rawValue
         return AlarmSchedulingHelpers.schedulingFingerprint(
             instances: rows,
             nextLiveActivityKey: nextKey,
-            snoozeRawValue: String(Int(snoozeSeconds))
+            snoozeRawValue: String(Int(snoozeSeconds)),
+            accentRawValue: accentRaw
         )
     }
 
@@ -285,9 +288,10 @@ final class AlarmScheduler {
             )
 
             let presentation: AlarmPresentation
+            let accent = resolvedAccentColor()
             if withLiveActivity {
-                let pauseButton = AlarmButton(text: "Pause", textColor: .red, systemImageName: "pause")
-                let resumeButton = AlarmButton(text: "Resume", textColor: .red, systemImageName: "play")
+                let pauseButton = AlarmButton(text: "Pause", textColor: accent, systemImageName: "pause")
+                let resumeButton = AlarmButton(text: "Resume", textColor: accent, systemImageName: "play")
                 presentation = AlarmPresentation(
                     alert: alertPresentation,
                     countdown: AlarmPresentation.Countdown(
@@ -347,11 +351,7 @@ final class AlarmScheduler {
     }
 
     private func resolvedAccentColor() -> Color {
-        if let raw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent),
-           let accent = CalarmAccent(rawValue: raw) {
-            return accent.color
-        }
-        return CalarmAccent.orange.color
+        CalarmAccent.resolved(from: CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent)).color
     }
 
     private func stableAlarmID(for occurrenceID: String, offset: AlarmOffsetOption) -> UUID {

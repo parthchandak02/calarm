@@ -27,13 +27,35 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         let first = AlarmSchedulingHelpers.schedulingFingerprint(
             instances: instances,
             nextLiveActivityKey: "a.tenMinutes",
-            snoozeRawValue: "nineMinutes"
+            snoozeRawValue: "540",
+            accentRawValue: "coral"
         )
         let second = AlarmSchedulingHelpers.schedulingFingerprint(
             instances: instances,
             nextLiveActivityKey: nil,
-            snoozeRawValue: "nineMinutes"
+            snoozeRawValue: "540",
+            accentRawValue: "coral"
         )
         XCTAssertNotEqual(first, second)
+    }
+
+    func testSchedulingFingerprintIncludesAccent() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let instances = [
+            (occurrenceID: "a", offsetRawValue: "tenMinutes", fireDate: base)
+        ]
+        let coral = AlarmSchedulingHelpers.schedulingFingerprint(
+            instances: instances,
+            nextLiveActivityKey: "a.tenMinutes",
+            snoozeRawValue: "540",
+            accentRawValue: "coral"
+        )
+        let violet = AlarmSchedulingHelpers.schedulingFingerprint(
+            instances: instances,
+            nextLiveActivityKey: "a.tenMinutes",
+            snoozeRawValue: "540",
+            accentRawValue: "violet"
+        )
+        XCTAssertNotEqual(coral, violet)
     }
 }

@@ -1,170 +1,130 @@
+//
+//  CalarmWidgetExtensionLiveActivity.swift
+//  CalarmWidgetExtension
+//
+
 import ActivityKit
 import AlarmKit
 import SwiftUI
 import WidgetKit
 
-// MARK: - AlarmKit Live Activity Implementation (Official WWDC 2025 Pattern)
-
-// AlarmMetadata for our alarm app - must match exactly with main app
-nonisolated struct AlarmAppMetadata: AlarmMetadata, Sendable, Codable {
-    let title: String
-    let offsetLabel: String?
-    let eventID: String?
-
-    nonisolated init(title: String = "Alarm", offsetLabel: String? = nil, eventID: String? = nil) {
-        self.title = title
-        self.offsetLabel = offsetLabel
-        self.eventID = eventID
-    }
-}
-
-private enum CalarmLiveActivityLink {
-    static func eventURL(eventID: String) -> URL? {
-        guard !eventID.isEmpty else { return nil }
-        var components = URLComponents()
-        components.scheme = "calarm"
-        components.host = "event"
-        components.queryItems = [URLQueryItem(name: "id", value: eventID)]
-        return components.url
-    }
-}
-
 // MARK: - Live Activity Widget
 struct CalarmWidgetExtensionLiveActivity: Widget {
     var body: some WidgetConfiguration {
-        // Using official AlarmKit ActivityConfiguration pattern from WWDC 2025
         ActivityConfiguration(for: AlarmAttributes<AlarmAppMetadata>.self) { context in
-            // Lock Screen View - Minimal design as requested
-            HStack(spacing: 12) {
-                Image(systemName: "alarm.fill")
-                    .font(.headline)
-                    .foregroundColor(.red)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(context.attributes.metadata?.title ?? "Alarm")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-
-                    // Show countdown using official AlarmKit state
-                    switch context.state.mode {
-                    case .countdown(let countdown):
-                        let fireDate = countdown.startDate.addingTimeInterval(
-                            countdown.totalCountdownDuration - countdown.previouslyElapsedDuration
-                        )
-                        Text(timerInterval: Date()...fireDate, countsDown: true)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .monospacedDigit()
-                    case .paused:
-                        Text("Paused")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    case .alert:
-                        Text("Alerting")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    @unknown default:
-                        Text("Unknown")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Spacer()
-            }
-            .padding()
-            .background(Color.black.opacity(0.05))
-            .cornerRadius(8)
-            .widgetURL(eventURL(for: context))
-
+            lockScreenView(context: context)
+                .activitySystemActionForegroundColor(tintColor(for: context))
+                .widgetURL(deepLinkURL(for: context))
         } dynamicIsland: { context in
-            // Dynamic Island Configuration - Minimal and compact
             DynamicIsland {
-                // Expanded regions
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "alarm.fill")
-                            .foregroundColor(.red)
+                            .foregroundStyle(tintColor(for: context))
                         Text(context.attributes.metadata?.title ?? "Alarm")
                             .font(.headline)
+                            .lineLimit(1)
                     }
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    // Show countdown state
-                    switch context.state.mode {
-                    case .countdown(let countdown):
-                        let fireDate = countdown.startDate.addingTimeInterval(
-                            countdown.totalCountdownDuration - countdown.previouslyElapsedDuration
-                        )
-                        Text(timerInterval: Date()...fireDate, countsDown: true)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .monospacedDigit()
-                    case .paused:
-                        Text("Paused")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    case .alert:
-                        Text("Alerting")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    @unknown default:
-                        Text("Unknown")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    countdownLabel(for: context, style: .expanded)
                 }
-
             } compactLeading: {
-                // Compact leading - just icon
                 Image(systemName: "alarm.fill")
                     .font(.caption)
-                    .foregroundColor(.red)
-
+                    .foregroundStyle(tintColor(for: context))
             } compactTrailing: {
-                // Show compact countdown timer in Dynamic Island
-                switch context.state.mode {
-                case .countdown(let countdown):
-                    let fireDate = countdown.startDate.addingTimeInterval(
-                        countdown.totalCountdownDuration - countdown.previouslyElapsedDuration
-                    )
-                    Text(timerInterval: Date()...fireDate, countsDown: true)
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundColor(.red)
-                        .monospacedDigit()
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                        .frame(maxWidth: 40)
-                case .paused:
-                    Text("Paused")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                case .alert:
-                    Text("Alerting")
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                @unknown default:
-                    Text("Unknown")
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                }
-
+                countdownLabel(for: context, style: .compact)
             } minimal: {
-                // Minimal view - just small icon
                 Image(systemName: "alarm.fill")
                     .font(.caption2)
-                    .foregroundColor(.red)
+                    .foregroundStyle(tintColor(for: context))
             }
-            .widgetURL(eventURL(for: context))
+            .keylineTint(tintColor(for: context))
+            .widgetURL(deepLinkURL(for: context))
         }
     }
 
-    private func eventURL(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> URL? {
+    @ViewBuilder
+    private func lockScreenView(context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "alarm.fill")
+                .font(.headline)
+                .foregroundStyle(tintColor(for: context))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(context.attributes.metadata?.title ?? "Alarm")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                countdownLabel(for: context, style: .lockScreen)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding()
+    }
+
+    private enum CountdownStyle {
+        case lockScreen
+        case expanded
+        case compact
+    }
+
+    @ViewBuilder
+    private func countdownLabel(
+        for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>,
+        style: CountdownStyle
+    ) -> some View {
+        let tint = tintColor(for: context)
+
+        switch context.state.mode {
+        case .countdown(let countdown):
+            let fireDate = countdown.fireDate
+            let showsHours = fireDate.timeIntervalSinceNow >= 3_600
+
+            Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: showsHours)
+                .font(font(for: style))
+                .foregroundStyle(tint)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .contentTransition(.numericText())
+                .frame(maxWidth: style == .compact ? .infinity : nil, alignment: .trailing)
+        case .paused:
+            Text("Paused")
+                .font(font(for: style))
+                .foregroundStyle(tint.opacity(0.85))
+        case .alert:
+            Text("Alerting")
+                .font(font(for: style))
+                .foregroundStyle(tint)
+        @unknown default:
+            Text("—")
+                .font(font(for: style))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func font(for style: CountdownStyle) -> Font {
+        switch style {
+        case .lockScreen:
+            return .system(.caption, design: .rounded).monospacedDigit()
+        case .expanded:
+            return .system(.body, design: .rounded).monospacedDigit()
+        case .compact:
+            return .system(size: 11, weight: .semibold, design: .rounded).monospacedDigit()
+        }
+    }
+
+    /// AlarmKit exposes the app-chosen accent on `AlarmAttributes.tintColor` (ActivityKit).
+    private func tintColor(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> Color {
+        context.attributes.tintColor
+    }
+
+    private func deepLinkURL(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> URL? {
         guard let eventID = context.attributes.metadata?.eventID else { return nil }
-        return CalarmLiveActivityLink.eventURL(eventID: eventID)
+        return CalarmDeepLink.eventURL(occurrenceID: eventID)
     }
 }
-
-// Preview is simplified for now - will be properly configured once AlarmKit types are fully available
-// #Preview will be added back once all AlarmKit types compile properly

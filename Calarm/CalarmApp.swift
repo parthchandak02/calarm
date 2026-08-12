@@ -50,5 +50,8 @@ private struct CalarmRootView: View {
         ScheduleView()
             .environment(\.calarmTheme, theme)
             .preferredColorScheme(themeStore.appearance.preferredColorScheme)
+            .onChange(of: themeStore.accent) { _, _ in
+                scheduleStore.refreshAfterThemeChange()
+            }
     }
 }
