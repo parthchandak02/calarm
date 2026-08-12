@@ -58,4 +58,14 @@ enum AlarmSchedulingHelpers {
             return (item.occurrenceID, item.offsetRawValue, adjusted)
         }
     }
+
+    /// True when a fixed-schedule alarm's fire time has elapsed and it should be cancelled.
+    static func isStaleAlarm(fireDate: Date, now: Date = Date()) -> Bool {
+        fireDate.timeIntervalSince(now) <= 0
+    }
+
+    /// True when an alarm still has meaningful pre-alert countdown time remaining.
+    static func hasUpcomingFireDate(_ fireDate: Date, now: Date = Date()) -> Bool {
+        fireDate.timeIntervalSince(now) > 1
+    }
 }

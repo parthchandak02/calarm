@@ -141,7 +141,7 @@ struct ScheduleView: View {
                 .lineLimit(1)
             Text("·")
                 .foregroundStyle(theme.textSecondary)
-            Text(fireDate, style: .relative)
+            Text(nextAlarmCountdown(until: fireDate))
                 .font(CalarmFont.caption)
                 .foregroundStyle(theme.textSecondary)
                 .monospacedDigit()
@@ -150,6 +150,14 @@ struct ScheduleView: View {
         .padding(.horizontal, CalarmTheme.rowPaddingH)
         .padding(.vertical, 8)
         .background(theme.accent.opacity(0.08))
+    }
+
+    private func nextAlarmCountdown(until fireDate: Date) -> String {
+        let interval = fireDate.timeIntervalSinceNow
+        guard interval > 0 else { return "passed" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: fireDate, relativeTo: Date())
     }
 
     @ViewBuilder

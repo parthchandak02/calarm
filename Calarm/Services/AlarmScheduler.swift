@@ -39,6 +39,8 @@ final class AlarmScheduler {
         var skippedTooSoon: [(occurrenceID: String, title: String, offset: AlarmOffsetOption)] = []
         var scheduledCount = 0
 
+        let cancelledStale = await reconcileStaleAlarms(events: events)
+
         let desired = buildDesiredInstances(from: events)
         let desiredIDs = Set(desired.map(\.alarmID))
         let managedIDs = managedAlarmIDs(for: events)
@@ -81,7 +83,7 @@ final class AlarmScheduler {
             }
         }
 
-        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) failures=\(failures.count)")
+        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) cancelledStale=\(cancelledStale) failures=\(failures.count)")
         return RescheduleResult(
             scheduledCount: scheduledCount,
             failures: failures,
@@ -154,11 +156,37 @@ final class AlarmScheduler {
     }
 
     func hasActiveCountdown() -> Bool {
+        hasActiveUpcomingCountdown()
+    }
+
+    /// Only defer reschedules while a future alarm is actively counting down.
+    func hasActiveUpcomingCountdown() -> Bool {
         guard let alarms = try? AlarmManager.shared.alarms else { return false }
         return alarms.contains { alarm in
-            if case .countdown = alarm.state { return true }
-            return false
+            guard case .countdown = alarm.state else { return false }
+            guard let fireDate = fixedFireDate(for: alarm) else { return true }
+            return AlarmSchedulingHelpers.hasUpcomingFireDate(fireDate)
         }
+    }
+
+    /// Cancel AlarmKit alarms whose fixed fire time has passed. Ends stale Live Activities.
+    @discardableResult
+    func reconcileStaleAlarms(events: [ScheduleEvent]) async -> Int {
+        let managedIDs = managedAlarmIDs(for: events)
+        let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        var cancelled = 0
+
+        for alarm in currentAlarms where managedIDs.contains(alarm.id) {
+            guard let fireDate = fixedFireDate(for: alarm) else { continue }
+            guard AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate) else { continue }
+            guard shouldAutoCancelStale(alarm) else { continue }
+
+            try? AlarmManager.shared.cancel(id: alarm.id)
+            cancelled += 1
+            SchedulerLog.info("cancelled stale alarm \(alarm.id) fire=\(fireDate)")
+        }
+
+        return cancelled
     }
 
     func schedulingFingerprint(for events: [ScheduleEvent], snoozeSeconds: TimeInterval) -> String {
@@ -262,6 +290,22 @@ final class AlarmScheduler {
     private func isAlerting(_ alarm: Alarm) -> Bool {
         if case .alerting = alarm.state { return true }
         return false
+    }
+
+    private func shouldAutoCancelStale(_ alarm: Alarm) -> Bool {
+        switch alarm.state {
+        case .countdown, .paused:
+            return true
+        case .alerting:
+            return false
+        default:
+            return true
+        }
+    }
+
+    private func fixedFireDate(for alarm: Alarm) -> Date? {
+        guard case .fixed(let date) = alarm.schedule else { return nil }
+        return date
     }
 
     private func schedule(

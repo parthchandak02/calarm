@@ -80,7 +80,7 @@ final class ScheduleStore: ObservableObject {
 
         alarmUpdatesObserver.onAlarmsChanged = { [weak self] _ in
             Task { @MainActor in
-                self?.objectWillChange.send()
+                await self?.handleAlarmKitUpdate()
             }
         }
     }
@@ -319,6 +319,14 @@ final class ScheduleStore: ObservableObject {
         requestReschedule(force: true)
     }
 
+    private func handleAlarmKitUpdate() async {
+        objectWillChange.send()
+        let cancelled = await alarmScheduler.reconcileStaleAlarms(events: events)
+        guard cancelled > 0 else { return }
+        lastScheduledFingerprint = nil
+        requestReschedule(force: true)
+    }
+
     private func applySetAllAlarmsEnabled(_ enabled: Bool, offset: AlarmOffsetOption) {
         var changed = false
 
@@ -353,12 +361,19 @@ final class ScheduleStore: ObservableObject {
 
     @discardableResult
     private func rescheduleIfNeeded(force: Bool) async -> RescheduleSummary {
+        var shouldForce = force
+        let cancelledStale = await alarmScheduler.reconcileStaleAlarms(events: events)
+        if cancelledStale > 0 {
+            lastScheduledFingerprint = nil
+            shouldForce = true
+        }
+
         let fingerprint = alarmScheduler.schedulingFingerprint(
             for: events,
             snoozeSeconds: defaultSnooze.seconds
         )
 
-        if !force, fingerprint == lastScheduledFingerprint {
+        if !shouldForce, fingerprint == lastScheduledFingerprint {
             SchedulerLog.info("reschedule skipped — schedule unchanged")
             return lastRescheduleSummary ?? RescheduleSummary(
                 finishedAt: Date(),
@@ -368,8 +383,8 @@ final class ScheduleStore: ObservableObject {
             )
         }
 
-        if !force, alarmScheduler.hasActiveCountdown() {
-            SchedulerLog.info("deferring reschedule during active countdown")
+        if !shouldForce, alarmScheduler.hasActiveUpcomingCountdown() {
+            SchedulerLog.info("deferring reschedule during active upcoming countdown")
             return lastRescheduleSummary ?? RescheduleSummary(
                 finishedAt: Date(),
                 scheduledCount: 0,
@@ -378,7 +393,7 @@ final class ScheduleStore: ObservableObject {
             )
         }
 
-        return await performReschedule(force: force, fingerprint: fingerprint)
+        return await performReschedule(force: shouldForce, fingerprint: fingerprint)
     }
 
     @discardableResult

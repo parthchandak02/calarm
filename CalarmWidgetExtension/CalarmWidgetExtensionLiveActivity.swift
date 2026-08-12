@@ -82,16 +82,19 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
         switch context.state.mode {
         case .countdown(let countdown):
             let fireDate = countdown.fireDate
-            let showsHours = fireDate.timeIntervalSinceNow >= 3_600
-
-            Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: showsHours)
-                .font(font(for: style))
-                .foregroundStyle(tint)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .contentTransition(.numericText())
-                .frame(maxWidth: style == .compact ? .infinity : nil, alignment: .trailing)
+            if fireDate.timeIntervalSinceNow <= 0 {
+                EmptyView()
+            } else {
+                let showsHours = fireDate.timeIntervalSinceNow >= 3_600
+                Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: showsHours)
+                    .font(font(for: style))
+                    .foregroundStyle(tint)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .contentTransition(.numericText())
+                    .frame(maxWidth: style == .compact ? .infinity : nil, alignment: .trailing)
+            }
         case .paused:
             Text("Paused")
                 .font(font(for: style))
