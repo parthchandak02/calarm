@@ -12,9 +12,13 @@ import WidgetKit
 struct CalarmWidgetExtensionLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: AlarmAttributes<AlarmAppMetadata>.self) { context in
-            lockScreenView(context: context)
-                .activitySystemActionForegroundColor(tintColor(for: context))
-                .widgetURL(deepLinkURL(for: context))
+            if isActivityExpired(context: context) {
+                EmptyView()
+            } else {
+                lockScreenView(context: context)
+                    .activitySystemActionForegroundColor(tintColor(for: context))
+                    .widgetURL(deepLinkURL(for: context))
+            }
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -108,6 +112,18 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                 .font(font(for: style))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private func isActivityExpired(context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> Bool {
+        if let endTimestamp = context.attributes.metadata?.eventEndTimestamp {
+            return Date().timeIntervalSince1970 >= endTimestamp
+        }
+
+        if case .countdown(let countdown) = context.state.mode {
+            return countdown.fireDate.timeIntervalSinceNow <= 0
+        }
+
+        return false
     }
 
     private func font(for style: CountdownStyle) -> Font {

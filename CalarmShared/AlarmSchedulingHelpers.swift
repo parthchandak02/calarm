@@ -68,4 +68,9 @@ enum AlarmSchedulingHelpers {
     static func hasUpcomingFireDate(_ fireDate: Date, now: Date = Date()) -> Bool {
         fireDate.timeIntervalSince(now) > 1
     }
+
+    /// Calendar alarms should end after the event block finishes, even if still alerting.
+    static func isEventEnded(endDate: Date, now: Date = Date()) -> Bool {
+        now >= endDate
+    }
 }

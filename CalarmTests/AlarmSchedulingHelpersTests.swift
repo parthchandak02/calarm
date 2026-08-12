@@ -72,4 +72,11 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         XCTAssertFalse(AlarmSchedulingHelpers.hasUpcomingFireDate(past))
         XCTAssertTrue(AlarmSchedulingHelpers.hasUpcomingFireDate(future))
     }
+
+    func testEventEndedDetection() {
+        let ended = Date().addingTimeInterval(-60)
+        let ongoing = Date().addingTimeInterval(300)
+        XCTAssertTrue(AlarmSchedulingHelpers.isEventEnded(endDate: ended))
+        XCTAssertFalse(AlarmSchedulingHelpers.isEventEnded(endDate: ongoing))
+    }
 }

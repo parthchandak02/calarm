@@ -321,8 +321,8 @@ final class ScheduleStore: ObservableObject {
 
     private func handleAlarmKitUpdate() async {
         objectWillChange.send()
-        let cancelled = await alarmScheduler.reconcileStaleAlarms(events: events)
-        guard cancelled > 0 else { return }
+        let cleaned = await alarmScheduler.reconcileAlarmLifecycle(events: events)
+        guard cleaned > 0 else { return }
         lastScheduledFingerprint = nil
         requestReschedule(force: true)
     }
@@ -362,8 +362,8 @@ final class ScheduleStore: ObservableObject {
     @discardableResult
     private func rescheduleIfNeeded(force: Bool) async -> RescheduleSummary {
         var shouldForce = force
-        let cancelledStale = await alarmScheduler.reconcileStaleAlarms(events: events)
-        if cancelledStale > 0 {
+        let cleaned = await alarmScheduler.reconcileAlarmLifecycle(events: events)
+        if cleaned > 0 {
             lastScheduledFingerprint = nil
             shouldForce = true
         }
