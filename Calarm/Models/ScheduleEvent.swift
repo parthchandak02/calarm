@@ -29,9 +29,16 @@ struct ScheduleEvent: Identifiable, Equatable {
             .sorted { $0.fireDate < $1.fireDate }
     }
 
+    var isEventUpcoming: Bool {
+        startDate > Date()
+    }
+
     /// Next upcoming fire time across all configured alarms.
+    /// Falls back to event start when the reminder window closed but the event has not started.
     var nextAlarmDate: Date? {
-        scheduledAlarms.first?.fireDate
+        if let fire = scheduledAlarms.first?.fireDate { return fire }
+        if alarmEnabled, isEventUpcoming { return startDate }
+        return nil
     }
 
     /// Legacy helper used by list highlighting.
@@ -39,18 +46,26 @@ struct ScheduleEvent: Identifiable, Equatable {
         nextAlarmDate ?? startDate
     }
 
+    /// True when the calendar event has started and no alarms remain.
     var isAlarmInPast: Bool {
-        alarmEnabled && scheduledAlarms.isEmpty
+        alarmEnabled && !isEventUpcoming && scheduledAlarms.isEmpty
+    }
+
+    /// Reminder fire time passed but the event has not started yet.
+    var isReminderPassed: Bool {
+        alarmEnabled && isEventUpcoming && scheduledAlarms.isEmpty
     }
 
     var canScheduleAlarm: Bool {
-        !scheduledAlarms.isEmpty
+        alarmEnabled && isEventUpcoming && !scheduledAlarms.isEmpty
     }
 
     var alarmSummary: String {
         guard alarmEnabled else { return "Alarm off" }
         let upcoming = scheduledAlarms
-        if upcoming.isEmpty { return "All alarms passed" }
+        if upcoming.isEmpty {
+            return isEventUpcoming ? "Reminder passed" : "All alarms passed"
+        }
         if upcoming.count == 1 {
             return upcoming[0].offset.title
         }

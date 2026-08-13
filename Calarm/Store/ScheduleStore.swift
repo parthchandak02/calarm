@@ -51,9 +51,11 @@ final class ScheduleStore: ObservableObject {
 
     var nextUpcomingAlarm: ScheduleEvent? {
         events
-            .filter(\.canScheduleAlarm)
+            .filter { $0.alarmEnabled && $0.isEventUpcoming }
             .min { lhs, rhs in
-                (lhs.nextAlarmDate ?? .distantFuture) < (rhs.nextAlarmDate ?? .distantFuture)
+                let lhsDate = lhs.nextAlarmDate ?? lhs.startDate
+                let rhsDate = rhs.nextAlarmDate ?? rhs.startDate
+                return lhsDate < rhsDate
             }
     }
 

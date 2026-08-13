@@ -1,1 +1,1 @@
-Build 20260813: Settings redesigned with tabbed panels (Calendar, Alarms, Look, Status). Optional Google Calendar direct sync. Lock screen Live Activities dismiss when events end; stale alarms cancel after fire time. Dynamic Island uses your theme accent with tighter countdown sizing.
+Build 20260813: Fix next-alarm banner when reminder time passed but event not started. Settings tabbed panels. Stale countdown alarms no longer cancel before event ends. Tighter Dynamic Island compact width.
