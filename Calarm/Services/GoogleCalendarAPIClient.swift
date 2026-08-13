@@ -5,6 +5,11 @@
 
 import Foundation
 
+struct GoogleCalendarEventsPage: Sendable {
+    let events: [GoogleCalendarEvent]
+    let nextSyncToken: String?
+}
+
 struct GoogleCalendarAPIClient: Sendable {
     private let session: URLSession
     private let isoFormatter: ISO8601DateFormatter
@@ -39,7 +44,7 @@ struct GoogleCalendarAPIClient: Sendable {
         accessToken: String,
         timeMin: Date,
         timeMax: Date
-    ) async throws -> [GoogleCalendarEvent] {
+    ) async throws -> GoogleCalendarEventsPage {
         let encodedCalendarID = calendarID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? calendarID
         var query = baseEventQuery(timeMin: timeMin, timeMax: timeMax)
         query.append(("singleEvents", "true"))
@@ -59,7 +64,7 @@ struct GoogleCalendarAPIClient: Sendable {
         updatedMin: Date,
         timeMin: Date,
         timeMax: Date
-    ) async throws -> [GoogleCalendarEvent] {
+    ) async throws -> GoogleCalendarEventsPage {
         let encodedCalendarID = calendarID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? calendarID
         var query = baseEventQuery(timeMin: timeMin, timeMax: timeMax)
         query.append(("singleEvents", "true"))
@@ -129,10 +134,11 @@ struct GoogleCalendarAPIClient: Sendable {
         path: String,
         query: [(String, String)],
         accessToken: String
-    ) async throws -> [GoogleCalendarEvent] {
+    ) async throws -> GoogleCalendarEventsPage {
         var allItems: [GoogleCalendarEvent] = []
         var pageToken: String?
         var pageCount = 0
+        var nextSyncToken: String?
 
         repeat {
             var pageQuery = query
@@ -146,10 +152,13 @@ struct GoogleCalendarAPIClient: Sendable {
             )
             allItems.append(contentsOf: response.items ?? [])
             pageToken = response.nextPageToken
+            if let token = response.nextSyncToken {
+                nextSyncToken = token
+            }
             pageCount += 1
         } while pageToken != nil && pageCount < 20
 
-        return allItems
+        return GoogleCalendarEventsPage(events: allItems, nextSyncToken: nextSyncToken)
     }
 
     private func get<T: Decodable>(

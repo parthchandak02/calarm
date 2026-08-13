@@ -45,12 +45,21 @@ struct CalarmTheme: Equatable {
     let onAccent: Color
     let toolbarIcon: Color
     let toolbarIconBackground: Color
+    let destructive: Color
+    let warning: Color
 
     static let cornerRadius: CGFloat = 16
     static let sectionHeaderTracking: CGFloat = 1.1
     static let rowPaddingH: CGFloat = 16
+    static let screenPaddingH: CGFloat = 20
+    static let settingsRowHeight: CGFloat = 44
+    static let settingsTabHeight: CGFloat = 40
     static let timeColumnWidth: CGFloat = 78
     static let bellTapSize: CGFloat = 44
+    static let minimumTouchTarget: CGFloat = 44
+
+    var accentSubtle: Color { accent.opacity(0.08) }
+    var accentSelected: Color { accent.opacity(0.12) }
 
     init(accent choice: CalarmAccent, isDark: Bool) {
         self.isDark = isDark
@@ -66,6 +75,8 @@ struct CalarmTheme: Equatable {
             onAccent = Color(red: 0.06, green: 0.06, blue: 0.07)
             toolbarIcon = Color.white.opacity(0.92)
             toolbarIconBackground = Color.white.opacity(0.1)
+            destructive = Color(red: 1, green: 0.35, blue: 0.35)
+            warning = Color(red: 1, green: 0.65, blue: 0.2)
         } else {
             background = Color(red: 0.97, green: 0.97, blue: 0.98)
             surface = Color.black.opacity(0.05)
@@ -75,6 +86,8 @@ struct CalarmTheme: Equatable {
             onAccent = Color.white
             toolbarIcon = Color(red: 0.12, green: 0.12, blue: 0.14)
             toolbarIconBackground = Color.black.opacity(0.06)
+            destructive = Color(red: 0.86, green: 0.15, blue: 0.15)
+            warning = Color(red: 0.92, green: 0.45, blue: 0.05)
         }
     }
 

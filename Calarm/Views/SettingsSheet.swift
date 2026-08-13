@@ -8,6 +8,37 @@ import EventKit
 import SwiftUI
 import UIKit
 
+private enum SettingsTab: String, SettingsTabItem {
+    case calendars
+    case alarms
+    case look
+    case status
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .calendars: "Calendar"
+        case .alarms: "Alarms"
+        case .look: "Look"
+        case .status: "Status"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .calendars: "calendar"
+        case .alarms: "bell"
+        case .look: "paintbrush"
+        case .status: "waveform.path.ecg"
+        }
+    }
+
+    var accessibilityIdentifier: String {
+        "settings.tab.\(rawValue)"
+    }
+}
+
 struct SettingsSheet: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var store: ScheduleStore
@@ -20,6 +51,7 @@ struct SettingsSheet: View {
     @State private var isSchedulingTestAlarm = false
     @State private var googleConnectError: String?
     @State private var isConnectingGoogle = false
+    @State private var selectedTab: SettingsTab = .calendars
 
     private let onDefaultAlarmOffsetChange: (AlarmOffsetOption) -> Void
     private let onDefaultSnoozeChange: (SnoozeDurationOption) -> Void
@@ -50,18 +82,17 @@ struct SettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    diagnosticsSection
-                    googleCalendarSection
-                    calendarsSection
-                    defaultAlarmSection
-                    snoozeSection
-                    appearanceSection
-                    accentSection
+            VStack(spacing: 0) {
+                SettingsTabBar(selection: $selectedTab, theme: theme)
+                    .padding(.horizontal, CalarmTheme.screenPaddingH)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+
+                ScrollView {
+                    tabContent
+                        .padding(.horizontal, CalarmTheme.screenPaddingH)
+                        .padding(.bottom, 8)
                 }
-                .padding(20)
-                .padding(.bottom, 8)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 developerInfoBar
@@ -103,6 +134,33 @@ struct SettingsSheet: View {
         }
     }
 
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .calendars:
+            VStack(alignment: .leading, spacing: 28) {
+                googleCalendarSection
+                calendarsSection
+            }
+            .accessibilityIdentifier("settings.panel.calendars")
+        case .alarms:
+            VStack(alignment: .leading, spacing: 28) {
+                defaultAlarmSection
+                snoozeSection
+            }
+            .accessibilityIdentifier("settings.panel.alarms")
+        case .look:
+            VStack(alignment: .leading, spacing: 28) {
+                appearanceSection
+                accentSection
+            }
+            .accessibilityIdentifier("settings.panel.look")
+        case .status:
+            diagnosticsSection
+                .accessibilityIdentifier("settings.panel.status")
+        }
+    }
+
     private var googleCalendarSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsSectionHeader(title: "Google Calendar", theme: theme)
@@ -114,7 +172,11 @@ struct SettingsSheet: View {
 
             SettingsOptionList(theme: theme) {
                 if store.googleCalendarService.isConnected {
-                    diagnosticRow("Account", value: store.googleCalendarService.connectedEmail ?? "Connected")
+                    SettingsInfoRow(
+                        title: "Account",
+                        value: store.googleCalendarService.connectedEmail ?? "Connected",
+                        theme: theme
+                    )
 
                     Divider().overlay(theme.surfaceStroke)
 
@@ -122,17 +184,22 @@ struct SettingsSheet: View {
                         Text("Loading Google calendars…")
                             .font(CalarmFont.caption)
                             .foregroundStyle(theme.textSecondary)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, CalarmTheme.rowPaddingH)
+                            .frame(height: CalarmTheme.settingsRowHeight)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(theme.surface)
                     } else {
                         ForEach(Array(store.googleCalendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
-                            Toggle(isOn: Binding(
-                                get: { store.googleCalendarService.isCalendarEnabled(calendar.id) },
-                                set: { enabled in
-                                    store.googleCalendarService.setCalendarEnabled(calendar.id, enabled: enabled)
-                                    Task { await store.reload() }
-                                }
-                            )) {
+                            SettingsToggleRow(
+                                isOn: Binding(
+                                    get: { store.googleCalendarService.isCalendarEnabled(calendar.id) },
+                                    set: { enabled in
+                                        store.googleCalendarService.setCalendarEnabled(calendar.id, enabled: enabled)
+                                        Task { await store.reload() }
+                                    }
+                                ),
+                                theme: theme
+                            ) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(calendar.title)
                                         .font(CalarmFont.bodyMedium)
@@ -144,9 +211,6 @@ struct SettingsSheet: View {
                                     }
                                 }
                             }
-                            .tint(theme.accent)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 16)
 
                             if index < store.googleCalendarService.availableCalendars.count - 1 {
                                 Divider().overlay(theme.surfaceStroke)
@@ -156,18 +220,20 @@ struct SettingsSheet: View {
 
                     Divider().overlay(theme.surfaceStroke)
 
-                    Button {
+                    SettingsActionRow(
+                        title: "Disconnect Google",
+                        theme: theme,
+                        titleColor: theme.destructive
+                    ) {
                         store.disconnectGoogleCalendar()
-                    } label: {
-                        Text("Disconnect Google")
-                            .font(CalarmFont.bodyMedium)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
                     }
                 } else if GoogleOAuthConfig.isConfigured {
-                    Button {
+                    SettingsActionRow(
+                        title: isConnectingGoogle ? "Connecting…" : "Connect Google Calendar",
+                        theme: theme,
+                        systemImage: "person.crop.circle.badge.plus",
+                        isDisabled: isConnectingGoogle
+                    ) {
                         guard let presenter = UIApplication.shared.calarmTopViewController else {
                             googleConnectError = "Could not present Google sign-in."
                             return
@@ -181,25 +247,15 @@ struct SettingsSheet: View {
                             }
                             isConnectingGoogle = false
                         }
-                    } label: {
-                        HStack {
-                            Text(isConnectingGoogle ? "Connecting…" : "Connect Google Calendar")
-                                .font(CalarmFont.bodyMedium)
-                                .foregroundStyle(theme.textPrimary)
-                            Spacer()
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .foregroundStyle(theme.accent)
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
                     }
-                    .disabled(isConnectingGoogle)
                 } else {
                     Text("Add GoogleService-Info.plist to enable Google Calendar. See scripts/setup-google-oauth.sh.")
                         .font(CalarmFont.caption)
                         .foregroundStyle(theme.textSecondary)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, CalarmTheme.rowPaddingH)
+                        .frame(minHeight: CalarmTheme.settingsRowHeight, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(theme.surface)
                 }
             }
 
@@ -230,20 +286,20 @@ struct SettingsSheet: View {
             } else {
                 SettingsOptionList(theme: theme) {
                     ForEach(Array(store.calendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
-                        Toggle(isOn: Binding(
-                            get: { calendar.isEnabled },
-                            set: { enabled in
-                                store.calendarService.setCalendarEnabled(calendar.id, enabled: enabled)
-                                Task { await store.reload() }
-                            }
-                        )) {
+                        SettingsToggleRow(
+                            isOn: Binding(
+                                get: { calendar.isEnabled },
+                                set: { enabled in
+                                    store.calendarService.setCalendarEnabled(calendar.id, enabled: enabled)
+                                    Task { await store.reload() }
+                                }
+                            ),
+                            theme: theme
+                        ) {
                             Text(calendar.title)
                                 .font(CalarmFont.bodyMedium)
                                 .foregroundStyle(theme.textPrimary)
                         }
-                        .tint(theme.accent)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 16)
 
                         if index < store.calendarService.availableCalendars.count - 1 {
                             Divider().overlay(theme.surfaceStroke)
@@ -259,17 +315,22 @@ struct SettingsSheet: View {
             SettingsSectionHeader(title: "Diagnostics", theme: theme)
 
             SettingsOptionList(theme: theme) {
-                diagnosticRow("Calendar", value: calendarStatusLabel)
+                SettingsInfoRow(title: "Calendar", value: calendarStatusLabel, theme: theme)
                 Divider().overlay(theme.surfaceStroke)
-                diagnosticRow("Alarms", value: alarmStatusLabel)
+                SettingsInfoRow(title: "Alarms", value: alarmStatusLabel, theme: theme)
                 Divider().overlay(theme.surfaceStroke)
-                diagnosticRow("Next ring", value: nextRingLabel)
+                SettingsInfoRow(title: "Next ring", value: nextRingLabel, theme: theme)
                 Divider().overlay(theme.surfaceStroke)
-                diagnosticRow("Last reschedule", value: lastRescheduleLabel)
+                SettingsInfoRow(title: "Last reschedule", value: lastRescheduleLabel, theme: theme)
 
                 Divider().overlay(theme.surfaceStroke)
 
-                Button {
+                SettingsActionRow(
+                    title: isSchedulingTestAlarm ? "Scheduling…" : "Test alarm (8 seconds)",
+                    theme: theme,
+                    systemImage: "bell.badge",
+                    isDisabled: isSchedulingTestAlarm
+                ) {
                     guard !isSimulator else {
                         testAlarmMessage = "Test alarms must be run on a physical iPhone — the Simulator cannot ring."
                         return
@@ -280,19 +341,7 @@ struct SettingsSheet: View {
                             ?? "Test alarm scheduled — it should ring in about 8 seconds."
                         isSchedulingTestAlarm = false
                     }
-                } label: {
-                    HStack {
-                        Text(isSchedulingTestAlarm ? "Scheduling…" : "Test alarm (8 seconds)")
-                            .font(CalarmFont.bodyMedium)
-                            .foregroundStyle(theme.textPrimary)
-                        Spacer()
-                        Image(systemName: "bell.badge")
-                            .foregroundStyle(isSimulator ? theme.textSecondary : theme.accent)
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
                 }
-                .disabled(isSchedulingTestAlarm)
                 .accessibilityIdentifier("settings.testAlarm")
             }
 
@@ -302,21 +351,6 @@ struct SettingsSheet: View {
                     .foregroundStyle(theme.textSecondary)
             }
         }
-    }
-
-    private func diagnosticRow(_ title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(CalarmFont.bodyMedium)
-                .foregroundStyle(theme.textPrimary)
-            Spacer()
-            Text(value)
-                .font(CalarmFont.caption)
-                .foregroundStyle(theme.textSecondary)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
     }
 
     private var calendarStatusLabel: String {
@@ -436,12 +470,12 @@ struct SettingsSheet: View {
                 .monospacedDigit()
 
             Text("\(AppBuildInfo.developerName) · © \(AppBuildInfo.copyrightYear)")
-                .font(.system(size: 11))
+                .font(CalarmFont.caption)
                 .foregroundStyle(theme.textSecondary.opacity(0.65))
         }
         .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, CalarmTheme.screenPaddingH)
         .padding(.top, 10)
         .padding(.bottom, 12)
         .background(theme.background)

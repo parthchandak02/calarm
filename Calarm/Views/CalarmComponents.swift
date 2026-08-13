@@ -25,6 +25,7 @@ struct ScheduleHeaderBar: View {
     let allAlarmsEnabled: Bool
     let hasEnabledAlarms: Bool
     let canRefresh: Bool
+    var isRefreshing: Bool = false
     let onTurnAllOn: () -> Void
     let onTurnAllOff: () -> Void
     let onRefresh: () -> Void
@@ -51,23 +52,31 @@ struct ScheduleHeaderBar: View {
                     Image(systemName: "bell.badge")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(canManageAlarms ? theme.toolbarIcon : theme.textSecondary)
-                        .frame(width: 34, height: 34)
+                        .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
                         .background(theme.toolbarIconBackground, in: Circle())
                         .overlay {
                             Circle()
                                 .strokeBorder(theme.surfaceStroke, lineWidth: 1)
                         }
+                        .contentShape(Circle())
                 }
                 .disabled(!canManageAlarms)
                 .accessibilityLabel("Alarm bulk actions")
 
-                CalarmToolbarIconButton(
-                    systemName: "arrow.clockwise",
-                    theme: theme,
-                    isDisabled: !canRefresh,
-                    action: onRefresh
-                )
-                .accessibilityLabel("Refresh calendar")
+                if isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(theme.accent)
+                        .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
+                } else {
+                    CalarmToolbarIconButton(
+                        systemName: "arrow.clockwise",
+                        theme: theme,
+                        isDisabled: !canRefresh,
+                        action: onRefresh
+                    )
+                    .accessibilityLabel("Refresh calendar")
+                }
 
                 CalarmToolbarIconButton(systemName: "gearshape", theme: theme, action: onSettings)
                     .accessibilityLabel("Settings")
@@ -104,12 +113,13 @@ struct CalarmToolbarIconButton: View {
             Image(systemName: systemName)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(isDisabled ? theme.textSecondary : theme.toolbarIcon)
-                .frame(width: 34, height: 34)
+                .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
                 .background(theme.toolbarIconBackground, in: Circle())
                 .overlay {
                     Circle()
                         .strokeBorder(theme.surfaceStroke, lineWidth: 1)
                 }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
@@ -172,9 +182,9 @@ struct SettingsOptionRow: View {
                         .foregroundStyle(theme.accent)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(isSelected ? theme.accent.opacity(0.1) : theme.surface)
+            .padding(.horizontal, CalarmTheme.rowPaddingH)
+            .frame(height: CalarmTheme.settingsRowHeight)
+            .background(isSelected ? theme.accentSelected : theme.surface)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -188,11 +198,153 @@ struct SettingsSectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(CalarmFont.captionSemibold)
+            .font(CalarmFont.sectionHeader)
             .foregroundStyle(theme.textSecondary)
             .textCase(.uppercase)
-            .tracking(0.6)
+            .tracking(CalarmTheme.sectionHeaderTracking)
     }
+}
+
+struct SettingsTabBar<Tab: SettingsTabItem>: View {
+    @Binding var selection: Tab
+    let theme: CalarmTheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
+                SettingsTabButton(
+                    title: tab.title,
+                    systemImage: tab.systemImage,
+                    isSelected: selection == tab,
+                    theme: theme
+                ) {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        selection = tab
+                    }
+                }
+                .accessibilityIdentifier(tab.accessibilityIdentifier)
+
+                if index < Tab.allCases.count - 1 {
+                    Rectangle()
+                        .fill(theme.surfaceStroke)
+                        .frame(width: 1)
+                }
+            }
+        }
+        .frame(height: CalarmTheme.settingsTabHeight)
+        .background(theme.surface, in: RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous)
+                .strokeBorder(theme.surfaceStroke, lineWidth: 1)
+        }
+        .accessibilityIdentifier("settings.tabBar")
+    }
+}
+
+private struct SettingsTabButton: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let theme: CalarmTheme
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+
+                Text(title)
+                    .font(CalarmFont.captionSemibold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(isSelected ? theme.accent : theme.textSecondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(isSelected ? theme.accentSelected : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+struct SettingsToggleRow<Label: View>: View {
+    @Binding var isOn: Bool
+    let theme: CalarmTheme
+    @ViewBuilder let label: () -> Label
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            label()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .tint(theme.accent)
+        .padding(.horizontal, CalarmTheme.rowPaddingH)
+        .frame(height: CalarmTheme.settingsRowHeight)
+        .background(theme.surface)
+    }
+}
+
+struct SettingsActionRow: View {
+    let title: String
+    let theme: CalarmTheme
+    var systemImage: String?
+    var titleColor: Color?
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(CalarmFont.bodyMedium)
+                    .foregroundStyle(titleColor ?? theme.textPrimary)
+
+                Spacer(minLength: 8)
+
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(theme.accent)
+                }
+            }
+            .padding(.horizontal, CalarmTheme.rowPaddingH)
+            .frame(height: CalarmTheme.settingsRowHeight)
+            .background(theme.surface)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+}
+
+struct SettingsInfoRow: View {
+    let title: String
+    let value: String
+    let theme: CalarmTheme
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(CalarmFont.bodyMedium)
+                .foregroundStyle(theme.textPrimary)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(CalarmFont.caption)
+                .foregroundStyle(theme.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, CalarmTheme.rowPaddingH)
+        .frame(height: CalarmTheme.settingsRowHeight)
+        .background(theme.surface)
+    }
+}
+
+protocol SettingsTabItem: CaseIterable, Equatable, Identifiable {
+    var title: String { get }
+    var systemImage: String { get }
+    var accessibilityIdentifier: String { get }
 }
 
 struct AccentColorDot: View {

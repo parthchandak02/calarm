@@ -326,6 +326,9 @@ final class AlarmScheduler {
 
         switch alarm.state {
         case .countdown, .paused:
+            if let event {
+                return AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate)
+            }
             return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
         case .alerting:
             return false

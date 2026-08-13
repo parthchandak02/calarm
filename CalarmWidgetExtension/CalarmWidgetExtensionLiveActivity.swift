@@ -32,6 +32,8 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     .foregroundStyle(tintColor(for: context))
             } compactTrailing: {
                 countdownLabel(for: context, style: .compact)
+                    .frame(width: 58, alignment: .trailing)
+                    .clipped()
             } minimal: {
                 Image(systemName: "alarm.fill")
                     .font(.caption2)
@@ -110,19 +112,22 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     .foregroundStyle(tint)
                     .monospacedDigit()
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.75)
                     .contentTransition(.numericText())
-                    .fixedSize(horizontal: true, vertical: false)
-                    .frame(maxWidth: style == .compact ? 58 : nil, alignment: .trailing)
+                    .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
             }
         case .paused:
             Text("Paused")
                 .font(font(for: style))
                 .foregroundStyle(tint.opacity(0.85))
+                .lineLimit(1)
+                .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
         case .alert:
             Text("Alerting")
                 .font(font(for: style))
                 .foregroundStyle(tint)
+                .lineLimit(1)
+                .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
         @unknown default:
             Text("—")
                 .font(font(for: style))

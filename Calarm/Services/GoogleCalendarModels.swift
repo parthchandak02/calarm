@@ -88,10 +88,29 @@ enum GoogleCalendarAPIError: LocalizedError {
             "Sign in to Google Calendar first."
         case .invalidResponse:
             "Unexpected response from Google Calendar."
-        case .http(let status, let message):
-            "Google Calendar error (\(status)): \(message)"
+        case .http(let status, _):
+            Self.userFacingMessage(forHTTPStatus: status)
         case .syncTokenExpired:
             "Google Calendar sync token expired."
+        }
+    }
+
+    private static func userFacingMessage(forHTTPStatus status: Int) -> String {
+        switch status {
+        case 401:
+            "Your Google sign-in expired. Sign in again."
+        case 403:
+            "Google Calendar access was denied. Check permissions and try again."
+        case 404:
+            "Google Calendar could not be found."
+        case 408, 504:
+            "Google Calendar took too long to respond. Try again."
+        case 429:
+            "Too many requests to Google Calendar. Try again later."
+        case 500 ... 599:
+            "Google Calendar is temporarily unavailable. Try again later."
+        default:
+            "Could not reach Google Calendar. Try again."
         }
     }
 }
