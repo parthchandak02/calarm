@@ -1,6 +1,6 @@
 # Security & privacy (repository)
 
-Last audited: 2026-06-30 (post–history purge; App Store prep pass)
+Last audited: 2026-08-13 (Google Calendar OAuth integration)
 
 ## What this app stores on device
 
@@ -9,15 +9,29 @@ Last audited: 2026-06-30 (post–history purge; App Store prep pass)
 | Alarm preferences per calendar event | `UserDefaults` (via `CalarmPersistence`) | No |
 | Default alarm offset & snooze | `UserDefaults` | No |
 | Theme (appearance + accent) | `UserDefaults` | No |
-| Calendar events | EventKit (system); read-only at runtime | No app upload |
+| On-device calendar events | EventKit (system); read-only at runtime | No app upload |
+| Google connected account email | `UserDefaults` (display only) | No |
+| Enabled Google calendar IDs & sync tokens | `UserDefaults` | No |
+| Google OAuth tokens (access/refresh) | iOS Keychain (via Google Sign-In SDK) | No app upload |
 
-No accounts, analytics SDKs, or network calls for user data.
+No Calarm-operated accounts, analytics SDKs, or backend servers for user data.
+
+## Optional Google Calendar integration
+
+When the user connects Google Calendar in Settings:
+
+1. **Sign-in** — Google Sign-In presents the OAuth flow. The Google Sign-In SDK stores OAuth tokens in the iOS Keychain.
+2. **Network** — CALarm calls the Google Calendar API over HTTPS at `https://www.googleapis.com/calendar/v3/` (calendar list and event endpoints). Requests include a short-lived OAuth access token in the `Authorization` header. Calendar event data is fetched for display and alarm scheduling only; it is not uploaded to any Calarm server.
+3. **Local storage** — The connected Google account email, enabled calendar IDs, last sync timestamp, and per-calendar sync tokens are stored in `UserDefaults` via `CalarmPersistence`. Disconnecting clears these preferences and signs out via the Google Sign-In SDK.
+
+Without Google Calendar connected, the app reads only on-device EventKit calendars and makes no Google API calls.
 
 ## What must never be committed
 
 - `fastlane/.env` (App Store Connect API keys)
 - `*.p8` / `AuthKey_*.p8`
 - `ExportOptions.plist` (signing export; local)
+- `Calarm/GoogleService-Info.plist` (Google OAuth client ID; local)
 - `build/`, `build-device/`, `build-sim/`, `DerivedData/`
 - Device UDIDs or named device identifiers in docs/scripts
 - Personal machine paths (`/Users/...`) in shared docs

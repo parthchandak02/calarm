@@ -38,11 +38,24 @@ final class ScheduleStore: ObservableObject {
     private var pendingBulkEnableAfterConfirm = false
     private var lastScheduledFingerprint: String?
 
+    var hasEventSource: Bool {
+        ScheduleEventSourcePolicy.hasEventSource(
+            eventKitFullAccess: authorizationStatus == .fullAccess,
+            googleConnected: googleCalendarService.isConnected
+        )
+    }
+
+    var googleSyncErrorMessage: String? {
+        googleCalendarService.lastSyncError
+    }
+
     var nextUpcomingAlarm: ScheduleEvent? {
         events
-            .filter(\.canScheduleAlarm)
+            .filter { $0.alarmEnabled && $0.isEventUpcoming }
             .min { lhs, rhs in
-                (lhs.nextAlarmDate ?? .distantFuture) < (rhs.nextAlarmDate ?? .distantFuture)
+                let lhsDate = lhs.nextAlarmDate ?? lhs.startDate
+                let rhsDate = rhs.nextAlarmDate ?? rhs.startDate
+                return lhsDate < rhsDate
             }
     }
 
@@ -127,9 +140,14 @@ final class ScheduleStore: ObservableObject {
         calendarService.checkAuthorizationStatus()
         calendarService.refreshRemoteSourcesIfNeeded()
         alarmAuthorization = AlarmManager.shared.authorizationState
-        if authorizationStatus == .fullAccess || googleCalendarService.isConnected {
+        if hasEventSource {
             await reload()
         }
+    }
+
+    func handleSignificantTimeChange() {
+        lastScheduledFingerprint = nil
+        requestReschedule(force: true)
     }
 
     func connectGoogleCalendar(from viewController: UIViewController) async throws {
@@ -184,7 +202,23 @@ final class ScheduleStore: ObservableObject {
             }
 
             if canLoadGoogle {
-                let googleEvents = await googleCalendarService.fetchUpcomingEvents(days: fetchDays)
+                let cachedGoogle = events.filter { $0.source == .google }.map { event in
+                    GoogleCalendarFetchedEvent(
+                        googleEventID: googleEventID(from: event.id) ?? event.id,
+                        title: event.title,
+                        startDate: event.startDate,
+                        endDate: event.endDate,
+                        location: event.location,
+                        calendarID: "",
+                        calendarTitle: event.calendarTitle,
+                        isBusyOnly: false,
+                        occurrenceID: event.id
+                    )
+                }
+                let googleEvents = await googleCalendarService.fetchUpcomingEvents(
+                    days: fetchDays,
+                    cachedEvents: cachedGoogle
+                )
                 mergedEvents.append(contentsOf: googleEvents.map { googleEvent in
                     ScheduleEvent(
                         id: googleEvent.occurrenceID,
@@ -204,11 +238,8 @@ final class ScheduleStore: ObservableObject {
             refreshEventsIdentityToken()
 
             let currentIDs = Set(mergedEvents.map(\.id))
-            for removedID in previousIDs.subtracting(currentIDs) {
-                preferences.removeOverride(for: removedID)
-            }
-
-            await alarmScheduler.cancelRemoved(eventIDs: previousIDs.subtracting(currentIDs))
+            let removedIDs = previousIDs.subtracting(currentIDs)
+            await alarmScheduler.cancelRemoved(eventIDs: removedIDs)
             await rescheduleIfNeeded(force: false)
         }
         reloadTask = task
@@ -229,13 +260,21 @@ final class ScheduleStore: ObservableObject {
         guard let index = events.firstIndex(where: { $0.id == eventID }) else { return }
 
         if events[index].alarmEnabled {
-            preferences.setAlarmOffsets([], for: eventID)
+            if events[index].alarmOffsets.count > 1 {
+                preferences.pauseAlarms(for: eventID)
+            } else {
+                preferences.setAlarmOffsets([], for: eventID)
+            }
             events[index].alarmOffsets = []
         } else {
             if alarmAuthorization == .notDetermined {
                 Task { await requestAlarmAuthorizationIfNeeded() }
             }
-            preferences.addAlarmOffset(defaultAlarmOffset.enablingFallback, for: eventID)
+            if preferences.hasPausedAlarms(for: eventID) {
+                preferences.resumeAlarms(for: eventID, defaultOffset: defaultAlarmOffset)
+            } else {
+                preferences.addAlarmOffset(defaultAlarmOffset.enablingFallback, for: eventID)
+            }
             events[index].alarmOffsets = preferences.alarmOffsets(for: eventID)
         }
 
@@ -316,7 +355,7 @@ final class ScheduleStore: ObservableObject {
         if event(with: pendingID) != nil {
             return
         }
-        if !isLoading, authorizationStatus == .fullAccess || googleCalendarService.isConnected {
+        if !isLoading, hasEventSource {
             deepLinkFailureMessage = "This event isn’t on your calendar anymore."
             acknowledgeEventDeepLink()
         }
@@ -361,6 +400,10 @@ final class ScheduleStore: ObservableObject {
 
     func clearScheduleFailures() {
         scheduleFailures = []
+    }
+
+    func clearGoogleSyncError() {
+        googleCalendarService.clearLastSyncError()
     }
 
     func refreshAfterThemeChange() {
@@ -510,10 +553,17 @@ final class ScheduleStore: ObservableObject {
 
     private func runMetadataMigrationIfNeeded() async {
         guard !CalarmPersistence.bool(forKey: CalarmPersistence.Key.occurrenceMetadataMigrationDone) else { return }
-        CalarmPersistence.setBool(true, forKey: CalarmPersistence.Key.occurrenceMetadataMigrationDone)
         if authorizationStatus == .fullAccess {
             lastScheduledFingerprint = nil
             await performReschedule(force: true)
         }
+        CalarmPersistence.setBool(true, forKey: CalarmPersistence.Key.occurrenceMetadataMigrationDone)
+    }
+
+    private func googleEventID(from occurrenceID: String) -> String? {
+        guard occurrenceID.hasPrefix("google.") else { return nil }
+        let withoutPrefix = String(occurrenceID.dropFirst("google.".count))
+        guard let separator = withoutPrefix.lastIndex(of: "_") else { return nil }
+        return String(withoutPrefix[..<separator])
     }
 }

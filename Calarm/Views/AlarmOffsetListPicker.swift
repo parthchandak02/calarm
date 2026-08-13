@@ -56,13 +56,19 @@ struct AlarmOffsetSelectionSheet: View {
             .background(theme.background.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .calarmToolbarChrome(theme: theme)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") { dismiss() }
                         .font(CalarmFont.bodyMedium)
-                        .foregroundStyle(theme.textSecondary)
+                        .foregroundStyle(theme.accent)
                 }
+                .sharedBackgroundVisibility(.hidden)
             }
         }
+        .font(CalarmFont.body)
+        .calarmNavigationStyle(theme: theme)
+        .presentationDragIndicator(.visible)
+        .presentationBackground(theme.background)
     }
 }

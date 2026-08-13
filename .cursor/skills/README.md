@@ -14,6 +14,7 @@ Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the a
 | [calarm-trust-diagnostics](calarm-trust-diagnostics/SKILL.md) | Permission banners, test alarm, schedule failures |
 | [calarm-release-pipeline](calarm-release-pipeline/SKILL.md) | ship.sh, ios-doctor, pipeline bootstrap |
 | [calarm-app-icon-alpha](calarm-app-icon-alpha/SKILL.md) | App icon transparency rejection, logo processing |
+| [calarm-ios-ui-design](calarm-ios-ui-design/SKILL.md) | View polish, HIG alignment, design tokens, UI consistency |
 
 ## Agents (delegation)
 

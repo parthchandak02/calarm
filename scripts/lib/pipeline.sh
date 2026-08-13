@@ -64,6 +64,25 @@ log_step() {
   echo "----"
 }
 
+run_calarm_unit_tests() {
+  local destination="${1:-platform=iOS Simulator,name=iPhone 17}"
+  if ! xcodebuild -showdestinations -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" 2>/dev/null \
+    | grep -q 'name:iPhone 17[^a-zA-Z]'; then
+    warn "iPhone 17 simulator not found; using generic iOS Simulator"
+    destination="generic/platform=iOS Simulator"
+  fi
+  xcodebuild test \
+    -project "$XCODE_PROJECT" \
+    -scheme "$XCODE_SCHEME" \
+    -destination "$destination" \
+    -only-testing:CalarmTests \
+    | xcbeautify 2>/dev/null || xcodebuild test \
+      -project "$XCODE_PROJECT" \
+      -scheme "$XCODE_SCHEME" \
+      -destination "$destination" \
+      -only-testing:CalarmTests
+}
+
 warn() {
   echo "!! $*"
 }

@@ -33,6 +33,12 @@ struct CalarmApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     Task { await scheduleStore.refreshOnForeground() }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    scheduleStore.handleSignificantTimeChange()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: Notification.Name.NSSystemTimeZoneDidChange)) { _ in
+                    Task { await scheduleStore.reload() }
+                }
         }
     }
 }

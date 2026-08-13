@@ -42,6 +42,10 @@ final class GoogleCalendarService: ObservableObject {
         lastSyncError = nil
     }
 
+    func clearLastSyncError() {
+        lastSyncError = nil
+    }
+
     func refreshCalendarList() async throws {
         guard authManager.isSignedIn else { throw GoogleCalendarAPIError.notSignedIn }
         isLoading = true
@@ -73,7 +77,11 @@ final class GoogleCalendarService: ObservableObject {
     }
 
     /// Fetch upcoming events across enabled Google calendars for the alarm horizon.
-    func fetchUpcomingEvents(days: Int) async -> [GoogleCalendarFetchedEvent] {
+    /// On failure, returns `cachedEvents` so callers can keep last-known-good schedule data.
+    func fetchUpcomingEvents(
+        days: Int,
+        cachedEvents: [GoogleCalendarFetchedEvent] = []
+    ) async -> [GoogleCalendarFetchedEvent] {
         guard isConnected else { return [] }
 
         isLoading = true
@@ -90,15 +98,20 @@ final class GoogleCalendarService: ObservableObject {
             var merged: [String: GoogleCalendarFetchedEvent] = [:]
 
             for calendar in enabledCalendars {
-                let windowEvents = try await api.listEvents(
+                let pageResult = try await api.listEvents(
                     calendarID: calendar.id,
                     accessToken: token,
                     timeMin: now,
                     timeMax: end
                 )
-                for event in windowEvents {
+                for event in pageResult.events {
                     guard let mapped = mapEvent(event, calendar: calendar) else { continue }
                     merged[mapped.occurrenceID] = mapped
+                }
+
+                if preferences.syncToken(for: calendar.id) == nil,
+                   let bootstrapToken = pageResult.nextSyncToken {
+                    preferences.setSyncToken(bootstrapToken, for: calendar.id)
                 }
 
                 if let syncToken = preferences.syncToken(for: calendar.id) {
@@ -108,13 +121,18 @@ final class GoogleCalendarService: ObservableObject {
                             accessToken: token,
                             syncToken: syncToken
                         )
+                        applyIncrementalEvents(
+                            incremental.events,
+                            calendar: calendar,
+                            merged: &merged
+                        )
                         if let next = incremental.nextSyncToken {
                             preferences.setSyncToken(next, for: calendar.id)
                         }
                     } catch GoogleCalendarAPIError.syncTokenExpired {
                         preferences.setSyncToken(nil, for: calendar.id)
                     } catch {
-                        // Bounded fetch is the primary path; sync token is best-effort.
+                        SchedulerLog.warning("google incremental sync failed for \(calendar.id)")
                     }
                 }
             }
@@ -126,13 +144,48 @@ final class GoogleCalendarService: ObservableObject {
                 .sorted { $0.startDate < $1.startDate }
         } catch {
             lastSyncError = error.localizedDescription
-            SchedulerLog.error("google calendar sync failed: \(error.localizedDescription)")
-            return []
+            SchedulerLog.error("google calendar sync failed")
+            if cachedEvents.isEmpty {
+                return []
+            }
+            let now = Date()
+            return cachedEvents
+                .filter { $0.startDate >= now }
+                .sorted { $0.startDate < $1.startDate }
         }
     }
 
     private var enabledCalendars: [GoogleCalendarListEntry] {
         availableCalendars.filter { preferences.isCalendarEnabled($0.id) }
+    }
+
+    private func applyIncrementalEvents(
+        _ events: [GoogleCalendarEvent],
+        calendar: GoogleCalendarListEntry,
+        merged: inout [String: GoogleCalendarFetchedEvent]
+    ) {
+        for event in events {
+            if event.isCancelled {
+                if let occurrenceID = occurrenceID(for: event, calendar: calendar) {
+                    merged.removeValue(forKey: occurrenceID)
+                }
+                continue
+            }
+            guard let mapped = mapEvent(event, calendar: calendar) else { continue }
+            merged[mapped.occurrenceID] = mapped
+        }
+    }
+
+    private func occurrenceID(
+        for event: GoogleCalendarEvent,
+        calendar: GoogleCalendarListEntry
+    ) -> String? {
+        guard let googleEventID = event.id else { return nil }
+        guard let dates = api.parseEventDates(event) else { return nil }
+        return GoogleCalendarFetchedEvent.occurrenceID(
+            googleEventID: googleEventID,
+            startDate: dates.start
+        )
     }
 
     private func mapEvent(

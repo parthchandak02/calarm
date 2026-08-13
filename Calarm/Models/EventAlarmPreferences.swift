@@ -10,6 +10,8 @@ struct EventOverride: Codable, Equatable {
     /// `nil` = no per-event override (use default-for-new-events policy).
     /// `[]` = user explicitly turned alarms off for this event.
     var alarmOffsets: [String]?
+    /// Offsets preserved when the user pauses alarms from the schedule list.
+    var pausedAlarmOffsets: [String]?
     /// Legacy single-offset storage (migrated on read).
     var legacyOffsetMinutes: Int?
     var legacyEnabled: Bool?
@@ -121,6 +123,37 @@ final class EventAlarmPreferences {
         setAlarmOffsets(current, for: occurrenceID)
     }
 
+    func hasPausedAlarms(for occurrenceID: String) -> Bool {
+        guard let paused = allOverrides()[occurrenceID]?.pausedAlarmOffsets else { return false }
+        return !paused.isEmpty
+    }
+
+    /// Pause alarms but preserve configured offsets for a later resume.
+    func pauseAlarms(for occurrenceID: String) {
+        let current = alarmOffsets(for: occurrenceID)
+        var override = overrides(for: occurrenceID)
+        override.legacyEnabled = nil
+        override.legacyOffsetMinutes = nil
+        override.pausedAlarmOffsets = current.map(\.rawValue)
+        override.alarmOffsets = []
+        save(override, for: occurrenceID)
+    }
+
+    /// Restore alarms from paused offsets, or apply the default enabling offset.
+    func resumeAlarms(for occurrenceID: String, defaultOffset: AlarmOffsetOption) {
+        var override = overrides(for: occurrenceID)
+        override.legacyEnabled = nil
+        override.legacyOffsetMinutes = nil
+        if let paused = override.pausedAlarmOffsets, !paused.isEmpty {
+            override.alarmOffsets = paused
+            override.pausedAlarmOffsets = nil
+        } else {
+            override.alarmOffsets = [defaultOffset.enablingFallback.rawValue]
+            override.pausedAlarmOffsets = nil
+        }
+        save(override, for: occurrenceID)
+    }
+
     func removeOverride(for occurrenceID: String) {
         var all = allOverrides()
         all.removeValue(forKey: occurrenceID)
@@ -134,6 +167,7 @@ final class EventAlarmPreferences {
     private func save(_ override: EventOverride, for occurrenceID: String) {
         var all = allOverrides()
         let isEmpty = override.alarmOffsets == nil
+            && override.pausedAlarmOffsets == nil
             && override.legacyEnabled == nil
             && override.legacyOffsetMinutes == nil
         if isEmpty {

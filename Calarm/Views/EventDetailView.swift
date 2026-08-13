@@ -8,7 +8,6 @@ import SwiftUI
 struct EventDetailView: View {
     @EnvironmentObject private var store: ScheduleStore
     @EnvironmentObject private var themeStore: ThemeStore
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     let eventID: String
@@ -43,14 +42,6 @@ struct EventDetailView: View {
         .navigationTitle("Event")
         .navigationBarTitleDisplayMode(.inline)
         .calarmToolbarChrome(theme: theme)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
-                    .font(CalarmFont.bodyMedium)
-                    .foregroundStyle(theme.accent)
-            }
-            .sharedBackgroundVisibility(.hidden)
-        }
         .sheet(isPresented: $showingAddAlarm) {
             if let event {
                 AlarmOffsetSelectionSheet(
@@ -164,6 +155,8 @@ struct EventDetailView: View {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(theme.textSecondary)
+                    .frame(width: CalarmTheme.bellTapSize, height: CalarmTheme.bellTapSize)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Remove \(offset.title)")
