@@ -25,6 +25,7 @@ struct ScheduleHeaderBar: View {
     let allAlarmsEnabled: Bool
     let hasEnabledAlarms: Bool
     let canRefresh: Bool
+    var isRefreshing: Bool = false
     let onTurnAllOn: () -> Void
     let onTurnAllOff: () -> Void
     let onRefresh: () -> Void
@@ -61,13 +62,20 @@ struct ScheduleHeaderBar: View {
                 .disabled(!canManageAlarms)
                 .accessibilityLabel("Alarm bulk actions")
 
-                CalarmToolbarIconButton(
-                    systemName: "arrow.clockwise",
-                    theme: theme,
-                    isDisabled: !canRefresh,
-                    action: onRefresh
-                )
-                .accessibilityLabel("Refresh calendar")
+                if isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(theme.accent)
+                        .frame(width: 34, height: 34)
+                } else {
+                    CalarmToolbarIconButton(
+                        systemName: "arrow.clockwise",
+                        theme: theme,
+                        isDisabled: !canRefresh,
+                        action: onRefresh
+                    )
+                    .accessibilityLabel("Refresh calendar")
+                }
 
                 CalarmToolbarIconButton(systemName: "gearshape", theme: theme, action: onSettings)
                     .accessibilityLabel("Settings")

@@ -18,7 +18,11 @@ enum SchedulerLog {
     }
 
     static func error(_ message: String) {
-        log.error("\(message, privacy: .public)")
+        log.error("\(message, privacy: .private)")
+    }
+
+    static func errorDetail(_ message: String) {
+        log.error("\(message, privacy: .private)")
     }
 }
 

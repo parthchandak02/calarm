@@ -22,7 +22,11 @@ struct ScheduleView: View {
     }
 
     private var canManageAlarms: Bool {
-        store.authorizationStatus == .fullAccess && !store.schedulableEvents.isEmpty
+        store.hasEventSource && !store.schedulableEvents.isEmpty
+    }
+
+    private var showsCalendarAccessPrompt: Bool {
+        !store.hasEventSource
     }
 
     var body: some View {
@@ -33,7 +37,8 @@ struct ScheduleView: View {
                     canManageAlarms: canManageAlarms,
                     allAlarmsEnabled: store.allAlarmsEnabled,
                     hasEnabledAlarms: store.schedulableEvents.contains(where: \.alarmEnabled),
-                    canRefresh: store.authorizationStatus == .fullAccess,
+                    canRefresh: store.hasEventSource,
+                    isRefreshing: store.isLoading,
                     onTurnAllOn: { store.setAllAlarmsEnabled(true) },
                     onTurnAllOff: { store.setAllAlarmsEnabled(false) },
                     onRefresh: { Task { await store.reload() } },
@@ -50,7 +55,7 @@ struct ScheduleView: View {
                     theme.background.ignoresSafeArea()
 
                     Group {
-                        if store.authorizationStatus != .fullAccess {
+                        if showsCalendarAccessPrompt {
                             accessPrompt
                         } else if store.events.isEmpty && !store.isLoading {
                             emptyState
@@ -132,32 +137,35 @@ struct ScheduleView: View {
     }
 
     private func nextAlarmBanner(event: ScheduleEvent, fireDate: Date) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "alarm.fill")
-                .font(.caption)
-                .foregroundStyle(theme.accent)
-            Text("Next: \(event.title)")
-                .font(CalarmFont.captionSemibold)
-                .lineLimit(1)
-            Text("·")
-                .foregroundStyle(theme.textSecondary)
-            Text(nextAlarmCountdown(until: fireDate))
-                .font(CalarmFont.caption)
-                .foregroundStyle(theme.textSecondary)
-                .monospacedDigit()
+        Button {
+            selectedEvent = EventRoute(id: event.id)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "alarm.fill")
+                    .font(.caption)
+                    .foregroundStyle(theme.accent)
+                Text("Next: \(event.title)")
+                    .font(CalarmFont.captionSemibold)
+                    .lineLimit(1)
+                Text("·")
+                    .foregroundStyle(theme.textSecondary)
+                if fireDate.timeIntervalSinceNow > 0 {
+                    Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: fireDate.timeIntervalSinceNow >= 3_600)
+                        .font(CalarmFont.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .monospacedDigit()
+                } else {
+                    Text("passed")
+                        .font(CalarmFont.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, CalarmTheme.rowPaddingH)
+            .padding(.vertical, 8)
+            .background(theme.accent.opacity(0.08))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, CalarmTheme.rowPaddingH)
-        .padding(.vertical, 8)
-        .background(theme.accent.opacity(0.08))
-    }
-
-    private func nextAlarmCountdown(until fireDate: Date) -> String {
-        let interval = fireDate.timeIntervalSinceNow
-        guard interval > 0 else { return "passed" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: fireDate, relativeTo: Date())
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -173,9 +181,23 @@ struct ScheduleView: View {
                 }
             }
 
-            if let failure = store.scheduleFailures.first {
+            if let syncError = store.googleSyncErrorMessage {
                 permissionBanner(
-                    title: "Couldn’t schedule an alarm",
+                    title: "Google Calendar sync failed",
+                    message: syncError,
+                    actionTitle: "Dismiss"
+                ) {
+                    store.clearGoogleSyncError()
+                }
+            }
+
+            if !store.scheduleFailures.isEmpty {
+                let failure = store.scheduleFailures.first!
+                let title = store.scheduleFailures.count > 1
+                    ? "Couldn’t schedule \(store.scheduleFailures.count) alarms"
+                    : "Couldn’t schedule an alarm"
+                permissionBanner(
+                    title: title,
                     message: "\(failure.eventTitle): \(failure.message)",
                     actionTitle: "Dismiss"
                 ) {
@@ -266,6 +288,9 @@ struct ScheduleView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .refreshable {
+            await store.reload()
+        }
         .accessibilityIdentifier("schedule.list")
         .id(themeStore.themeToken)
     }
@@ -280,7 +305,7 @@ struct ScheduleView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(theme.accent)
 
-            Text(store.authorizationStatus == .denied ? "Calendar access is off" : "See your week at a glance")
+            Text(accessPromptTitle)
                 .font(CalarmFont.title3)
                 .foregroundStyle(theme.textPrimary)
 
@@ -300,9 +325,22 @@ struct ScheduleView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(theme.accent)
+
+                Button("Connect Google Calendar in Settings") {
+                    showingSettings = true
+                }
+                .font(CalarmFont.subheadline)
+                .foregroundStyle(theme.accent)
             }
         }
         .padding()
+    }
+
+    private var accessPromptTitle: String {
+        if store.authorizationStatus == .denied {
+            return "Calendar access is off"
+        }
+        return "See your week at a glance"
     }
 
     private var accessPromptMessage: String {
@@ -323,6 +361,18 @@ struct ScheduleView: View {
             Text("Nothing scheduled in the selected calendar window.")
                 .font(CalarmFont.subheadline)
                 .foregroundStyle(theme.textSecondary)
+
+            Button("Refresh") {
+                Task { await store.reload() }
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.accent)
+
+            Button("Choose calendars in Settings") {
+                showingSettings = true
+            }
+            .font(CalarmFont.subheadline)
+            .foregroundStyle(theme.accent)
         }
     }
 }
@@ -387,7 +437,7 @@ private struct EventRow: View {
                     }
 
                     if hasTooSoonWarning {
-                        Text("Too soon")
+                        Text("Too soon to schedule")
                             .font(CalarmFont.captionSemibold)
                             .foregroundStyle(.orange)
                     }
