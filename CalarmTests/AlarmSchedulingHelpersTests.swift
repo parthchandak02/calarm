@@ -58,4 +58,25 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         )
         XCTAssertNotEqual(coral, violet)
     }
+
+    func testStaleAlarmDetection() {
+        let past = Date().addingTimeInterval(-60)
+        let future = Date().addingTimeInterval(300)
+        XCTAssertTrue(AlarmSchedulingHelpers.isStaleAlarm(fireDate: past))
+        XCTAssertFalse(AlarmSchedulingHelpers.isStaleAlarm(fireDate: future))
+    }
+
+    func testUpcomingFireDateDetection() {
+        let past = Date().addingTimeInterval(-60)
+        let future = Date().addingTimeInterval(300)
+        XCTAssertFalse(AlarmSchedulingHelpers.hasUpcomingFireDate(past))
+        XCTAssertTrue(AlarmSchedulingHelpers.hasUpcomingFireDate(future))
+    }
+
+    func testEventEndedDetection() {
+        let ended = Date().addingTimeInterval(-60)
+        let ongoing = Date().addingTimeInterval(300)
+        XCTAssertTrue(AlarmSchedulingHelpers.isEventEnded(endDate: ended))
+        XCTAssertFalse(AlarmSchedulingHelpers.isEventEnded(endDate: ongoing))
+    }
 }

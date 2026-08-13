@@ -39,6 +39,7 @@ enum ScreenshotDemoData {
                 endDate: end,
                 location: location,
                 calendarTitle: calendarTitle,
+                source: .eventKit,
                 alarmOffsets: alarmOffsets
             )
         }

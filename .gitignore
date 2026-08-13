@@ -144,6 +144,7 @@ fastlane/*.env
 .asc/
 *.p8
 AuthKey_*.p8
+Calarm/GoogleService-Info.plist
 
 ## Xcode Cloud
 .xcode-cloud

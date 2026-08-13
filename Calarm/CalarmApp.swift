@@ -8,6 +8,7 @@ import SwiftUI
 
 @main
 struct CalarmApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var scheduleStore = ScheduleStore()
     @StateObject private var themeStore = ThemeStore()
 
