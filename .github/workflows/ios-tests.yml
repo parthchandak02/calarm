@@ -1,0 +1,42 @@
+name: iOS Tests
+
+on:
+  push:
+    branches:
+      - main
+      - cursor/**
+  pull_request:
+    branches:
+      - main
+      - cursor/**
+
+jobs:
+  unit-tests:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select simulator destination
+        id: destination
+        run: |
+          set -euo pipefail
+          if xcodebuild -showdestinations -project Calarm.xcodeproj -scheme Calarm 2>/dev/null \
+            | grep -Eq 'name:iPhone 17[^a-zA-Z]'; then
+            echo 'destination=platform=iOS Simulator,name=iPhone 17' >> "$GITHUB_OUTPUT"
+          else
+            echo "iPhone 17 simulator not found; falling back to generic iOS Simulator"
+            echo 'destination=generic/platform=iOS Simulator' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run CalarmTests
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project Calarm.xcodeproj \
+            -scheme Calarm \
+            -destination "${{ steps.destination.outputs.destination }}" \
+            -only-testing:CalarmTests \
+            -derivedDataPath /tmp/calarm-derived-data \
+            CODE_SIGNING_ALLOWED=NO
