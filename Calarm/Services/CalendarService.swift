@@ -79,6 +79,8 @@ final class CalendarService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        refreshRemoteSourcesIfNeeded()
+
         let start = Date()
         let end = Calendar.current.date(byAdding: .day, value: days, to: start) ?? start
         let calendars = filteredCalendars()
@@ -88,6 +90,25 @@ final class CalendarService: ObservableObject {
             .events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
+    }
+
+    /// Ask iOS to refresh external calendar sources (Google, Exchange) before reading EventKit.
+    func refreshRemoteSourcesIfNeeded() {
+        guard authorizationStatus == .fullAccess else { return }
+        eventStore.refreshSourcesIfNecessary()
+    }
+
+    /// EventKit calendars that mirror a Google account — skipped when Google direct sync is active.
+    func isGoogleMirroredCalendar(_ calendar: EKCalendar) -> Bool {
+        let sourceTitle = calendar.source.title.lowercased()
+        if sourceTitle.contains("google") || sourceTitle.contains("gmail") {
+            return true
+        }
+        if calendar.source.sourceType == .calDAV,
+           calendar.calendarIdentifier.lowercased().contains("google") {
+            return true
+        }
+        return false
     }
 
     private func filteredCalendars() -> [EKCalendar]? {

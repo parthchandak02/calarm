@@ -13,15 +13,16 @@
 </head>
 <body>
   <h1>Privacy Policy for CALarm</h1>
-  <p><strong>Last updated:</strong> June 30, 2026</p>
+  <p><strong>Last updated:</strong> August 12, 2026</p>
 
   <h2>Summary</h2>
-  <p>CALarm is a calendar-aware alarm app for iOS 26. We do not sell your data. Calendar information and alarm preferences stay on your device.</p>
+  <p>CALarm is a calendar-aware alarm app for iOS 26. We do not sell your data. Alarm preferences stay on your device. If you connect Google Calendar, CALarm reads events directly from Google’s API using your account — we do not operate CALarm servers for calendar storage.</p>
 
   <h2>Information we access</h2>
-  <p><strong>Calendar events.</strong> With your permission, CALarm reads upcoming calendar events from calendars on your device to display your schedule and schedule countdown alarms before each event. CALarm does not upload calendar data to our servers.</p>
-  <p><strong>Alarm preferences.</strong> Per-event alarm settings, default alarm offset, snooze duration, and theme choices are stored locally on your device using iOS storage (UserDefaults).</p>
+  <p><strong>Calendar events (EventKit).</strong> With your permission, CALarm reads upcoming events from calendars on your device (iCloud, Exchange, and calendars synced through iOS Settings). This data is processed on your device and is not uploaded to us.</p>
+  <p><strong>Google Calendar (optional).</strong> If you choose “Connect Google Calendar,” CALarm uses Google Sign-In to read upcoming events from the Google Calendar API. Requests go directly from your device to Google. We do not receive or store your Google credentials on CALarm servers.</p>
   <p><strong>Alarms.</strong> CALarm uses Apple’s AlarmKit framework to schedule countdown alarms and Live Activities. Alarm scheduling is handled by iOS on your device.</p>
+  <p><strong>Alarm preferences.</strong> Per-event alarm settings, default alarm offset, snooze duration, theme choices, and Google calendar toggles are stored locally on your device using iOS storage (UserDefaults).</p>
 
   <h2>Information we do not collect</h2>
   <ul>
@@ -31,7 +32,7 @@
   </ul>
 
   <h2>Data sharing</h2>
-  <p>We do not share your personal information with third parties. Apple processes App Store distribution and TestFlight under <a href="https://www.apple.com/legal/privacy/">Apple’s Privacy Policy</a>.</p>
+  <p>We do not share your personal information with third parties. Google processes Calendar API requests when you connect Google Calendar, under <a href="https://policies.google.com/privacy">Google’s Privacy Policy</a>. Apple processes App Store distribution and TestFlight under <a href="https://www.apple.com/legal/privacy/">Apple’s Privacy Policy</a>.</p>
 
   <h2>Data retention</h2>
   <p>Data remains on your device until you delete the app or revoke calendar access in iOS Settings.</p>

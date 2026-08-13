@@ -12,6 +12,7 @@ struct ScheduleEvent: Identifiable, Equatable {
     let endDate: Date
     let location: String?
     let calendarTitle: String
+    let source: CalendarSource
 
     var alarmOffsets: [AlarmOffsetOption]
 

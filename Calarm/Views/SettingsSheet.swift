@@ -6,6 +6,7 @@
 import AlarmKit
 import EventKit
 import SwiftUI
+import UIKit
 
 struct SettingsSheet: View {
     @EnvironmentObject private var themeStore: ThemeStore
@@ -17,6 +18,8 @@ struct SettingsSheet: View {
     @State private var defaultSnooze: SnoozeDurationOption
     @State private var testAlarmMessage: String?
     @State private var isSchedulingTestAlarm = false
+    @State private var googleConnectError: String?
+    @State private var isConnectingGoogle = false
 
     private let onDefaultAlarmOffsetChange: (AlarmOffsetOption) -> Void
     private let onDefaultSnoozeChange: (SnoozeDurationOption) -> Void
@@ -50,6 +53,7 @@ struct SettingsSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     diagnosticsSection
+                    googleCalendarSection
                     calendarsSection
                     defaultAlarmSection
                     snoozeSection
@@ -88,6 +92,126 @@ struct SettingsSheet: View {
             Button("OK", role: .cancel) { testAlarmMessage = nil }
         } message: {
             Text(testAlarmMessage ?? "")
+        }
+        .alert("Google Calendar", isPresented: Binding(
+            get: { googleConnectError != nil },
+            set: { if !$0 { googleConnectError = nil } }
+        )) {
+            Button("OK", role: .cancel) { googleConnectError = nil }
+        } message: {
+            Text(googleConnectError ?? "")
+        }
+    }
+
+    private var googleCalendarSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader(title: "Google Calendar", theme: theme)
+
+            Text("Connect Google for faster updates than iOS Calendar sync. iCloud and other calendars still use EventKit.")
+                .font(CalarmFont.subheadline)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            SettingsOptionList(theme: theme) {
+                if store.googleCalendarService.isConnected {
+                    diagnosticRow("Account", value: store.googleCalendarService.connectedEmail ?? "Connected")
+
+                    Divider().overlay(theme.surfaceStroke)
+
+                    if store.googleCalendarService.availableCalendars.isEmpty {
+                        Text("Loading Google calendars…")
+                            .font(CalarmFont.caption)
+                            .foregroundStyle(theme.textSecondary)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                    } else {
+                        ForEach(Array(store.googleCalendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
+                            Toggle(isOn: Binding(
+                                get: { store.googleCalendarService.isCalendarEnabled(calendar.id) },
+                                set: { enabled in
+                                    store.googleCalendarService.setCalendarEnabled(calendar.id, enabled: enabled)
+                                    Task { await store.reload() }
+                                }
+                            )) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(calendar.title)
+                                        .font(CalarmFont.bodyMedium)
+                                        .foregroundStyle(theme.textPrimary)
+                                    if calendar.isBusyOnly {
+                                        Text("Busy blocks only")
+                                            .font(CalarmFont.caption)
+                                            .foregroundStyle(theme.textSecondary)
+                                    }
+                                }
+                            }
+                            .tint(theme.accent)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16)
+
+                            if index < store.googleCalendarService.availableCalendars.count - 1 {
+                                Divider().overlay(theme.surfaceStroke)
+                            }
+                        }
+                    }
+
+                    Divider().overlay(theme.surfaceStroke)
+
+                    Button {
+                        store.disconnectGoogleCalendar()
+                    } label: {
+                        Text("Disconnect Google")
+                            .font(CalarmFont.bodyMedium)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                    }
+                } else if GoogleOAuthConfig.isConfigured {
+                    Button {
+                        guard let presenter = UIApplication.shared.calarmTopViewController else {
+                            googleConnectError = "Could not present Google sign-in."
+                            return
+                        }
+                        isConnectingGoogle = true
+                        Task {
+                            do {
+                                try await store.connectGoogleCalendar(from: presenter)
+                            } catch {
+                                googleConnectError = error.localizedDescription
+                            }
+                            isConnectingGoogle = false
+                        }
+                    } label: {
+                        HStack {
+                            Text(isConnectingGoogle ? "Connecting…" : "Connect Google Calendar")
+                                .font(CalarmFont.bodyMedium)
+                                .foregroundStyle(theme.textPrimary)
+                            Spacer()
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .foregroundStyle(theme.accent)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                    }
+                    .disabled(isConnectingGoogle)
+                } else {
+                    Text("Add GoogleService-Info.plist to enable Google Calendar. See scripts/setup-google-oauth.sh.")
+                        .font(CalarmFont.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                }
+            }
+
+            if store.googleCalendarService.isConnected {
+                Text("Google events refresh whenever you open CALarm. iOS may still delay EventKit copies of the same calendars.")
+                    .font(CalarmFont.caption)
+                    .foregroundStyle(theme.textSecondary)
+            } else {
+                Text("Without Google connect, calendars added in iOS Settings sync on Apple's schedule — often minutes behind. Open the Calendar app to force a refresh.")
+                    .font(CalarmFont.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
         }
     }
 

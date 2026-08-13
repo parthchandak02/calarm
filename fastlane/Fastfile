@@ -113,6 +113,8 @@ platform :ios do
       distribute_external: false,
       changelog: changelog
     )
+
+    sh("../scripts/add-testflight-internal-group.sh")
   end
 
   desc "Upload metadata only (no binary) — descriptions, keywords, URLs"

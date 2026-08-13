@@ -74,7 +74,7 @@
 	<key>NSAlarmKitUsageDescription</key>
 	<string>CALarm schedules countdown alarms for your upcoming events and shows them in Live Activities and the Dynamic Island.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>CALarm reads your calendar to show upcoming events and let you set reminder alarms before each event. Calendar data stays on your device.</string>
+	<string>CALarm reads your calendar to show upcoming events and let you set reminder alarms before each event. iCloud and other on-device calendars stay local; connect Google Calendar separately for faster Google sync.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
@@ -82,6 +82,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.calarmapp.calarm.morning-sync</string>
+		<string>com.calarmapp.calarm.hourly-sync</string>
 	</array>
 	<key>UIAppFonts</key>
 	<array>

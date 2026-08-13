@@ -30,8 +30,10 @@ final class AlarmScheduler {
     }
 
     func reschedule(events: [ScheduleEvent], snoozeSeconds: TimeInterval, force: Bool = false) async -> RescheduleResult {
+        let cleaned = await reconcileAlarmLifecycle(events: events)
+
         if !force, hasAlertingAlarms() {
-            SchedulerLog.warning("reschedule skipped — alarm alerting")
+            SchedulerLog.warning("reschedule skipped — alarm alerting (cleaned=\(cleaned))")
             return RescheduleResult(scheduledCount: 0, failures: [], skippedDuringAlerting: true, skippedTooSoon: [])
         }
 
@@ -41,14 +43,7 @@ final class AlarmScheduler {
 
         let desired = buildDesiredInstances(from: events)
         let desiredIDs = Set(desired.map(\.alarmID))
-        let managedIDs = managedAlarmIDs(for: events)
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
-
-        for alarm in currentAlarms where managedIDs.contains(alarm.id) && !desiredIDs.contains(alarm.id) {
-            if isAlerting(alarm) { continue }
-            try? AlarmManager.shared.cancel(id: alarm.id)
-            SchedulerLog.info("cancelled orphan alarm \(alarm.id)")
-        }
 
         for instance in desired {
             let existing = currentAlarms.first { $0.id == instance.alarmID }
@@ -81,7 +76,7 @@ final class AlarmScheduler {
             }
         }
 
-        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) failures=\(failures.count)")
+        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) cleaned=\(cleaned) failures=\(failures.count)")
         return RescheduleResult(
             scheduledCount: scheduledCount,
             failures: failures,
@@ -154,11 +149,71 @@ final class AlarmScheduler {
     }
 
     func hasActiveCountdown() -> Bool {
+        hasActiveUpcomingCountdown()
+    }
+
+    /// Only defer reschedules while a future alarm is actively counting down.
+    func hasActiveUpcomingCountdown() -> Bool {
         guard let alarms = try? AlarmManager.shared.alarms else { return false }
         return alarms.contains { alarm in
-            if case .countdown = alarm.state { return true }
-            return false
+            guard case .countdown = alarm.state else { return false }
+            guard let fireDate = fixedFireDate(for: alarm) else { return true }
+            return AlarmSchedulingHelpers.hasUpcomingFireDate(fireDate)
         }
+    }
+
+    /// Always-safe cleanup: stale countdowns, expired events, and undesired alarms.
+    @discardableResult
+    func reconcileAlarmLifecycle(events: [ScheduleEvent]) async -> Int {
+        let stale = await reconcileStaleAlarms(events: events)
+        let undesired = await cancelUndesiredAlarms(events: events)
+        return stale + undesired
+    }
+
+    /// Cancel AlarmKit alarms whose fixed fire time has passed. Ends stale Live Activities.
+    @discardableResult
+    func reconcileStaleAlarms(events: [ScheduleEvent]) async -> Int {
+        let lookup = alarmEventLookup(for: events)
+        let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        var terminated = 0
+
+        for alarm in currentAlarms where lookup[alarm.id] != nil {
+            guard let fireDate = fixedFireDate(for: alarm) else { continue }
+            let event = lookup[alarm.id]
+            guard shouldTerminateStale(alarm: alarm, event: event, fireDate: fireDate) else { continue }
+
+            if terminate(alarm) {
+                terminated += 1
+                SchedulerLog.info("terminated stale alarm \(alarm.id) fire=\(fireDate)")
+            }
+        }
+
+        return terminated
+    }
+
+    /// Cancel alarms no longer in the desired schedule (including ended events).
+    @discardableResult
+    func cancelUndesiredAlarms(events: [ScheduleEvent]) async -> Int {
+        let desiredIDs = Set(buildDesiredInstances(from: events).map(\.alarmID))
+        let lookup = alarmEventLookup(for: events)
+        let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        var terminated = 0
+
+        for alarm in currentAlarms {
+            guard lookup[alarm.id] != nil else { continue }
+            guard !desiredIDs.contains(alarm.id) else { continue }
+
+            if isAlerting(alarm), let event = lookup[alarm.id], !AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate) {
+                continue
+            }
+
+            if terminate(alarm) {
+                terminated += 1
+                SchedulerLog.info("terminated undesired alarm \(alarm.id)")
+            }
+        }
+
+        return terminated
     }
 
     func schedulingFingerprint(for events: [ScheduleEvent], snoozeSeconds: TimeInterval) -> String {
@@ -264,6 +319,49 @@ final class AlarmScheduler {
         return false
     }
 
+    private func shouldTerminateStale(alarm: Alarm, event: ScheduleEvent?, fireDate: Date) -> Bool {
+        if let event, AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate) {
+            return true
+        }
+
+        switch alarm.state {
+        case .countdown, .paused:
+            return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
+        case .alerting:
+            return false
+        default:
+            return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
+        }
+    }
+
+    @discardableResult
+    private func terminate(_ alarm: Alarm) -> Bool {
+        if isAlerting(alarm) {
+            try? AlarmManager.shared.stop(id: alarm.id)
+        }
+        do {
+            try AlarmManager.shared.cancel(id: alarm.id)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func alarmEventLookup(for events: [ScheduleEvent]) -> [UUID: ScheduleEvent] {
+        var lookup: [UUID: ScheduleEvent] = [:]
+        for event in events {
+            for offset in AlarmOffsetOption.schedulableOffsets {
+                lookup[stableAlarmID(for: event.id, offset: offset)] = event
+            }
+        }
+        return lookup
+    }
+
+    private func fixedFireDate(for alarm: Alarm) -> Date? {
+        guard case .fixed(let date) = alarm.schedule else { return nil }
+        return date
+    }
+
     private func schedule(
         _ event: ScheduleEvent,
         offset: AlarmOffsetOption,
@@ -314,7 +412,8 @@ final class AlarmScheduler {
                     title: event.title,
                     offsetLabel: offset.title,
                     eventID: event.id,
-                    accentRawValue: accentRaw
+                    accentRawValue: accentRaw,
+                    eventEndTimestamp: event.endDate.timeIntervalSince1970
                 ),
                 tintColor: resolvedAccentColor()
             )
