@@ -188,11 +188,82 @@ struct SettingsSectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(CalarmFont.captionSemibold)
+            .font(CalarmFont.sectionHeader)
             .foregroundStyle(theme.textSecondary)
             .textCase(.uppercase)
-            .tracking(0.6)
+            .tracking(CalarmTheme.sectionHeaderTracking)
     }
+}
+
+struct SettingsTabBar<Tab: SettingsTabItem>: View {
+    @Binding var selection: Tab
+    let theme: CalarmTheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
+                SettingsTabButton(
+                    title: tab.title,
+                    systemImage: tab.systemImage,
+                    isSelected: selection == tab,
+                    theme: theme
+                ) {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        selection = tab
+                    }
+                }
+                .accessibilityIdentifier(tab.accessibilityIdentifier)
+
+                if index < Tab.allCases.count - 1 {
+                    Rectangle()
+                        .fill(theme.surfaceStroke)
+                        .frame(width: 1)
+                }
+            }
+        }
+        .background(theme.surface, in: RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous)
+                .strokeBorder(theme.surfaceStroke, lineWidth: 1)
+        }
+        .accessibilityIdentifier("settings.tabBar")
+    }
+}
+
+private struct SettingsTabButton: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let theme: CalarmTheme
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+
+                Text(title)
+                    .font(CalarmFont.captionSemibold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .foregroundStyle(isSelected ? theme.accent : theme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 6)
+            .background(isSelected ? theme.accent.opacity(0.12) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+protocol SettingsTabItem: CaseIterable, Equatable, Identifiable {
+    var title: String { get }
+    var systemImage: String { get }
+    var accessibilityIdentifier: String { get }
 }
 
 struct AccentColorDot: View {
