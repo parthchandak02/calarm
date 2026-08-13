@@ -8,6 +8,37 @@ import EventKit
 import SwiftUI
 import UIKit
 
+private enum SettingsTab: String, SettingsTabItem {
+    case calendars
+    case alarms
+    case look
+    case status
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .calendars: "Calendar"
+        case .alarms: "Alarms"
+        case .look: "Look"
+        case .status: "Status"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .calendars: "calendar"
+        case .alarms: "bell"
+        case .look: "paintbrush"
+        case .status: "waveform.path.ecg"
+        }
+    }
+
+    var accessibilityIdentifier: String {
+        "settings.tab.\(rawValue)"
+    }
+}
+
 struct SettingsSheet: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var store: ScheduleStore
@@ -20,6 +51,7 @@ struct SettingsSheet: View {
     @State private var isSchedulingTestAlarm = false
     @State private var googleConnectError: String?
     @State private var isConnectingGoogle = false
+    @State private var selectedTab: SettingsTab = .calendars
 
     private let onDefaultAlarmOffsetChange: (AlarmOffsetOption) -> Void
     private let onDefaultSnoozeChange: (SnoozeDurationOption) -> Void
@@ -50,18 +82,17 @@ struct SettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    diagnosticsSection
-                    googleCalendarSection
-                    calendarsSection
-                    defaultAlarmSection
-                    snoozeSection
-                    appearanceSection
-                    accentSection
+            VStack(spacing: 0) {
+                SettingsTabBar(selection: $selectedTab, theme: theme)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
+
+                ScrollView {
+                    tabContent
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
                 }
-                .padding(20)
-                .padding(.bottom, 8)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 developerInfoBar
@@ -100,6 +131,33 @@ struct SettingsSheet: View {
             Button("OK", role: .cancel) { googleConnectError = nil }
         } message: {
             Text(googleConnectError ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .calendars:
+            VStack(alignment: .leading, spacing: 28) {
+                googleCalendarSection
+                calendarsSection
+            }
+            .accessibilityIdentifier("settings.panel.calendars")
+        case .alarms:
+            VStack(alignment: .leading, spacing: 28) {
+                defaultAlarmSection
+                snoozeSection
+            }
+            .accessibilityIdentifier("settings.panel.alarms")
+        case .look:
+            VStack(alignment: .leading, spacing: 28) {
+                appearanceSection
+                accentSection
+            }
+            .accessibilityIdentifier("settings.panel.look")
+        case .status:
+            diagnosticsSection
+                .accessibilityIdentifier("settings.panel.status")
         }
     }
 
@@ -436,7 +494,7 @@ struct SettingsSheet: View {
                 .monospacedDigit()
 
             Text("\(AppBuildInfo.developerName) · © \(AppBuildInfo.copyrightYear)")
-                .font(.system(size: 11))
+                .font(CalarmFont.caption)
                 .foregroundStyle(theme.textSecondary.opacity(0.65))
         }
         .frame(maxWidth: .infinity)
