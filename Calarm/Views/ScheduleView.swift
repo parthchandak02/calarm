@@ -8,6 +8,10 @@ import EventKit
 import SwiftUI
 import UIKit
 
+private struct EventRoute: Hashable {
+    let id: String
+}
+
 struct ScheduleView: View {
     @EnvironmentObject private var store: ScheduleStore
     @EnvironmentObject private var themeStore: ThemeStore
@@ -15,11 +19,7 @@ struct ScheduleView: View {
     @Environment(\.calarmTheme) private var theme
 
     @State private var showingSettings = false
-    @State private var selectedEvent: EventRoute?
-
-    private struct EventRoute: Identifiable, Hashable {
-        let id: String
-    }
+    @State private var navigationPath = NavigationPath()
 
     private var canManageAlarms: Bool {
         store.hasEventSource && !store.schedulableEvents.isEmpty
@@ -30,7 +30,7 @@ struct ScheduleView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 ScheduleHeaderBar(
                     theme: theme,
@@ -77,7 +77,7 @@ struct ScheduleView: View {
                 .environmentObject(store)
                 .environmentObject(themeStore)
             }
-            .navigationDestination(item: $selectedEvent) { route in
+            .navigationDestination(for: EventRoute.self) { route in
                 EventDetailView(eventID: route.id)
                     .environmentObject(store)
                     .environmentObject(themeStore)
@@ -138,7 +138,7 @@ struct ScheduleView: View {
 
     private func nextAlarmBanner(event: ScheduleEvent, fireDate: Date) -> some View {
         Button {
-            selectedEvent = EventRoute(id: event.id)
+            navigationPath.append(EventRoute(id: event.id))
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "alarm.fill")
@@ -245,7 +245,7 @@ struct ScheduleView: View {
             return store.event(with: pendingID)
         }()
         guard let event = resolved else { return }
-        selectedEvent = EventRoute(id: event.id)
+        navigationPath.append(EventRoute(id: event.id))
         store.acknowledgeEventDeepLink()
     }
 
@@ -257,7 +257,7 @@ struct ScheduleView: View {
         case .settings:
             showingSettings = true
         case .eventDetail, .addAlarm:
-            selectedEvent = EventRoute(id: ScreenshotDemoData.featuredEventID)
+            navigationPath.append(EventRoute(id: ScreenshotDemoData.featuredEventID))
         }
     }
 
@@ -270,17 +270,13 @@ struct ScheduleView: View {
                             event: event,
                             isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
                             hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
-                            onToggle: { store.toggleAlarm(for: event.id) },
-                            onTap: { selectedEvent = EventRoute(id: event.id) }
+                            onToggle: { store.toggleAlarm(for: event.id) }
                         )
                         .listRowInsets(rowInsets)
                         .listRowSeparatorTint(theme.surfaceStroke)
                     }
                 } header: {
-                    Text(day.title.uppercased())
-                        .font(CalarmFont.sectionHeader)
-                        .tracking(CalarmTheme.sectionHeaderTracking)
-                        .foregroundStyle(theme.textPrimary.opacity(0.72))
+                    SettingsSectionHeader(title: day.title, theme: theme)
                         .padding(.top, 8)
                         .padding(.bottom, 6)
                 }
@@ -300,29 +296,21 @@ struct ScheduleView: View {
     }
 
     private var accessPrompt: some View {
-        VStack(spacing: 20) {
-            Image(systemName: store.authorizationStatus == .denied ? "calendar.badge.exclamationmark" : "calendar")
-                .font(.system(size: 48))
-                .foregroundStyle(theme.accent)
-
-            Text(accessPromptTitle)
-                .font(CalarmFont.title3)
-                .foregroundStyle(theme.textPrimary)
-
+        ContentUnavailableView {
+            Label(accessPromptTitle, systemImage: accessPromptSymbol)
+        } description: {
             Text(accessPromptMessage)
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-
+        } actions: {
             if store.authorizationStatus == .denied {
                 Button("Open Settings", action: openSettings)
+                    .font(CalarmFont.bodyMedium)
                     .buttonStyle(.borderedProminent)
                     .tint(theme.accent)
             } else {
                 Button("Allow Calendar Access") {
                     Task { await store.requestCalendarAccess() }
                 }
+                .font(CalarmFont.bodyMedium)
                 .buttonStyle(.borderedProminent)
                 .tint(theme.accent)
 
@@ -334,6 +322,10 @@ struct ScheduleView: View {
             }
         }
         .padding()
+    }
+
+    private var accessPromptSymbol: String {
+        store.authorizationStatus == .denied ? "calendar.badge.exclamationmark" : "calendar"
     }
 
     private var accessPromptTitle: String {
@@ -351,21 +343,16 @@ struct ScheduleView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 44))
-                .foregroundStyle(theme.accent.opacity(0.8))
-            Text("No upcoming events")
-                .font(CalarmFont.headline)
-                .foregroundStyle(theme.textPrimary)
+        ContentUnavailableView {
+            Label("No upcoming events", systemImage: "calendar.badge.clock")
+        } description: {
             Text("Nothing scheduled in the selected calendar window.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-
+        } actions: {
             Button("Refresh") {
                 Task { await store.reload() }
             }
-            .buttonStyle(.bordered)
+            .font(CalarmFont.bodyMedium)
+            .buttonStyle(.borderedProminent)
             .tint(theme.accent)
 
             Button("Choose calendars in Settings") {
@@ -378,18 +365,12 @@ struct ScheduleView: View {
 }
 
 private struct EventRow: View {
-    @EnvironmentObject private var themeStore: ThemeStore
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.calarmTheme) private var theme
 
     let event: ScheduleEvent
     let isNextAlarm: Bool
     let hasTooSoonWarning: Bool
     let onToggle: () -> Void
-    let onTap: () -> Void
-
-    private var theme: CalarmTheme {
-        themeStore.theme(colorScheme: colorScheme)
-    }
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -412,40 +393,46 @@ private struct EventRow: View {
             .frame(width: CalarmTheme.timeColumnWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.title)
-                    .font(CalarmFont.bodyMedium)
-                    .foregroundStyle(theme.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+            NavigationLink(value: EventRoute(id: event.id)) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.title)
+                        .font(CalarmFont.bodyMedium)
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
 
-                HStack(spacing: 8) {
-                    if event.alarmEnabled {
-                        Text(event.alarmSummary)
-                            .font(CalarmFont.caption)
-                            .foregroundStyle(theme.accentMuted)
-                    } else {
-                        Text("Alarm off")
-                            .font(CalarmFont.caption)
-                            .foregroundStyle(theme.textSecondary)
-                    }
+                    HStack(spacing: 8) {
+                        if event.alarmEnabled {
+                            Text(event.alarmSummary)
+                                .font(CalarmFont.caption)
+                                .foregroundStyle(theme.accentMuted)
+                        } else {
+                            Text("Alarm off")
+                                .font(CalarmFont.caption)
+                                .foregroundStyle(theme.textSecondary)
+                        }
 
-                    if event.isAlarmInPast {
-                        Text("Past")
-                            .font(CalarmFont.captionSemibold)
-                            .foregroundStyle(.red.opacity(0.75))
-                    }
+                        if event.isReminderPassed {
+                            Text("Reminder passed")
+                                .font(CalarmFont.captionSemibold)
+                                .foregroundStyle(.orange.opacity(0.85))
+                        } else if event.isAlarmInPast {
+                            Text("Past")
+                                .font(CalarmFont.captionSemibold)
+                                .foregroundStyle(.red.opacity(0.75))
+                        }
 
-                    if hasTooSoonWarning {
-                        Text("Too soon to schedule")
-                            .font(CalarmFont.captionSemibold)
-                            .foregroundStyle(.orange)
+                        if hasTooSoonWarning {
+                            Text("Too soon to schedule")
+                                .font(CalarmFont.captionSemibold)
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onTap)
+            .buttonStyle(.plain)
 
             Button(action: onToggle) {
                 Image(systemName: event.alarmEnabled ? "bell.fill" : "bell.slash")
