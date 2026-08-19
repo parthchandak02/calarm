@@ -38,15 +38,15 @@ git push -u origin cursor/my-feature-b61b
 
 1. On the branch that contains the changes to ship
 2. Merge or rebase `origin/main` if needed; resolve conflicts
-3. Run unit tests:
+3. Compile check (no Simulator.app, no booted sim unless the user explicitly asks):
 
 ```bash
-xcodebuild test \
-  -project Calarm.xcodeproj \
-  -scheme Calarm \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -only-testing:CalarmTests
+xcodebuild -project Calarm.xcodeproj -scheme Calarm \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -quiet build
 ```
+
+Do **not** run `xcodebuild test` or boot simulators on this Mac unless the user says to. Tests eat RAM. Prefer a prior TEST SUCCEEDED run, or skip tests and archive.
 
 4. Doctor:
 
