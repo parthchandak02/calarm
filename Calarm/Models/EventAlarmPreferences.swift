@@ -60,6 +60,8 @@ final class EventAlarmPreferences {
         for legacyKey in legacyKeys {
             guard let override = all[legacyKey] else { continue }
             let matching = ekEvents.filter { $0.eventIdentifier == legacyKey }
+            // Keep unmatched legacy keys until an in-window EKEvent appears.
+            guard !matching.isEmpty else { continue }
             for ekEvent in matching {
                 guard let eventIdentifier = ekEvent.eventIdentifier else { continue }
                 let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)

@@ -24,20 +24,36 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                 // Keep expanded content in one region so iOS does not stretch a sparse
                 // leading/trailing layout into a full-width empty pill.
                 DynamicIslandExpandedRegion(.center) {
-                    expandedIslandContent(for: context)
+                    if isActivityExpired(context: context) {
+                        EmptyView()
+                    } else {
+                        expandedIslandContent(for: context)
+                    }
                 }
             } compactLeading: {
-                Image(systemName: "alarm.fill")
-                    .font(.caption)
-                    .foregroundStyle(tintColor(for: context))
+                if isActivityExpired(context: context) {
+                    EmptyView()
+                } else {
+                    Image(systemName: "alarm.fill")
+                        .font(.caption)
+                        .foregroundStyle(tintColor(for: context))
+                }
             } compactTrailing: {
-                countdownLabel(for: context, style: .compact)
-                    .frame(width: 58, alignment: .trailing)
-                    .clipped()
+                if isActivityExpired(context: context) {
+                    EmptyView()
+                } else {
+                    countdownLabel(for: context, style: .compact)
+                        .frame(width: 58, alignment: .trailing)
+                        .clipped()
+                }
             } minimal: {
-                Image(systemName: "alarm.fill")
-                    .font(.caption2)
-                    .foregroundStyle(tintColor(for: context))
+                if isActivityExpired(context: context) {
+                    EmptyView()
+                } else {
+                    Image(systemName: "alarm.fill")
+                        .font(.caption2)
+                        .foregroundStyle(tintColor(for: context))
+                }
             }
             .contentMargins(.horizontal, 8, for: .compactTrailing)
             .contentMargins(.horizontal, 12, for: .expanded)
@@ -129,7 +145,7 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                 .lineLimit(1)
                 .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
         @unknown default:
-            Text("—")
+            Text("-")
                 .font(font(for: style))
                 .foregroundStyle(.secondary)
         }

@@ -212,6 +212,15 @@ Details and file references: [BACKLOG.md](BACKLOG.md)
 
 ---
 
+## AlarmKit / Island
+
+- One compact Island Live Activity; multiple become minimal/stacked.
+- Compact: icon + `monospacedDigit` countdown; avoid empty expanded regions stretching the pill.
+- Lock Screen and Island must share the same expired/hide rule.
+- Live Activities for defined start/end (hours not days).
+
+Sources: Apple AlarmKit docs, Live Activities HIG, OSS samples (BleepingSwift, ADHDAlarms, alarmkit-patterns).
+
 ## Related skills
 
 - `calarm-trust-diagnostics` — permission banners, test alarm, failure surfacing
