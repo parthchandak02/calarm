@@ -178,6 +178,7 @@ final class ScheduleStore: ObservableObject {
 
             if canLoadEventKit {
                 let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
+                guard !Task.isCancelled else { return }
                 preferences.migrateLegacyKeys(for: ekEvents)
                 let googleConnected = canLoadGoogle
                 mergedEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
@@ -219,6 +220,7 @@ final class ScheduleStore: ObservableObject {
                     days: fetchDays,
                     cachedEvents: cachedGoogle
                 )
+                guard !Task.isCancelled else { return }
                 mergedEvents.append(contentsOf: googleEvents.map { googleEvent in
                     ScheduleEvent(
                         id: googleEvent.occurrenceID,
@@ -234,13 +236,22 @@ final class ScheduleStore: ObservableObject {
             }
 
             mergedEvents.sort { $0.startDate < $1.startDate }
+            guard !Task.isCancelled else { return }
             events = mergedEvents
             refreshEventsIdentityToken()
 
             let currentIDs = Set(mergedEvents.map(\.id))
             let removedIDs = previousIDs.subtracting(currentIDs)
             await alarmScheduler.cancelRemoved(eventIDs: removedIDs)
-            await rescheduleIfNeeded(force: false)
+            guard !Task.isCancelled else { return }
+            await rescheduleCoordinator.requestRescheduleImmediate { [weak self] in
+                await self?.rescheduleIfNeeded(force: false) ?? RescheduleSummary(
+                    finishedAt: Date(),
+                    scheduledCount: 0,
+                    failureCount: 0,
+                    skippedDuringAlerting: false
+                )
+            }
         }
         reloadTask = task
         await task.value
@@ -307,6 +318,9 @@ final class ScheduleStore: ObservableObject {
     func updateDefaultAlarmOffset(_ offset: AlarmOffsetOption) {
         defaultAlarmOffset = offset
         preferences.defaultAlarmOffset = offset
+        for index in events.indices {
+            events[index].alarmOffsets = preferences.alarmOffsets(for: events[index].id)
+        }
         requestReschedule()
     }
 
@@ -351,10 +365,17 @@ final class ScheduleStore: ObservableObject {
     }
 
     func resolveDeepLinkIfNeeded() {
-        guard let pendingID = pendingEventDeepLinkID else { return }
-        if event(with: pendingID) != nil {
+        guard let route = pendingDeepLinkRoute else {
+            // fallback if only ID set
+            guard let pendingID = pendingEventDeepLinkID else { return }
+            if event(with: pendingID) != nil { return }
+            if !isLoading, hasEventSource {
+                deepLinkFailureMessage = "This event isn’t on your calendar anymore."
+                acknowledgeEventDeepLink()
+            }
             return
         }
+        if event(matching: route) != nil { return }
         if !isLoading, hasEventSource {
             deepLinkFailureMessage = "This event isn’t on your calendar anymore."
             acknowledgeEventDeepLink()
@@ -414,9 +435,16 @@ final class ScheduleStore: ObservableObject {
     private func handleAlarmKitUpdate() async {
         objectWillChange.send()
         let cleaned = await alarmScheduler.reconcileAlarmLifecycle(events: events)
-        guard cleaned > 0 else { return }
-        lastScheduledFingerprint = nil
-        requestReschedule(force: true)
+        let fingerprint = alarmScheduler.schedulingFingerprint(
+            for: events,
+            snoozeSeconds: defaultSnooze.seconds
+        )
+        if cleaned > 0 || fingerprint != lastScheduledFingerprint {
+            if cleaned > 0 {
+                lastScheduledFingerprint = nil
+            }
+            requestReschedule(force: true)
+        }
     }
 
     private func applySetAllAlarmsEnabled(_ enabled: Bool, offset: AlarmOffsetOption) {
@@ -466,17 +494,7 @@ final class ScheduleStore: ObservableObject {
         )
 
         if !shouldForce, fingerprint == lastScheduledFingerprint {
-            SchedulerLog.info("reschedule skipped — schedule unchanged")
-            return lastRescheduleSummary ?? RescheduleSummary(
-                finishedAt: Date(),
-                scheduledCount: 0,
-                failureCount: 0,
-                skippedDuringAlerting: false
-            )
-        }
-
-        if !shouldForce, alarmScheduler.hasActiveUpcomingCountdown() {
-            SchedulerLog.info("deferring reschedule during active upcoming countdown")
+            SchedulerLog.info("reschedule skipped - schedule unchanged")
             return lastRescheduleSummary ?? RescheduleSummary(
                 finishedAt: Date(),
                 scheduledCount: 0,

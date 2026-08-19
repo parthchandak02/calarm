@@ -60,3 +60,15 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 
 - Partial per-event reschedule (stacked Live Activities).
 - Raw `Task { reschedule }` without coordinator (races).
+
+## AlarmKit platform lessons
+
+- Countdown presentation requires a widget Live Activity or iOS may dismiss alarms.
+- Alerting UI is system-owned; countdown/paused UI lives in the widget.
+- Stable UUID; cancel/stop before replace; log cancel failures.
+- `preAlert: nil` means no countdown (not `0`).
+- AlarmKit does not wake the app; use App Intents.
+- Observe `alarmUpdates`.
+- Do **not** defer reschedule on `.countdown` — only hard-skip on `.alerting`.
+
+Sources: Apple AlarmKit docs, Live Activities HIG, OSS samples (BleepingSwift, ADHDAlarms, alarmkit-patterns).

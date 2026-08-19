@@ -1,1 +1,1 @@
-Build 20260813: Fix next-alarm banner when reminder time passed but event not started. Settings tabbed panels. Stale countdown alarms no longer cancel before event ends. Tighter Dynamic Island compact width.
+AlarmKit correctness: calendar changes update the next Island countdown even while counting down. No ghost Island after an alarm ends. Safer reload/cancel, Google fetch window, and legacy deep links.

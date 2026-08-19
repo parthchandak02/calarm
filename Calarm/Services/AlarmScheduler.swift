@@ -33,7 +33,7 @@ final class AlarmScheduler {
         let cleaned = await reconcileAlarmLifecycle(events: events)
 
         if !force, hasAlertingAlarms() {
-            SchedulerLog.warning("reschedule skipped — alarm alerting (cleaned=\(cleaned))")
+            SchedulerLog.warning("reschedule skipped - alarm alerting (cleaned=\(cleaned))")
             return RescheduleResult(scheduledCount: 0, failures: [], skippedDuringAlerting: true, skippedTooSoon: [])
         }
 
@@ -42,17 +42,26 @@ final class AlarmScheduler {
         var scheduledCount = 0
 
         let desired = buildDesiredInstances(from: events)
-        let desiredIDs = Set(desired.map(\.alarmID))
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
 
         for instance in desired {
+            guard !Task.isCancelled else { break }
             let existing = currentAlarms.first { $0.id == instance.alarmID }
             if !force, let existing, !needsReschedule(existing: existing, instance: instance, snoozeSeconds: snoozeSeconds) {
                 continue
             }
             if let existing, isAlerting(existing) { continue }
 
-            await cancel(occurrenceID: instance.occurrenceID, offset: instance.offset)
+            let cancelled = await cancel(occurrenceID: instance.occurrenceID, offset: instance.offset)
+            if !cancelled, existing != nil {
+                failures.append(ScheduleFailure(
+                    occurrenceID: instance.occurrenceID,
+                    eventTitle: instance.event.title,
+                    offsetTitle: instance.offset.title,
+                    message: "Cancel failed before reschedule"
+                ))
+                continue
+            }
 
             let outcome = await schedule(
                 instance.event,
@@ -87,6 +96,7 @@ final class AlarmScheduler {
 
     func cancelRemoved(eventIDs: Set<String>) async {
         for eventID in eventIDs {
+            guard !Task.isCancelled else { break }
             await cancelAll(for: eventID)
         }
     }
@@ -97,8 +107,16 @@ final class AlarmScheduler {
         }
     }
 
-    func cancel(occurrenceID: String, offset: AlarmOffsetOption) async {
-        try? AlarmManager.shared.cancel(id: stableAlarmID(for: occurrenceID, offset: offset))
+    @discardableResult
+    func cancel(occurrenceID: String, offset: AlarmOffsetOption) async -> Bool {
+        let id = stableAlarmID(for: occurrenceID, offset: offset)
+        do {
+            try AlarmManager.shared.cancel(id: id)
+            return true
+        } catch {
+            SchedulerLog.warning("cancel failed \(occurrenceID) \(offset.rawValue): \(error.localizedDescription)")
+            return false
+        }
     }
 
     func scheduleTestAlarm(snoozeSeconds: TimeInterval) async -> String? {
@@ -178,6 +196,7 @@ final class AlarmScheduler {
         var terminated = 0
 
         for alarm in currentAlarms where lookup[alarm.id] != nil {
+            guard !Task.isCancelled else { break }
             guard let fireDate = fixedFireDate(for: alarm) else { continue }
             let event = lookup[alarm.id]
             guard shouldTerminateStale(alarm: alarm, event: event, fireDate: fireDate) else { continue }
@@ -200,6 +219,7 @@ final class AlarmScheduler {
         var terminated = 0
 
         for alarm in currentAlarms {
+            guard !Task.isCancelled else { break }
             guard lookup[alarm.id] != nil else { continue }
             guard !desiredIDs.contains(alarm.id) else { continue }
 
@@ -340,12 +360,17 @@ final class AlarmScheduler {
     @discardableResult
     private func terminate(_ alarm: Alarm) -> Bool {
         if isAlerting(alarm) {
-            try? AlarmManager.shared.stop(id: alarm.id)
+            do {
+                try AlarmManager.shared.stop(id: alarm.id)
+            } catch {
+                SchedulerLog.warning("stop failed \(alarm.id): \(error.localizedDescription)")
+            }
         }
         do {
             try AlarmManager.shared.cancel(id: alarm.id)
             return true
         } catch {
+            SchedulerLog.warning("cancel failed \(alarm.id): \(error.localizedDescription)")
             return false
         }
     }

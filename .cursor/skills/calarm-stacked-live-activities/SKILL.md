@@ -35,9 +35,13 @@ Partial per-event reschedule left **old Live Activities running** when a differe
 
 ## Intended product behavior
 
-- **One** Live Activity: the next upcoming alarm across all events.
+- Exactly **one** countdown presentation / Live Activity for the earliest `fireDate`.
 - Tap opens app via `calarm://event?id=` deep link (see `calarm-live-activity-deep-links` skill).
+- Multiple Live Activities collapse to minimal Island and look stacked.
 
 ## Regression guard
 
-Never reintroduce `reschedule(event:among:)` without rescheduling all other events' AlarmKit state.
+- Never reintroduce `reschedule(event:among:)` without rescheduling all other events' AlarmKit state.
+- Countdown defer in `ScheduleStore` is a regression (do not reintroduce).
+
+Sources: Apple AlarmKit docs, Live Activities HIG, OSS samples (BleepingSwift, ADHDAlarms, alarmkit-patterns).

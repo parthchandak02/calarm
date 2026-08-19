@@ -140,7 +140,7 @@ final class GoogleCalendarService: ObservableObject {
             preferences.lastSyncCheck = Date()
             lastSyncError = nil
             return merged.values
-                .filter { $0.startDate >= now }
+                .filter { $0.startDate >= now && $0.startDate <= end }
                 .sorted { $0.startDate < $1.startDate }
         } catch {
             lastSyncError = error.localizedDescription
@@ -149,8 +149,9 @@ final class GoogleCalendarService: ObservableObject {
                 return []
             }
             let now = Date()
+            let end = Calendar.current.date(byAdding: .day, value: days, to: now) ?? now
             return cachedEvents
-                .filter { $0.startDate >= now }
+                .filter { $0.startDate >= now && $0.startDate <= end }
                 .sorted { $0.startDate < $1.startDate }
         }
     }
