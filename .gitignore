@@ -150,3 +150,6 @@ Calarm/GoogleService-Info.plist
 .xcode-cloud
 
 .tasks.md
+
+# Graphify local knowledge graph (rebuild with `graphify`)
+graphify-out/
