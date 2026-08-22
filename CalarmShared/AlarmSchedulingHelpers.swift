@@ -33,7 +33,8 @@ enum AlarmSchedulingHelpers {
         instances: [(occurrenceID: String, offsetRawValue: String, fireDate: Date)],
         nextLiveActivityKey: String?,
         snoozeRawValue: String,
-        accentRawValue: String
+        accentRawValue: String,
+        liveActivityTintKey: String? = nil
     ) -> String {
         let rows = instances.map {
             "\($0.occurrenceID).\($0.offsetRawValue).\(Int($0.fireDate.timeIntervalSince1970))"
@@ -41,7 +42,8 @@ enum AlarmSchedulingHelpers {
         return (rows + [
             "la:\(nextLiveActivityKey ?? "none")",
             "snooze:\(snoozeRawValue)",
-            "accent:\(accentRawValue)"
+            "accent:\(accentRawValue)",
+            "tint:\(liveActivityTintKey ?? "accent")"
         ]).joined(separator: "|")
     }
 
@@ -60,9 +62,16 @@ enum AlarmSchedulingHelpers {
     }
 
     /// True when a fixed-schedule alarm's fire time has elapsed and it should be cancelled.
-    static func isStaleAlarm(fireDate: Date, now: Date = Date()) -> Bool {
-        fireDate.timeIntervalSince(now) <= 0
+    /// Pass `graceAfterFire` to allow a short post-fire window (e.g. snooze).
+    static func isStaleAlarm(fireDate: Date, now: Date = Date(), graceAfterFire: TimeInterval = 0) -> Bool {
+        now.timeIntervalSince(fireDate) >= graceAfterFire
     }
+
+    /// Grace after scheduled fire before cancelling a stuck `.countdown`/`.paused` alarm.
+    static let countdownCleanupGrace: TimeInterval = 60
+
+    /// Grace after scheduled fire before silencing a stale `.alerting` alarm (snooze window).
+    static let alertingCleanupGrace: TimeInterval = 5 * 60
 
     /// True when an alarm still has meaningful pre-alert countdown time remaining.
     static func hasUpcomingFireDate(_ fireDate: Date, now: Date = Date()) -> Bool {

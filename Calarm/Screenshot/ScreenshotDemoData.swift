@@ -40,6 +40,7 @@ enum ScreenshotDemoData {
                 location: location,
                 calendarTitle: calendarTitle,
                 source: .eventKit,
+                calendarColorHex: nil,
                 alarmOffsets: alarmOffsets
             )
         }

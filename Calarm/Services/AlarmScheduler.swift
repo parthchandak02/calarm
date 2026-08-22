@@ -180,12 +180,39 @@ final class AlarmScheduler {
         }
     }
 
-    /// Always-safe cleanup: stale countdowns, expired events, and undesired alarms.
+    /// Always-safe cleanup: stale countdowns, expired events, orphans, and undesired alarms.
     @discardableResult
     func reconcileAlarmLifecycle(events: [ScheduleEvent]) async -> Int {
+        let orphans = await reconcileOrphanAlarms(events: events)
         let stale = await reconcileStaleAlarms(events: events)
         let undesired = await cancelUndesiredAlarms(events: events)
-        return stale + undesired
+        return orphans + stale + undesired
+    }
+
+    /// Cancel AlarmKit alarms that no longer map to the current schedule (dropped events, ID migrations).
+    @discardableResult
+    func reconcileOrphanAlarms(events: [ScheduleEvent]) async -> Int {
+        let lookup = alarmEventLookup(for: events)
+        let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        var terminated = 0
+
+        for alarm in currentAlarms {
+            guard !Task.isCancelled else { break }
+            guard lookup[alarm.id] == nil else { continue }
+
+            if let fireDate = fixedFireDate(for: alarm) {
+                guard shouldTerminateOrphan(alarm: alarm, fireDate: fireDate) else { continue }
+            } else if !isAlerting(alarm), case .scheduled = alarm.state {
+                continue
+            }
+
+            if terminate(alarm) {
+                terminated += 1
+                SchedulerLog.info("terminated orphan alarm \(alarm.id)")
+            }
+        }
+
+        return terminated
     }
 
     /// Cancel AlarmKit alarms whose fixed fire time has passed. Ends stale Live Activities.
@@ -224,7 +251,13 @@ final class AlarmScheduler {
             guard !desiredIDs.contains(alarm.id) else { continue }
 
             if isAlerting(alarm), let event = lookup[alarm.id], !AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate) {
-                continue
+                if let fireDate = fixedFireDate(for: alarm),
+                   !AlarmSchedulingHelpers.isStaleAlarm(
+                       fireDate: fireDate,
+                       graceAfterFire: AlarmSchedulingHelpers.alertingCleanupGrace
+                   ) {
+                    continue
+                }
             }
 
             if terminate(alarm) {
@@ -245,12 +278,22 @@ final class AlarmScheduler {
             ($0.occurrenceID, $0.offset.rawValue, $0.fireDate)
         }
         let accentRaw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent) ?? CalarmAccent.orange.rawValue
+        let liveActivityEvent = desired.first(where: \.withLiveActivity)?.event
         return AlarmSchedulingHelpers.schedulingFingerprint(
             instances: rows,
             nextLiveActivityKey: nextKey,
             snoozeRawValue: String(Int(snoozeSeconds)),
-            accentRawValue: accentRaw
+            accentRawValue: accentRaw,
+            liveActivityTintKey: liveActivityTintKey(for: liveActivityEvent, accentRaw: accentRaw)
         )
+    }
+
+    private func liveActivityTintKey(for event: ScheduleEvent?, accentRaw: String) -> String {
+        guard CalarmPersistence.bool(forKey: CalarmPersistence.Key.useCalendarColorInLiveActivity),
+              let hex = event?.calendarColorHex else {
+            return "accent:\(accentRaw)"
+        }
+        return "cal:\(hex)"
     }
 
     private enum ScheduleOutcome {
@@ -346,12 +389,34 @@ final class AlarmScheduler {
 
         switch alarm.state {
         case .countdown, .paused:
-            if let event {
-                return AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate)
-            }
-            return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
+            // Cancel stuck countdowns once fire time passes — do not wait for event.endDate.
+            // A long meeting block otherwise keeps a missed alarm alive for hours (PR #10 regression).
+            return AlarmSchedulingHelpers.isStaleAlarm(
+                fireDate: fireDate,
+                graceAfterFire: AlarmSchedulingHelpers.countdownCleanupGrace
+            )
         case .alerting:
-            return false
+            return AlarmSchedulingHelpers.isStaleAlarm(
+                fireDate: fireDate,
+                graceAfterFire: AlarmSchedulingHelpers.alertingCleanupGrace
+            )
+        default:
+            return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
+        }
+    }
+
+    private func shouldTerminateOrphan(alarm: Alarm, fireDate: Date) -> Bool {
+        switch alarm.state {
+        case .alerting:
+            return AlarmSchedulingHelpers.isStaleAlarm(
+                fireDate: fireDate,
+                graceAfterFire: AlarmSchedulingHelpers.alertingCleanupGrace
+            )
+        case .countdown, .paused:
+            return AlarmSchedulingHelpers.isStaleAlarm(
+                fireDate: fireDate,
+                graceAfterFire: AlarmSchedulingHelpers.countdownCleanupGrace
+            )
         default:
             return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
         }
@@ -414,10 +479,10 @@ final class AlarmScheduler {
             )
 
             let presentation: AlarmPresentation
-            let accent = resolvedAccentColor()
+            let tint = resolvedLiveActivityTint(for: event)
             if withLiveActivity {
-                let pauseButton = AlarmButton(text: "Pause", textColor: accent, systemImageName: "pause")
-                let resumeButton = AlarmButton(text: "Resume", textColor: accent, systemImageName: "play")
+                let pauseButton = AlarmButton(text: "Pause", textColor: tint, systemImageName: "pause")
+                let resumeButton = AlarmButton(text: "Resume", textColor: tint, systemImageName: "play")
                 presentation = AlarmPresentation(
                     alert: alertPresentation,
                     countdown: AlarmPresentation.Countdown(
@@ -443,7 +508,7 @@ final class AlarmScheduler {
                     accentRawValue: accentRaw,
                     eventEndTimestamp: event.endDate.timeIntervalSince1970
                 ),
-                tintColor: resolvedAccentColor()
+                tintColor: resolvedLiveActivityTint(for: event)
             )
 
             let countdownDuration: Alarm.CountdownDuration?
@@ -479,6 +544,15 @@ final class AlarmScheduler {
 
     private func resolvedAccentColor() -> Color {
         CalarmAccent.resolved(from: CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent)).color
+    }
+
+    private func resolvedLiveActivityTint(for event: ScheduleEvent) -> Color {
+        if CalarmPersistence.bool(forKey: CalarmPersistence.Key.useCalendarColorInLiveActivity),
+           let hex = event.calendarColorHex,
+           let calendarColor = CalendarColor.color(fromHex: hex) {
+            return calendarColor
+        }
+        return resolvedAccentColor()
     }
 
     private func stableAlarmID(for occurrenceID: String, offset: AlarmOffsetOption) -> UUID {

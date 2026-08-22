@@ -15,6 +15,7 @@ final class ScheduleEventTests: XCTestCase {
             location: nil,
             calendarTitle: "Work",
             source: .eventKit,
+            calendarColorHex: nil,
             alarmOffsets: offsets
         )
     }

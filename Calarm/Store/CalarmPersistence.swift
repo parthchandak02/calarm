@@ -23,6 +23,8 @@ enum CalarmPersistence {
         static let legacyDefaultOffsetMinutes = "calarm.defaultOffsetMinutes"
         static let occurrenceMetadataMigrationDone = "calarm.migration.occurrenceMetadata"
         static let enabledCalendarIDs = "calarm.enabledCalendarIDs"
+        /// When true, Live Activity / Dynamic Island tint follows the EventKit calendar color.
+        static let useCalendarColorInLiveActivity = "calarm.liveActivity.useCalendarColor"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.

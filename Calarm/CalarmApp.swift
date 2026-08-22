@@ -60,5 +60,8 @@ private struct CalarmRootView: View {
             .onChange(of: themeStore.accent) { _, _ in
                 scheduleStore.refreshAfterThemeChange()
             }
+            .onChange(of: themeStore.useCalendarColorInLiveActivity) { _, _ in
+                scheduleStore.refreshAfterThemeChange()
+            }
     }
 }

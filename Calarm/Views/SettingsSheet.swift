@@ -151,6 +151,7 @@ struct SettingsSheet: View {
             .accessibilityIdentifier("settings.panel.alarms")
         case .look:
             VStack(alignment: .leading, spacing: 28) {
+                liveActivityCalendarColorSection
                 appearanceSection
                 accentSection
             }
@@ -387,6 +388,29 @@ struct SettingsSheet: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         return "\(formatter.string(from: summary.finishedAt)) · \(summary.scheduledCount) ok"
+    }
+
+    private var liveActivityCalendarColorSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader(title: "Live Activity", theme: theme)
+
+            Text("When enabled, the Dynamic Island and Lock Screen countdown use each event’s Apple Calendar color instead of your accent.")
+                .font(CalarmFont.subheadline)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            SettingsOptionList(theme: theme) {
+                Toggle(isOn: $themeStore.useCalendarColorInLiveActivity) {
+                    Text("Use calendar color")
+                        .font(CalarmFont.bodyMedium)
+                        .foregroundStyle(theme.textPrimary)
+                }
+                .tint(theme.accent)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .accessibilityIdentifier("settings.liveActivity.useCalendarColor")
+            }
+        }
     }
 
     private var appearanceSection: some View {
