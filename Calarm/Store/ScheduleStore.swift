@@ -140,6 +140,9 @@ final class ScheduleStore: ObservableObject {
         calendarService.checkAuthorizationStatus()
         calendarService.refreshRemoteSourcesIfNeeded()
         alarmAuthorization = AlarmManager.shared.authorizationState
+        // Reconcile before reload so missed/stuck AlarmKit alarms are cancelled even if
+        // EventKit fetch hasn't run yet (AlarmKit does not wake the app — Apple docs).
+        _ = await alarmScheduler.reconcileAlarmLifecycle(events: events)
         if hasEventSource {
             await reload()
         }
@@ -197,6 +200,7 @@ final class ScheduleStore: ObservableObject {
                         location: ekEvent.location,
                         calendarTitle: ekEvent.calendar.title,
                         source: .eventKit,
+                        calendarColorHex: CalendarColor.hexString(from: ekEvent.calendar.cgColor),
                         alarmOffsets: preferences.alarmOffsets(for: occurrence.rawValue)
                     )
                 })
@@ -230,6 +234,7 @@ final class ScheduleStore: ObservableObject {
                         location: googleEvent.location,
                         calendarTitle: googleEvent.calendarTitle,
                         source: .google,
+                        calendarColorHex: nil,
                         alarmOffsets: preferences.alarmOffsets(for: googleEvent.occurrenceID)
                     )
                 })

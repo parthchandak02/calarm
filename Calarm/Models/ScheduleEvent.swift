@@ -13,6 +13,8 @@ struct ScheduleEvent: Identifiable, Equatable {
     let location: String?
     let calendarTitle: String
     let source: CalendarSource
+    /// EventKit calendar color (`#RRGGBB`), when available.
+    let calendarColorHex: String?
 
     var alarmOffsets: [AlarmOffsetOption]
 

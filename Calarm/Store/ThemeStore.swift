@@ -16,6 +16,11 @@ final class ThemeStore: ObservableObject {
         didSet { persist() }
     }
 
+    /// Experimental: tint Live Activity / Dynamic Island with each event's calendar color.
+    @Published var useCalendarColorInLiveActivity: Bool {
+        didSet { persist() }
+    }
+
     init() {
         if let raw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent),
            let value = CalarmAccent(rawValue: raw) {
@@ -29,10 +34,17 @@ final class ThemeStore: ObservableObject {
         } else {
             appearance = .dark
         }
+        if CalarmPersistence.objectExists(forKey: CalarmPersistence.Key.useCalendarColorInLiveActivity) {
+            useCalendarColorInLiveActivity = CalarmPersistence.bool(
+                forKey: CalarmPersistence.Key.useCalendarColorInLiveActivity
+            )
+        } else {
+            useCalendarColorInLiveActivity = false
+        }
     }
 
     var themeToken: String {
-        "\(appearance.rawValue)-\(accent.rawValue)"
+        "\(appearance.rawValue)-\(accent.rawValue)-cal-\(useCalendarColorInLiveActivity)"
     }
 
     func theme(colorScheme: ColorScheme) -> CalarmTheme {
@@ -42,6 +54,10 @@ final class ThemeStore: ObservableObject {
     private func persist() {
         CalarmPersistence.setString(accent.rawValue, forKey: CalarmPersistence.Key.themeAccent)
         CalarmPersistence.setString(appearance.rawValue, forKey: CalarmPersistence.Key.themeAppearance)
+        CalarmPersistence.setBool(
+            useCalendarColorInLiveActivity,
+            forKey: CalarmPersistence.Key.useCalendarColorInLiveActivity
+        )
     }
 }
 

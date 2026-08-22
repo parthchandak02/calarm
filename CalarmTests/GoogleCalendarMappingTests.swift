@@ -26,6 +26,7 @@ final class GoogleCalendarMappingTests: XCTestCase {
             location: nil,
             calendarTitle: "Work",
             source: .google,
+            calendarColorHex: nil,
             alarmOffsets: [.tenMinutes]
         )
         XCTAssertEqual(event.source, .google)
