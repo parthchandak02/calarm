@@ -23,7 +23,7 @@ enum CalendarColor {
     }
 
     private static func clampedByte(_ value: CGFloat) -> Int {
-        Int(min(max(value, 0), 1) * 255)
+        Int(round(min(max(value, 0), 1) * 255))
     }
 
     private static func parseHex(_ hex: String) -> (red: Double, green: Double, blue: Double)? {
