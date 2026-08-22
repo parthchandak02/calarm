@@ -13,6 +13,19 @@ ARCHIVE_PATH="build/Calarm.xcarchive"
 EXPORT_PATH="build/export"
 EXPORT_OPTIONS="ExportOptions.plist"
 
+AUTH_KEY_ARGS=()
+if [[ -f fastlane/.env ]]; then
+  # shellcheck disable=SC1091
+  source fastlane/.env
+  if [[ -n "${ASC_KEY_PATH:-}" && -f "${ASC_KEY_PATH}" && -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" ]]; then
+    AUTH_KEY_ARGS=(
+      -authenticationKeyPath "$ASC_KEY_PATH"
+      -authenticationKeyID "$ASC_KEY_ID"
+      -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+    )
+  fi
+fi
+
 echo "==> Cleaning prior release artifacts"
 rm -rf build/Calarm.xcarchive build/export
 
@@ -27,6 +40,7 @@ xcodebuild \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
   -allowProvisioningUpdates \
+  "${AUTH_KEY_ARGS[@]}" \
   archive
 
 echo "==> Exporting App Store IPA"
@@ -35,10 +49,16 @@ xcodebuild \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
   -exportOptionsPlist "$EXPORT_OPTIONS" \
-  -allowProvisioningUpdates
+  -allowProvisioningUpdates \
+  "${AUTH_KEY_ARGS[@]}"
 
 IPA=$(find "$EXPORT_PATH" -name "*.ipa" | head -n1)
 if [[ -z "${IPA:-}" ]]; then
+  if grep -q '<string>upload</string>' "$EXPORT_OPTIONS" 2>/dev/null; then
+    echo ""
+    echo "Success: uploaded to App Store Connect (ExportOptions destination=upload; no local IPA)."
+    exit 0
+  fi
   echo "ERROR: No IPA found in $EXPORT_PATH"
   exit 1
 fi
