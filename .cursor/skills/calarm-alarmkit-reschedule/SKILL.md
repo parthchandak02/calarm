@@ -67,8 +67,23 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 - Alerting UI is system-owned; countdown/paused UI lives in the widget.
 - Stable UUID; cancel/stop before replace; log cancel failures.
 - `preAlert: nil` means no countdown (not `0`).
-- AlarmKit does not wake the app; use App Intents.
+- **AlarmKit does not wake the app** — reconcile stale/orphan alarms on foreground, reschedule, and `alarmUpdates` (Apple: [Scheduling an alarm with AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit)).
 - Observe `alarmUpdates`.
 - Do **not** defer reschedule on `.countdown` — only hard-skip on `.alerting`.
 
-Sources: Apple AlarmKit docs, Live Activities HIG, OSS samples (BleepingSwift, ADHDAlarms, alarmkit-patterns).
+## Stale / delayed alarm cleanup
+
+**Symptom:** Alarms fire hours after the event (e.g. 10:00 alarm on a 10:00–16:00 meeting rings at 16:00).
+
+**Root cause:** Keeping `.countdown`/`.paused` alarms alive until `event.endDate` instead of fire time. AlarmKit holds the alarm until the event block ends.
+
+**Fix (AlarmScheduler):**
+
+1. `shouldTerminateStale` — cancel `.countdown`/`.paused` after `fireDate + countdownCleanupGrace` (60s), not `event.endDate`.
+2. `cancelUndesiredAlarms` — only preserve `.alerting` within `alertingCleanupGrace` (5 min snooze window).
+3. `reconcileOrphanAlarms` — terminate AlarmKit alarms not in current schedule lookup (dropped events, ID migrations).
+4. `ScheduleStore.refreshOnForeground()` — call `reconcileAlarmLifecycle` **before** EventKit reload.
+
+**Helpers:** `AlarmSchedulingHelpers.isStaleAlarm(fireDate:graceAfterFire:)`, `countdownCleanupGrace`, `alertingCleanupGrace`.
+
+Sources: [Scheduling an alarm with AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit), [AlarmManager.alarmUpdates](https://developer.apple.com/documentation/alarmkit/alarmmanager/alarmupdates), Live Activities HIG, OSS samples (BleepingSwift, ADHDAlarms, alarmkit-patterns).

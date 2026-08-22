@@ -1,1 +1,1 @@
-AlarmKit correctness: calendar changes update the next Island countdown even while counting down. No ghost Island after an alarm ends. Safer reload/cancel, Google fetch window, and legacy deep links.
+Fixes alarms firing hours after an event passed. Stuck countdowns now cancel at fire time (not event end). Orphan AlarmKit alarms are cleaned up when you reopen the app. Optional calendar color tint for Dynamic Island (Settings → Look).
