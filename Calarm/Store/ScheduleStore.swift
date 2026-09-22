@@ -113,7 +113,10 @@ final class ScheduleStore: ObservableObject {
 
         alarmUpdatesObserver.start()
         startAuthorizationUpdatesObservation()
-        MorningSyncScheduler.register { [weak self] in
+        // Registration itself happens in AppDelegate.didFinishLaunchingWithOptions,
+        // because BGTaskScheduler requires it before launch returns and this runs from a
+        // SwiftUI `.task`. Here we only hand over the work to do.
+        MorningSyncScheduler.setReloadHandler { [weak self] in
             await self?.reload()
         }
         MorningSyncScheduler.scheduleNext()
@@ -177,14 +180,15 @@ final class ScheduleStore: ObservableObject {
             let previousIDs = Set(events.map(\.id))
             let fetchDays = AlarmOffsetOption.recommendedCalendarFetchDays
 
-            var mergedEvents: [ScheduleEvent] = []
+            var eventKitEvents: [ScheduleEvent] = []
+            var googleEvents: [ScheduleEvent] = []
 
             if canLoadEventKit {
                 let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
                 guard !Task.isCancelled else { return }
                 preferences.migrateLegacyKeys(for: ekEvents)
                 let googleConnected = canLoadGoogle
-                mergedEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
+                eventKitEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
                     guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
                     if googleConnected, calendarService.isGoogleMirroredCalendar(ekEvent.calendar) {
                         return nil
@@ -220,12 +224,12 @@ final class ScheduleStore: ObservableObject {
                         occurrenceID: event.id
                     )
                 }
-                let googleEvents = await googleCalendarService.fetchUpcomingEvents(
+                let fetched = await googleCalendarService.fetchUpcomingEvents(
                     days: fetchDays,
                     cachedEvents: cachedGoogle
                 )
                 guard !Task.isCancelled else { return }
-                mergedEvents.append(contentsOf: googleEvents.map { googleEvent in
+                googleEvents.append(contentsOf: fetched.map { googleEvent in
                     ScheduleEvent(
                         id: googleEvent.occurrenceID,
                         title: googleEvent.title,
@@ -240,7 +244,12 @@ final class ScheduleStore: ObservableObject {
                 })
             }
 
-            mergedEvents.sort { $0.startDate < $1.startDate }
+            // Sorted and deduplicated by the pure policy, so the rule that decides
+            // whether one meeting becomes one alarm or two is unit testable.
+            let mergedEvents = ScheduleEventSourcePolicy.merge(
+                eventKit: eventKitEvents,
+                google: googleEvents
+            )
             guard !Task.isCancelled else { return }
             events = mergedEvents
             refreshEventsIdentityToken()

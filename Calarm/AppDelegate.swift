@@ -11,7 +11,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        true
+        // Must happen here. BGTaskScheduler requires every launch handler to be
+        // registered before this method returns; registering from a SwiftUI `.task`
+        // is too late and installs nothing. See MorningSyncScheduler.
+        MorningSyncScheduler.registerHandlers()
+        return true
     }
 
     func application(

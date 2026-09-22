@@ -57,24 +57,34 @@ struct GoogleCalendarAPIClient: Sendable {
         )
     }
 
-    /// Delta fetch since the last successful sync check.
-    func listUpdatedEvents(
+    /// The one call that mints a `syncToken`, and the only one whose parameters the
+    /// incremental call can match.
+    ///
+    /// Three of these choices are load-bearing and were wrong before:
+    ///
+    /// - **No `timeMax`.** `timeMax` is forbidden on a request carrying a `syncToken`,
+    ///   and Google requires every other parameter to match the initial sync. A token
+    ///   minted from a bounded window can therefore never be used, and worse, the window
+    ///   is an absolute date: deltas would never mention an event scheduled past it.
+    /// - **No `orderBy`.** Also forbidden alongside `syncToken`, same consequence.
+    /// - **`singleEvents=false`.** With `true` and no `timeMax`, Google expands every
+    ///   recurrence for all time, so one daily standup becomes thousands of rows. Parents
+    ///   only here; expansion happens in `listEvents` where the window is bounded.
+    ///
+    /// `timeMin` *is* allowed and does not suppress the token. Google's own sync guide
+    /// passes it. The token is only ever omitted when `nextPageToken` is present, which
+    /// `paginateEvents` handles by following to the last page.
+    func listFullSyncEvents(
         calendarID: String,
         accessToken: String,
-        updatedMin: Date,
-        timeMin: Date,
-        timeMax: Date
+        timeMin: Date
     ) async throws -> GoogleCalendarEventsPage {
         let encodedCalendarID = calendarID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? calendarID
-        var query = baseEventQuery(timeMin: timeMin, timeMax: timeMax)
-        query.append(("singleEvents", "true"))
-        query.append(("orderBy", "updated"))
-        query.append(("updatedMin", rfc3339(updatedMin)))
-
         return try await paginateEvents(
             path: "/calendar/v3/calendars/\(encodedCalendarID)/events",
-            query: query,
-            accessToken: accessToken
+            query: Self.syncParameters,
+            accessToken: accessToken,
+            extraQuery: [("timeMin", rfc3339(timeMin))]
         )
     }
 
@@ -85,10 +95,11 @@ struct GoogleCalendarAPIClient: Sendable {
         syncToken: String
     ) async throws -> (events: [GoogleCalendarEvent], nextSyncToken: String?) {
         let encodedCalendarID = calendarID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? calendarID
-        var query: [(String, String)] = [
-            ("syncToken", syncToken),
-            ("singleEvents", "true"),
-        ]
+        // Same parameter set as listFullSyncEvents, minus timeMin. Google: "All other
+        // query parameters should be the same as for the initial synchronization to
+        // avoid undefined behavior." A mismatch here is not an error you will see, it is
+        // a delta you quietly cannot trust.
+        let query: [(String, String)] = [("syncToken", syncToken)] + Self.syncParameters
 
         var allItems: [GoogleCalendarEvent] = []
         var nextSyncToken: String?
@@ -121,6 +132,14 @@ struct GoogleCalendarAPIClient: Sendable {
 
     // MARK: - Private
 
+    /// The parameter set shared by the full sync and every incremental sync after it.
+    /// Deliberately excludes anything forbidden alongside `syncToken`.
+    private static let syncParameters: [(String, String)] = [
+        ("singleEvents", "false"),
+        ("showDeleted", "true"),
+        ("maxResults", "2500"),
+    ]
+
     private func baseEventQuery(timeMin: Date, timeMax: Date) -> [(String, String)] {
         [
             ("timeMin", rfc3339(timeMin)),
@@ -133,8 +152,10 @@ struct GoogleCalendarAPIClient: Sendable {
     private func paginateEvents(
         path: String,
         query: [(String, String)],
-        accessToken: String
+        accessToken: String,
+        extraQuery: [(String, String)] = []
     ) async throws -> GoogleCalendarEventsPage {
+        let query = query + extraQuery
         var allItems: [GoogleCalendarEvent] = []
         var pageToken: String?
         var pageCount = 0
@@ -169,7 +190,13 @@ struct GoogleCalendarAPIClient: Sendable {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "www.googleapis.com"
-        components.path = path
+        // `percentEncodedPath`, not `path`. Callers percent-encode the calendar ID
+        // before interpolating it, and the `path` setter then escapes the `%` itself, so
+        // `team%20room` went out as `team%2520room` and asked Google for a calendar that
+        // does not exist. It only bites IDs containing characters outside
+        // `.urlPathAllowed` -- which includes every Google holiday calendar, since those
+        // are named like `en.usa#holiday@group.v.calendar.google.com`.
+        components.percentEncodedPath = path
         if !query.isEmpty {
             components.queryItems = query.map { URLQueryItem(name: $0.0, value: $0.1) }
         }

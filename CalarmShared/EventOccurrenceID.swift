@@ -6,7 +6,13 @@
 import Foundation
 
 /// Stable identity for one calendar event occurrence (recurring series instances are distinct).
-struct EventOccurrenceID: Hashable, Codable, Sendable {
+///
+/// `nonisolated` because this is a pure value type that identity-related code needs from
+/// every context: the app, the widget extension, background decode of a network response,
+/// and the test target. The target's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` would
+/// otherwise isolate it to the main actor, which makes `rawValue` unreachable from a
+/// nonisolated caller -- a warning today, an error under the Swift 6 language mode.
+nonisolated struct EventOccurrenceID: Hashable, Codable, Sendable {
     let eventIdentifier: String
     let startTimestamp: TimeInterval
 

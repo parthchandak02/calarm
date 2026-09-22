@@ -95,49 +95,82 @@ final class GoogleCalendarService: ObservableObject {
             let now = Date()
             let end = Calendar.current.date(byAdding: .day, value: days, to: now) ?? now
 
-            var merged: [String: GoogleCalendarFetchedEvent] = [:]
+            // Step 1: ask each calendar whether anything changed, as cheaply as possible.
+            //
+            // This used to do a full window fetch AND an incremental fetch on every
+            // sync, which is strictly more work than either alone: the incremental
+            // could only ever return what the full fetch had already returned. Now the
+            // incremental is what it should be, a change detector, and the expensive
+            // expanded fetch in step 2 runs only when it reports something.
+            var needsWindowFetch = cachedEvents.isEmpty
 
             for calendar in enabledCalendars {
-                let pageResult = try await api.listEvents(
+                guard let syncToken = preferences.syncToken(for: calendar.id) else {
+                    // No token yet. Mint one from an unbounded, unordered request, which
+                    // is the only shape whose parameters an incremental call can match.
+                    let full = try await api.listFullSyncEvents(
+                        calendarID: calendar.id,
+                        accessToken: token,
+                        timeMin: Self.syncFloor(from: now)
+                    )
+                    preferences.setSyncToken(full.nextSyncToken, for: calendar.id)
+                    needsWindowFetch = true
+                    continue
+                }
+
+                do {
+                    let delta = try await api.listIncrementalEvents(
+                        calendarID: calendar.id,
+                        accessToken: token,
+                        syncToken: syncToken
+                    )
+                    if let next = delta.nextSyncToken {
+                        preferences.setSyncToken(next, for: calendar.id)
+                    }
+                    if !delta.events.isEmpty {
+                        needsWindowFetch = true
+                    }
+                } catch GoogleCalendarAPIError.syncTokenExpired {
+                    // 410. Google's instruction is to clear and full sync; dropping the
+                    // token makes the next pass take the branch above.
+                    preferences.setSyncToken(nil, for: calendar.id)
+                    needsWindowFetch = true
+                } catch {
+                    // Fail open. An unknown delta state must not be read as "nothing
+                    // changed", because the cost of that is an alarm for a meeting that
+                    // moved.
+                    SchedulerLog.warning("google incremental sync failed for \(calendar.id)")
+                    needsWindowFetch = true
+                }
+            }
+
+            preferences.lastSyncCheck = Date()
+
+            guard needsWindowFetch else {
+                // Steady state: one cheap request per calendar and no expansion work.
+                lastSyncError = nil
+                return cachedEvents
+                    .filter { $0.startDate >= now && $0.startDate <= end }
+                    .sorted { $0.startDate < $1.startDate }
+            }
+
+            // Step 2: the expanded, bounded query that actually feeds the UI and the
+            // alarms. `singleEvents=true` and `orderBy=startTime` live here, where the
+            // window is bounded and no sync token is involved.
+            var merged: [String: GoogleCalendarFetchedEvent] = [:]
+            for calendar in enabledCalendars {
+                let page = try await api.listEvents(
                     calendarID: calendar.id,
                     accessToken: token,
                     timeMin: now,
                     timeMax: end
                 )
-                for event in pageResult.events {
+                for event in page.events {
                     guard let mapped = mapEvent(event, calendar: calendar) else { continue }
                     merged[mapped.occurrenceID] = mapped
                 }
-
-                if preferences.syncToken(for: calendar.id) == nil,
-                   let bootstrapToken = pageResult.nextSyncToken {
-                    preferences.setSyncToken(bootstrapToken, for: calendar.id)
-                }
-
-                if let syncToken = preferences.syncToken(for: calendar.id) {
-                    do {
-                        let incremental = try await api.listIncrementalEvents(
-                            calendarID: calendar.id,
-                            accessToken: token,
-                            syncToken: syncToken
-                        )
-                        applyIncrementalEvents(
-                            incremental.events,
-                            calendar: calendar,
-                            merged: &merged
-                        )
-                        if let next = incremental.nextSyncToken {
-                            preferences.setSyncToken(next, for: calendar.id)
-                        }
-                    } catch GoogleCalendarAPIError.syncTokenExpired {
-                        preferences.setSyncToken(nil, for: calendar.id)
-                    } catch {
-                        SchedulerLog.warning("google incremental sync failed for \(calendar.id)")
-                    }
-                }
             }
 
-            preferences.lastSyncCheck = Date()
             lastSyncError = nil
             return merged.values
                 .filter { $0.startDate >= now && $0.startDate <= end }
@@ -160,33 +193,13 @@ final class GoogleCalendarService: ObservableObject {
         availableCalendars.filter { preferences.isCalendarEnabled($0.id) }
     }
 
-    private func applyIncrementalEvents(
-        _ events: [GoogleCalendarEvent],
-        calendar: GoogleCalendarListEntry,
-        merged: inout [String: GoogleCalendarFetchedEvent]
-    ) {
-        for event in events {
-            if event.isCancelled {
-                if let occurrenceID = occurrenceID(for: event, calendar: calendar) {
-                    merged.removeValue(forKey: occurrenceID)
-                }
-                continue
-            }
-            guard let mapped = mapEvent(event, calendar: calendar) else { continue }
-            merged[mapped.occurrenceID] = mapped
-        }
-    }
-
-    private func occurrenceID(
-        for event: GoogleCalendarEvent,
-        calendar: GoogleCalendarListEntry
-    ) -> String? {
-        guard let googleEventID = event.id else { return nil }
-        guard let dates = api.parseEventDates(event) else { return nil }
-        return GoogleCalendarFetchedEvent.occurrenceID(
-            googleEventID: googleEventID,
-            startDate: dates.start
-        )
+    /// How far back the token-minting full sync reaches.
+    ///
+    /// `timeMin` is an absolute date baked into the token, so this is a floor that never
+    /// moves until the token is replaced. A week of history is enough to catch an event
+    /// that was edited today but started yesterday, without asking Google for years.
+    private static func syncFloor(from now: Date) -> Date {
+        now.addingTimeInterval(-7 * 24 * 60 * 60)
     }
 
     private func mapEvent(
@@ -195,6 +208,9 @@ final class GoogleCalendarService: ObservableObject {
     ) -> GoogleCalendarFetchedEvent? {
         guard !event.isCancelled else { return nil }
         guard !event.isAllDay else { return nil }
+        // Focus blocks, out-of-office and working-location entries are not meetings.
+        // The predecessor app macOS app has always filtered these; the Google path here never did.
+        guard event.isAlertableEventType else { return nil }
         guard let googleEventID = event.id else { return nil }
         guard let dates = api.parseEventDates(event) else { return nil }
 
