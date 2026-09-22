@@ -112,6 +112,7 @@ final class AlarmScheduler {
         let id = stableAlarmID(for: occurrenceID, offset: offset)
         do {
             try AlarmManager.shared.cancel(id: id)
+            AlarmJournalStore.record(.cancelled, alarmID: id.uuidString, occurrenceID: occurrenceID)
             return true
         } catch {
             SchedulerLog.warning("cancel failed \(occurrenceID) \(offset.rawValue): \(error.localizedDescription)")
@@ -518,8 +519,13 @@ final class AlarmScheduler {
                     postAlert: snoozeSeconds
                 )
             } else {
+                // A one second pre-alert, and it is not cosmetic. AlarmKit alarms fail to
+                // present when the foregrounded app is in landscape; Apple's own Reminders
+                // works around it with exactly this, and the WWDC demo had the bug.
+                // `needsReschedule` tests `preAlert > 1`, so 1 still reads as "no Live
+                // Activity" and this does not cause reschedule churn.
                 countdownDuration = Alarm.CountdownDuration(
-                    preAlert: nil,
+                    preAlert: 1,
                     postAlert: snoozeSeconds
                 )
             }
@@ -533,6 +539,12 @@ final class AlarmScheduler {
             )
 
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
+            AlarmJournalStore.record(
+                .scheduled,
+                alarmID: idString,
+                occurrenceID: event.id,
+                intendedFire: fireDate
+            )
             SchedulerLog.info("scheduled \(event.id) \(offset.rawValue) fire=\(fireDate) liveActivity=\(withLiveActivity)")
             return .scheduled
         } catch {
