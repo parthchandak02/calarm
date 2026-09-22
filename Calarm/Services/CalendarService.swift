@@ -55,7 +55,9 @@ final class CalendarService: ObservableObject {
             availableCalendars = []
             return
         }
-        availableCalendars = eventStore.calendars(for: .event)
+        let calendars = eventStore.calendars(for: .event)
+        CalendarFilterPreferences.migrateAllowListIfNeeded(allCalendarIDs: calendars.map(\.calendarIdentifier))
+        availableCalendars = calendars
             .map { calendar in
                 CalendarSummary(
                     id: calendar.calendarIdentifier,
@@ -67,9 +69,13 @@ final class CalendarService: ObservableObject {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
+    func enableAllCalendars() {
+        CalendarFilterPreferences.disabledCalendarIDs = []
+        refreshCalendarList()
+    }
+
     func setCalendarEnabled(_ calendarID: String, enabled: Bool) {
-        let allIDs = eventStore.calendars(for: .event).map(\.calendarIdentifier)
-        CalendarFilterPreferences.setEnabled(enabled, calendarID: calendarID, allCalendarIDs: allIDs)
+        CalendarFilterPreferences.setEnabled(enabled, calendarID: calendarID)
         refreshCalendarList()
     }
 
@@ -111,10 +117,12 @@ final class CalendarService: ObservableObject {
         return false
     }
 
+    /// `nil` means "every calendar", which is also the fallback when the user has
+    /// switched everything off — an empty predicate list reads nothing at all.
     private func filteredCalendars() -> [EKCalendar]? {
-        let enabled = CalendarFilterPreferences.enabledCalendarIDs
-        if enabled.isEmpty { return nil }
-        let calendars = eventStore.calendars(for: .event).filter { enabled.contains($0.calendarIdentifier) }
+        let disabled = CalendarFilterPreferences.disabledCalendarIDs
+        if disabled.isEmpty { return nil }
+        let calendars = eventStore.calendars(for: .event).filter { !disabled.contains($0.calendarIdentifier) }
         return calendars.isEmpty ? nil : calendars
     }
 

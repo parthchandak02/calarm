@@ -276,9 +276,15 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsSectionHeader(title: "Calendars", theme: theme)
 
-            Text("Choose which calendars CALarm reads for upcoming events.")
+            Text("Choose which calendars CALarm reads for upcoming events. All-day events are always skipped.")
                 .font(CalarmFont.subheadline)
                 .foregroundStyle(theme.textSecondary)
+
+            if hiddenCalendarCount > 0 {
+                Text("\(hiddenCalendarCount) calendar\(hiddenCalendarCount == 1 ? " is" : "s are") switched off, so their events never appear on the schedule.")
+                    .font(CalarmFont.caption)
+                    .foregroundStyle(theme.accent)
+            }
 
             if store.calendarService.availableCalendars.isEmpty {
                 Text(store.authorizationStatus == .fullAccess ? "No calendars found." : "Grant calendar access to choose calendars.")
@@ -307,8 +313,23 @@ struct SettingsSheet: View {
                         }
                     }
                 }
+
+                if hiddenCalendarCount > 0 {
+                    SettingsActionRow(
+                        title: "Turn all calendars back on",
+                        theme: theme,
+                        systemImage: "checklist.checked"
+                    ) {
+                        store.calendarService.enableAllCalendars()
+                        Task { await store.reload() }
+                    }
+                }
             }
         }
+    }
+
+    private var hiddenCalendarCount: Int {
+        store.calendarService.availableCalendars.filter { !$0.isEnabled }.count
     }
 
     private var diagnosticsSection: some View {
@@ -397,8 +418,9 @@ struct SettingsSheet: View {
     private var eventSourceLabel: String {
         let eventKit = store.events.filter { $0.source == .eventKit }.count
         let google = store.events.filter { $0.source == .google }.count
-        let enabled = CalendarFilterPreferences.enabledCalendarIDs.count
-        let filter = enabled == 0 ? "all cals" : "\(enabled) cals"
+        let all = store.calendarService.availableCalendars
+        let off = all.filter { !$0.isEnabled }.count
+        let filter = off == 0 ? "all \(all.count) cals" : "\(all.count - off)/\(all.count) cals"
         let googlePart = store.googleCalendarService.isConnected ? "google \(google)" : "google off"
         return "ek \(eventKit) · \(googlePart) · \(filter)"
     }

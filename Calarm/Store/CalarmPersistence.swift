@@ -22,7 +22,9 @@ enum CalarmPersistence {
         static let eventOverrides = "calarm.eventOverrides"
         static let legacyDefaultOffsetMinutes = "calarm.defaultOffsetMinutes"
         static let occurrenceMetadataMigrationDone = "calarm.migration.occurrenceMetadata"
+        /// Legacy allow-list, migrated into `disabledCalendarIDs` then removed.
         static let enabledCalendarIDs = "calarm.enabledCalendarIDs"
+        static let disabledCalendarIDs = "calarm.disabledCalendarIDs"
         /// When true, Live Activity / Dynamic Island tint follows the EventKit calendar color.
         static let useCalendarColorInLiveActivity = "calarm.liveActivity.useCalendarColor"
     }
