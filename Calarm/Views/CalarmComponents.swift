@@ -232,7 +232,10 @@ struct SettingsTabBar<Tab: SettingsTabItem>: View {
             }
         }
         .frame(height: CalarmTheme.settingsTabHeight)
-        .background(theme.surface, in: RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous))
+        .background(theme.surface)
+        // Clips the selected tab's fill, which is a plain rectangle drawn by the child.
+        // Without this the first and last tabs square off the bar's rounded corners.
+        .clipShape(RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: CalarmTheme.cornerRadius, style: .continuous)
                 .strokeBorder(theme.surfaceStroke, lineWidth: 1)
