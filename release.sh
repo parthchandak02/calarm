@@ -52,7 +52,10 @@ xcodebuild \
   -allowProvisioningUpdates \
   "${AUTH_KEY_ARGS[@]}"
 
-IPA=$(find "$EXPORT_PATH" -name "*.ipa" | head -n1)
+# Tolerate a missing export dir: with destination=upload xcodebuild ships straight to
+# App Store Connect and writes no IPA, and under `set -e` a failing find would abort the
+# script after a successful upload — taking any chained step down with it.
+IPA=$(find "$EXPORT_PATH" -name "*.ipa" 2>/dev/null | head -n1 || true)
 if [[ -z "${IPA:-}" ]]; then
   if grep -q '<string>upload</string>' "$EXPORT_OPTIONS" 2>/dev/null; then
     echo ""

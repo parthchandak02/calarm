@@ -32,8 +32,13 @@ case "$CMD" in
     "$SCRIPT_DIR/ios-doctor.sh"
     log_step "Unit tests"
     run_calarm_unit_tests
-    log_step "TestFlight upload (fastlane)"
-    bundle exec fastlane ios upload_beta
+    # release.sh, not `fastlane ios upload_beta`. The fastlane lane builds through gym,
+    # which never received the App Store Connect API key auth that release.sh passes to
+    # xcodebuild, so it fails with "No Accounts / No signing certificate iOS Distribution".
+    log_step "TestFlight upload"
+    ./release.sh
+    log_step "Internal Testing group"
+    "$SCRIPT_DIR/add-testflight-internal-group.sh"
     ;;
   metadata)
     asc_env_ready || { echo "Configure credentials first: ./scripts/configure-credentials.sh <ISSUER_ID>"; exit 1; }
