@@ -1,68 +1,53 @@
 # AGENTS.md
 
-Instructions for any AI coding agent working in this repository. This is the **canonical
-and only** instruction file — see [Harness wiring](#harness-wiring) if you are wondering
-where `CLAUDE.md` went.
+Instructions for any AI coding agent working in this repository. This is the **canonical**
+instruction file — every other harness config points here. See
+[Harness wiring](#harness-wiring) before adding another one.
 
-**calarm** is an iOS 26+ app that turns calendar events into AlarmKit alarms — the loudest
-thing a third-party iOS app can do. Swift, SwiftUI, a widget extension for Live Activities,
-and a direct Google Calendar API client alongside EventKit.
-
----
+**calarm** turns calendar events into AlarmKit alarms — the loudest thing a third-party
+iOS app can do. iOS 26+, Swift, SwiftUI, a widget extension for Live Activities, and a
+direct Google Calendar API client alongside EventKit.
 
 ## Read this first
 
-| File | What it holds | Read when |
+| File | Holds | Read when |
 |---|---|---|
-| **[STATUS.md](STATUS.md)** | Where the project stands, what is blocked, what comes next | **Always, at session start** |
-| [CHANGELOG.md](CHANGELOG.md) | What changed, when, and why | Before claiming something is new or broken |
-| [RESEARCH.md](RESEARCH.md) | Verified platform facts, disproved claims, architecture reasoning, sources | Before researching AlarmKit, EventKit, Google Calendar, push, or background execution |
-| [README.md](README.md) | Human-facing setup and project layout | Setting up a machine |
-| [SECURITY.md](SECURITY.md) | What must never be committed | Before touching credentials or config |
+| **[STATUS.md](STATUS.md)** | Where things stand, what is blocked, what is next | **Always, at session start** |
+| [CHANGELOG.md](CHANGELOG.md) | What changed, when, why | Before calling something new or broken |
+| [RESEARCH.md](RESEARCH.md) | Verified platform facts, disproved claims, sources | Before researching AlarmKit, EventKit, Google Calendar, push, or background execution |
+| [SECURITY.md](SECURITY.md) | What must never be committed | Before touching credentials |
 
-**RESEARCH.md exists so you do not repeat research that is already done, and so you do not
-re-reach conclusions that were already disproved.** It has a section of confidently-stated
-claims that turned out to be wrong. Read it before spending a research budget.
-
----
+RESEARCH.md exists so you do not repeat finished research, and so you do not re-reach
+conclusions that were already disproved — it has a whole section of confident claims that
+turned out wrong. Read it before spending a research budget.
 
 ## The documentation rule
 
-**Leave the docs true. Every session, without being asked.**
+**Leave the docs true, every session, without being asked.** They are not a courtesy to
+humans; they are the handoff mechanism between agents. A stale STATUS.md costs the next
+agent an hour, or sends it down a path that was already closed.
 
-Documentation here is not a courtesy to humans — it is the handoff mechanism between
-agents. A stale `STATUS.md` costs the next agent an hour of rediscovery, or worse, sends it
-down a path that was already closed.
+Before finishing a piece of work:
 
-Before you finish a piece of work:
+- **CHANGELOG.md** — add an entry for anything a user or agent would notice. Name the
+  commit. Skip typo fixes.
+- **STATUS.md** — update if the state of play moved, and **always bump `Last updated`**.
+- **RESEARCH.md** — add what you verified against a primary source, with URL and evidence
+  label. If you disproved something there, correct it *and* record the correction.
+- **This file** — update when a command, convention or trap changes.
 
-1. **`CHANGELOG.md`** — add an entry for anything a user or another agent would notice.
-   Behaviour changes, bug fixes, new files, pipeline changes. Not typo fixes. Name the
-   commit hash.
-2. **`STATUS.md`** — update it if the state of play moved: something shipped, a gate
-   resolved, a blocker appeared or cleared, the next step changed. **Always update the
-   `Last updated` date when you touch it.**
-3. **`RESEARCH.md`** — add anything you verified against a primary source, with its URL and
-   an evidence label. If you disproved something in there, correct it in place *and* record
-   the correction — the wrong version is useful to the next agent.
-4. **This file** — update it when a command, convention or trap changes.
+Unsure where a fact goes? *True now and likely to change?* → STATUS. *Did it happen?* →
+CHANGELOG. *True about the platform regardless of this repo?* → RESEARCH.
 
-If you are unsure which file a fact belongs in: *is it true right now and likely to change?*
-→ STATUS. *Did it happen?* → CHANGELOG. *Is it true about the platform regardless of this
-repo?* → RESEARCH.
-
-Do not create new top-level documents. Four is the budget; the previous structure drifted
-into two overlapping 700-line session narratives that nobody could tell apart.
-
----
+**Do not add a fifth top-level document.** The previous structure drifted into two
+overlapping 700-line session narratives nobody could tell apart.
 
 ## Commands
 
-Everything is command line. **There is no Xcode GUI in this loop** — the owner's Mac is
-RAM-constrained and this is a standing constraint, not a preference.
+Everything is command line. **No Xcode GUI** — this Mac is RAM-constrained and that is a
+standing constraint, not a preference.
 
 ```bash
-# Tests. Needs a simulator; create one if none exists.
 UDID=$(xcrun simctl create "calarm-tmp" \
   com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro \
   com.apple.CoreSimulator.SimRuntime.iOS-26-5)
@@ -72,148 +57,124 @@ xcrun simctl delete "$UDID"
 ```
 
 ```bash
-./scripts/ship.sh doctor    # health check — run before anything release-shaped
+./scripts/ship.sh doctor    # run before anything release-shaped
 ./scripts/ship.sh beta      # tests + archive + TestFlight + tester group
-./scripts/ship.sh metadata  # App Store descriptions, URLs, screenshots
+./deploy.sh 1               # simulator      ./deploy.sh 2   # device
 ```
 
-```bash
-./deploy.sh 1   # build + install + launch on simulator
-./deploy.sh 2   # same, physical device
-```
-
-### Shipping happens on the Mac mini, not the laptop
-
-The App Store Connect key and signing identity live on `macmini-remote`. The keychain must
-be unlocked **in the same SSH session** as the build — each `ssh` gets its own security
-session, so a separate unlock call does nothing. The owner types the password; an agent
-must not handle it.
+**Shipping happens on `macmini-remote`**, which holds the signing identity and ASC key.
+The keychain must be unlocked **in the same SSH session as the build** — each `ssh` gets
+its own security session. The owner types the password; do not handle it.
 
 ```bash
 ssh -t macmini-remote 'security unlock-keychain ~/Library/Keychains/login.keychain-db && cd ~/projects/calarm && git pull --ff-only origin main && ./scripts/ship.sh beta'
 ```
 
-**Verify a ship against App Store Connect, not against the script's output.** This pipeline
-has produced a green success message with a build that reached nobody three separate times.
-The signal that matters is `internalBuildState == IN_BETA_TESTING`. Note that the API key's
-role gets 403 on `/builds/{id}/betaGroups`, so check the build beta detail instead.
-
----
+**Verify a ship against App Store Connect, not the script's output.** This pipeline has
+printed success with a build that reached nobody, three times in one day. The signal is
+`internalBuildState == IN_BETA_TESTING` on the build's `buildBetaDetail`; the API key's
+role gets 403 on `/builds/{id}/betaGroups`.
 
 ## Hard constraints
 
-- **Never commit a credential.** This repo has already had a git-history purge for personal
-  data. `apps-script/Relay.gs` reads every secret from Script Properties for this reason.
-  See [SECURITY.md](SECURITY.md).
-- **Never handle the owner's passwords.** Keychain unlocks and console logins are theirs to
-  type.
+- **Never commit a credential.** This repo has already had a history purge for personal
+  data. See [SECURITY.md](SECURITY.md).
+- **Never handle the owner's passwords.** Keychain unlocks and logins are theirs to type.
 [redacted]
 [redacted]
 [redacted]
-- **Do not send repo content to third-party services.** No paste sites, file hosts, or
-  upload endpoints.
-- **A missed meeting is this app's worst outcome.** When a design choice is ambiguous, fail
-  *open* — show the event, ring the alarm. Every filter in this codebase that could hide an
-  event defaults to showing it, deliberately.
-
----
+- **Do not send repo content to third-party services.** No paste sites or file hosts.
+- **A missed meeting is this app's worst outcome.** When a design choice is ambiguous,
+  fail *open* — show the event, ring the alarm. Every filter here that could hide an event
+  defaults to showing it, deliberately.
 
 ## Code conventions
 
-- **Do not write comments that explain what the code does.** Code should be
-  self-explanatory. Comments here earn their place by explaining *why* — a non-obvious
-  constraint, a platform bug being worked around, a decision that looks wrong without
-  context. Match the density of the surrounding file.
-- **Commit messages say what changed and why**, in the imperative. No co-author trailers —
-  a git hook strips them.
-- **Tests are expected** for pure logic. The pattern that works here is extracting a pure
-  function out of `ScheduleStore` and testing that, rather than trying to construct the
-  store.
+- **No comments that explain what the code does.** Comments earn their place by explaining
+  *why* — a platform bug being worked around, a decision that looks wrong without context.
+  Match the surrounding file's density.
+- **Commit messages say what changed and why**, imperative mood. No co-author trailers; a
+  git hook strips them.
+- **Tests for pure logic.** The pattern that works here is extracting a pure function out
+  of `ScheduleStore` and testing that, rather than constructing the store.
 
----
+## Traps
 
-## Traps specific to this repo
+- **`SWIFT_VERSION = 5.0` with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`.** Unannotated
+  statics and structs are MainActor-isolated and **nobody has ever seen the diagnostic**.
+  Pure helpers and DTOs need explicit `nonisolated`.
+- **`PBXFileSystemSynchronizedRootGroup`** — Sources build phases are empty and adding a
+  Swift file needs **no project edit**. Do not hand-add file references.
+- **`CalarmShared/` is compiled into each target, not imported as a module.** Do not mark
+  its types `public`.
+- **AlarmKit owns the Live Activity.** Never call `Activity.request` for an alarm, or you
+  get two.
+- **The Simulator cannot ring an AlarmKit alarm** and the app blocks the test alarm there.
+  Anything alarm-visual must be verified on device.
+- **`Calarm/GoogleService-Info.plist` is gitignored and absent** — Google sync is dark on
+  any fresh clone.
+- **A separate Apps Script mutates this calendar.** "Focus Block Creator" converts solo
+  events via insert-then-remove, which **changes the event ID** and orphans preferences
+  keyed to it.
+- **`ScreenshotMode` is a live branch in the launch path**, short-circuiting
+  `ScheduleStore.bootstrap()` to inject demo data.
 
-- **`SWIFT_VERSION = 5.0` with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`.** Every
-  unannotated `static func` or `struct` is MainActor-isolated, and because the language mode
-  is 5.0 **nobody has ever seen the diagnostic**. Pure helpers and DTOs need an explicit
-  `nonisolated` or they cannot be called from a `map` closure or a background decode.
-- **The project uses `PBXFileSystemSynchronizedRootGroup`.** All four Sources build phases
-  are literally empty and adding a Swift file requires **no project edit**. Do not hand-add
-  file references.
-- **`CalarmShared/` is compiled directly into each target, not imported as a module.** Do
-  not mark its types `public`. `CalarmTests` compiles it *and* does
-  `@testable import Calarm`, so shared types exist twice in the test process.
-- **`Calarm/GoogleService-Info.plist` is gitignored and absent.** Google sync is dark on
-  any fresh clone. Only the `.example` exists.
-- **AlarmKit owns the Live Activity.** Never call `Activity.request` for an alarm — the
-  widget extension supplies views for an activity AlarmKit creates. Calling it yourself
-  produces two.
-- **The Simulator cannot ring an AlarmKit alarm**, and the app blocks the test alarm there
-  on purpose. Anything alarm-visual must be verified on the device.
-- **The owner runs a separate Apps Script that mutates this calendar.** "Focus Block
-  Creator" converts solo events to `eventType: 'focusTime'` via insert-then-remove, which
-  **changes the event ID** and silently orphans any per-event preference keyed to it.
-- **`ScreenshotMode` is a live branch in the launch path**, checked in `CalarmApp.init`,
-  short-circuiting `ScheduleStore.bootstrap()` to inject demo data.
-
-More, with the reasoning behind each:
+More, with reasoning:
 [RESEARCH.md § Known problems](RESEARCH.md#known-problems-not-fixed-and-why).
-
----
 
 ## Layout
 
 ```
-Calarm/                     Main app — AlarmKit, EventKit, Google client, SwiftUI views
-CalarmWidgetExtension/      Live Activity + Dynamic Island views
-CalarmShared/               Types compiled into both targets (not a module)
-CalarmTests/                Unit tests
-CalarmUITests/              Screenshot automation
-apps-script/                Google Apps Script relay (alternative backend, not deployed)
-scripts/                    ship.sh, ios-doctor.sh, build stamping, credentials
-docs/app-store/             Publishing playbooks
-docs/                       Also the GitHub Pages site (index/privacy/support .html)
-.claude/skills/             Task-scoped playbooks — see below
-.claude/agents/             Subagent definitions — see below
+Calarm/                  Main app — AlarmKit, EventKit, Google client, views
+CalarmWidgetExtension/   Live Activity + Dynamic Island views
+CalarmShared/            Types compiled into both targets (not a module)
+CalarmTests/             Unit tests      CalarmUITests/   Screenshot automation
+apps-script/             Apps Script relay (alternative backend, not deployed)
+scripts/                 ship.sh, ios-doctor.sh, stamping, credentials
+docs/app-store/          Publishing playbooks; docs/ is also the Pages site
+.claude/skills/          Task playbooks  .claude/agents/  Subagent definitions
 ```
 
 ## Skills and subagents
 
-Task-scoped playbooks live in `.claude/skills/<name>/SKILL.md`, subagent definitions in
-`.claude/agents/<name>.md`. See the [skills index](.claude/skills/README.md).
+Playbooks live in `.claude/skills/<name>/SKILL.md`, subagents in
+`.claude/agents/<name>.md`. See the [skills index](.claude/skills/README.md). Reach for
+them when editing alarm scheduling, the release pipeline, deep links, occurrence identity,
+or UI.
 
-Reach for them when editing alarm scheduling, the release pipeline, deep links, occurrence
-identity, or UI.
-
-**Adding one:** create the real directory under `.claude/skills/`, never through a symlink
-— Claude Code refuses to write into symlinked directories. Frontmatter needs `name` (must
-match the folder name, `a-z0-9-`) and `description` (say *what* and *when*). Keep the body
-under 500 lines and push detail into a `references/` subdirectory.
+Adding one: create the real directory under `.claude/skills/`. Frontmatter needs `name`
+(matching the folder, `a-z0-9-`) and `description` (say *what* and *when*). Keep the body
+under 500 lines; push detail into `references/`.
 
 ## Harness wiring
 
-One copy of everything, read by every agent harness. The layout is deliberate:
+One copy of every instruction, read by every harness. Do not add more config files.
 
-| Path | Read natively by | Notes |
+| Path | Read natively by | Kind |
 |---|---|---|
 | `AGENTS.md` | Claude Code, Cursor, Codex, Copilot, Windsurf, Devin, Jules | The canonical file |
+| `CLAUDE.md` | Claude Code | Two-line `@AGENTS.md` import — **keep it that way** |
 | `.claude/skills/` | Claude Code, Cursor, Copilot | Real directory — author here |
 | `.claude/agents/` | Claude Code, Cursor | Real directory |
 | `.agents/skills` | Codex | Symlink → `.claude/skills` |
 | `.gemini/settings.json` | Gemini CLI | Points `context.fileName` at AGENTS.md |
-| `.aider.conf.yml` | Aider | Aider auto-loads nothing; this adds AGENTS.md |
+| `.aider.conf.yml` | Aider | Aider auto-loads nothing without it |
 
-**Do not add a `CLAUDE.md`.** Claude Code reads `AGENTS.md` natively, but *only when no
-`CLAUDE.md` exists* — creating one, even as a symlink, silently disables this file. Same
-for a personal `CLAUDE.local.md`. If you genuinely need Claude-specific instructions, make
-`CLAUDE.md` contain the single line `@AGENTS.md` followed by your additions; the import
-never causes double-loading.
+- **Never make `CLAUDE.md` a symlink or a copy.** As an import it costs nothing and never
+  double-loads, and it keeps working where native AGENTS.md reading is unavailable — older
+  Claude Code, Bedrock and third-party providers, telemetry off. As a symlink it breaks
+  Edit/Write, and a Windows clone with `core.symlinks=false` turns it into a nine-byte file
+  containing the literal string `AGENTS.md`, with a clean `git status` hiding it. Verified,
+  not theoretical.
+- **Never add `CLAUDE.local.md`** — it silently disables native AGENTS.md reading.
+- **Author skills in `.claude/skills/`, never through `.agents/skills`.** Claude Code
+  refuses to write into a symlinked directory. The symlink points this way round on
+  purpose: it degrades on a Windows clone, and confining that to Codex leaves AGENTS.md
+  and all twelve skills intact for everything else.
 
-Symlinking `CLAUDE.md → AGENTS.md` looks tempting and is a trap: it breaks Edit/Write, and
-on a Windows clone with `core.symlinks=false` it silently becomes a 9-byte text file
-containing the literal string `AGENTS.md`, with a clean `git status`.
+Skipped deliberately: `.github/copilot-instructions.md` (Copilot would load it *and*
+AGENTS.md, duplicating context), `.cursor/rules/`, `.windsurfrules`, `GEMINI.md`.
 
-`.agents/skills` degrades the same way on such a clone — verified. That is why the real
-directory is `.claude/skills` and the symlink points at it rather than the reverse: the
-breakage is confined to Codex, and AGENTS.md plus all twelve skills stay intact.
+```bash
+claude plugin validate .claude/agents && claude plugin validate .claude/skills
+```
