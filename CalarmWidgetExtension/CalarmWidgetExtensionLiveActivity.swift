@@ -43,7 +43,6 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     EmptyView()
                 } else {
                     countdownLabel(for: context, style: .compact)
-                        .frame(width: 58, alignment: .trailing)
                         .clipped()
                 }
             } minimal: {
@@ -122,7 +121,11 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
             if fireDate.timeIntervalSinceNow <= 0 {
                 EmptyView()
             } else {
-                let showsHours = fireDate.timeIntervalSinceNow >= 3_600
+                // Keyed to how long the countdown runs, not to how much of it is left.
+                // The widget body renders once and the system animates the digits from
+                // there, so reading the remaining time here would freeze a long alarm's
+                // layout onto whatever instant it happened to be rendered at.
+                let showsHours = countdown.totalCountdownDuration >= 3_600
                 Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: showsHours)
                     .font(font(for: style))
                     .foregroundStyle(tint)
@@ -130,20 +133,18 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .contentTransition(.numericText())
-                    .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
+                    .frame(width: style == .compact ? compactCountdownWidth(showsHours: showsHours) : nil, alignment: .trailing)
             }
         case .paused:
             Text("Paused")
                 .font(font(for: style))
                 .foregroundStyle(tint.opacity(0.85))
                 .lineLimit(1)
-                .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
         case .alert:
             Text("Alerting")
                 .font(font(for: style))
                 .foregroundStyle(tint)
                 .lineLimit(1)
-                .frame(width: style == .compact ? 58 : nil, alignment: .trailing)
         @unknown default:
             Text("-")
                 .font(font(for: style))
@@ -161,6 +162,15 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
         }
 
         return false
+    }
+
+    /// The compact region has no intrinsic size of its own: the Dynamic Island grows to
+    /// whatever the content asks for, and `Text(timerInterval:)` asks for enough room to
+    /// hold every digit combination it could ever show. Left to itself it inflates the
+    /// pill and leaves the digits stranded in the middle of it, so the width is pinned to
+    /// the widest string the chosen format can actually produce — `59:59` or `23:59:59`.
+    private func compactCountdownWidth(showsHours: Bool) -> CGFloat {
+        showsHours ? 58 : 38
     }
 
     private func font(for style: CountdownStyle) -> Font {
