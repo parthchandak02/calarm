@@ -95,7 +95,10 @@ final class ScheduleStore: ObservableObject {
         }
         .store(in: &cancellables)
 
-        alarmUpdatesObserver.onAlarmsChanged = { [weak self] _ in
+        alarmUpdatesObserver.onAlarmsChanged = { [weak self] alarms in
+            for alarm in alarms where alarm.state == .alerting {
+                AlarmJournalStore.recordAlertingOnce(alarmID: alarm.id.uuidString)
+            }
             Task { @MainActor in
                 await self?.handleAlarmKitUpdate()
             }

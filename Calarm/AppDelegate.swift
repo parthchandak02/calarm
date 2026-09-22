@@ -15,6 +15,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // registered before this method returns; registering from a SwiftUI `.task`
         // is too late and installs nothing. See MorningSyncScheduler.
         MorningSyncScheduler.registerHandlers()
+        // `alarmUpdates` is in-process, so a fire that happened while the app was dead can
+        // only be classified here, after the fact.
+        AlarmJournalStore.reconcileOnLaunch()
         return true
     }
 

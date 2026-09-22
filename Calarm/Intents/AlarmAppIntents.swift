@@ -59,6 +59,7 @@ public struct SnoozeAlarmIntent: LiveActivityIntent {
     public func perform() async throws -> some IntentResult {
         // AlarmKit handles .countdown secondary behavior; intent satisfies configuration contract.
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
+        AlarmJournalStore.record(.snoozed, alarmID: id.uuidString)
         try? AlarmManager.shared.countdown(id: id)
         return .result()
     }
@@ -84,6 +85,7 @@ public struct StopAlarmIntent: LiveActivityIntent {
 
     public func perform() async throws -> some IntentResult {
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
+        AlarmJournalStore.record(.stopped, alarmID: id.uuidString)
         try? AlarmManager.shared.stop(id: id)
         return .result()
     }
