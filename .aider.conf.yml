@@ -1,0 +1,3 @@
+# Aider auto-loads no instruction file. Point it at the canonical one.
+read:
+  - AGENTS.md

@@ -20,16 +20,15 @@ Store `.p8` outside the repo (e.g. `~/Keys/AuthKey_XXXXX.p8`).
 
 ## Git: commit and push
 
-Cloud Agent branches use `cursor/<descriptive-name>-b61b`.
+Work goes straight to `main` unless the owner asks otherwise.
 
 ```bash
-git checkout -b cursor/my-feature-b61b   # if needed
 git status
 git add <files>
 git commit -m "Short imperative summary
 
 Optional body explaining why."
-git push -u origin cursor/my-feature-b61b
+git push origin main
 ```
 
 **Push blocked by `.github/workflows/`?** GitHub OAuth may lack `workflow` scope. Either push from a local machine with full credentials, or temporarily omit the workflow commit from the branch.
@@ -56,46 +55,61 @@ Do **not** run `xcodebuild test` or boot simulators on this Mac unless the user 
 
 ## Ship to TestFlight
 
-### Full pipeline (recommended)
+Shipping happens on **`macmini-remote`**, which holds the signing identity and the App
+Store Connect key. The keychain must be unlocked **in the same SSH session as the build** —
+each `ssh` gets its own security session, so unlocking in a separate invocation does
+nothing. The owner types the password; do not handle it.
 
 ```bash
-./scripts/ship.sh beta
+ssh -t macmini-remote 'security unlock-keychain ~/Library/Keychains/login.keychain-db && cd ~/projects/calarm && git pull --ff-only origin main && ./scripts/ship.sh beta'
 ```
 
-Runs: doctor → unit tests → `fastlane ios upload_beta` → Internal Testing group.
+Runs: doctor → unit tests → `./release.sh` → Internal Testing group.
 
-### Manual (when `ship.sh beta` fails on stale build number)
+**Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the
+ASC API key auth `release.sh` passes to xcodebuild, and fails with *No Accounts / No signing
+certificate "iOS Distribution" found*. See the `calarm-testflight-fastlane` skill.
 
-`upload_beta` skips archive if `build/export/Calarm.ipa` already exists. **Always remove stale artifacts and stamp before re-upload:**
+After a successful ship, commit the stamp the script wrote:
 
 ```bash
-rm -rf build/export build/Calarm.xcarchive
-./scripts/stamp-build-version.sh          # YYYYMMDD.HHmm → CURRENT_PROJECT_VERSION
-git add Calarm.xcodeproj/project.pbxproj
-git commit -m "Stamp build for TestFlight upload"
-git push -u origin <branch>
-bundle exec fastlane ios upload_beta
+ssh macmini-remote 'cd ~/projects/calarm && git add -A && git commit -m "Stamp build YYYYMMDD.HHmm (uploaded to TestFlight)" && git push origin main'
+git pull --ff-only origin main
 ```
 
 ### Update release notes
 
 Edit `fastlane/metadata/en-US/release_notes.txt` before upload. Fastlane sends this as the TestFlight changelog.
 
-## Verify on App Store Connect
+## Verify on App Store Connect — always
+
+**A green ship log does not mean the build reached anyone.** This pipeline has produced a
+successful upload with a build no tester could install, three separate times in one day.
 
 ```bash
 source fastlane/.env
 asc builds list --app "$ASC_APP_APPLE_ID" --limit 3 --output table --sort -uploadedDate
 ```
 
-Expect `Processing: VALID`. Internal Testing assignment runs automatically via `scripts/add-testflight-internal-group.sh` at end of `upload_beta`.
+`Processing: VALID` only says Apple accepted the binary. The state that gates TestFlight is
+`internalBuildState` on the build's `buildBetaDetail`, and it must read **`IN_BETA_TESTING`**,
+not `READY_FOR_BETA_TESTING`. The API key's role returns 403 on `/builds/{id}/betaGroups`, so
+read the beta detail rather than group membership.
+
+Group assignment runs automatically at the end of `ship.sh beta` via
+`scripts/add-testflight-internal-group.sh`, which waits for the stamped
+`CURRENT_PROJECT_VERSION` to finish processing before assigning it. It used to pass
+`--latest`, which resolves to the newest *processed* build — right after an upload that is
+the previous one, so it re-assigned an old build and stranded the new one.
 
 ## Common errors
 
 | Error | Fix |
 |-------|-----|
 | Build number already used | `stamp-build-version.sh`, delete `build/export/`, rebuild |
-| Stale IPA uploaded | `rm -rf build/export` before `upload_beta` |
+| `No Accounts / No signing certificate "iOS Distribution"` | You are on the fastlane/gym path. Use `./scripts/ship.sh beta` |
+| `CodeSign errSecInternalComponent` over SSH | The login keychain is locked. Unlock it **in the same** `ssh -t` session as the build |
+| Upload succeeded, build never appears for testers | Group assignment raced processing, or was skipped. Run `./scripts/add-testflight-internal-group.sh` |
 | Tests fail / DB locked | `pkill -9 -f xcodebuild`; retry with separate `-derivedDataPath /tmp/calarm-ci-dd` |
 | Missing ASC credentials | `./scripts/configure-credentials.sh <ISSUER_ID>` |
 

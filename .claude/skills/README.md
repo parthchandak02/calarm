@@ -1,6 +1,12 @@
-# CALarm Cursor Skills
+# CALarm agent skills
 
-Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the agent match from description triggers.
+Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the agent match
+from description triggers.
+
+These live under `.claude/skills/`, which Claude Code, Cursor and GitHub Copilot all read
+natively. `.agents/skills` is a symlink here for Codex. Add new ones in this directory —
+never through a symlink, because Claude Code refuses to write into one. See
+[AGENTS.md](../../AGENTS.md).
 
 | Skill | Use when |
 |-------|----------|
@@ -9,6 +15,7 @@ Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the a
 | [calarm-device-deploy-verify](calarm-device-deploy-verify/SKILL.md) | USB/Wi-Fi deploy, stale build on device |
 | [calarm-build-version-stamp](calarm-build-version-stamp/SKILL.md) | CFBundleVersion date format, Settings build display |
 | [calarm-testflight-fastlane](calarm-testflight-fastlane/SKILL.md) | TestFlight upload, ASC API, fastlane lanes |
+| [calarm-testflight-ship-git](calarm-testflight-ship-git/SKILL.md) | Commit, push, and ship a beta end to end |
 | [calarm-live-activity-deep-links](calarm-live-activity-deep-links/SKILL.md) | Island tap behavior, `calarm://` deep links |
 | [calarm-occurrence-identity](calarm-occurrence-identity/SKILL.md) | Recurring events, per-occurrence IDs, preference migration |
 | [calarm-trust-diagnostics](calarm-trust-diagnostics/SKILL.md) | Permission banners, test alarm, schedule failures |
@@ -18,7 +25,7 @@ Project-scoped agent skills for the CALarm iOS repo. Invoke by name or let the a
 
 ## Agents (delegation)
 
-- `.cursor/agents/calarm-ship-ready.md` — final-mile code audit + device deploy
-- `.cursor/agents/calarm-app-store-prep.md` — metadata, fastlane, ASC checklist
+- `.claude/agents/calarm-ship-ready.md` — final-mile code audit + device deploy
+- `.claude/agents/calarm-app-store-prep.md` — metadata, fastlane, ASC checklist
 
 Skills are narrow references; agents orchestrate broader release workflows.

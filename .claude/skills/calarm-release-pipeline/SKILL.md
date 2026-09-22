@@ -13,10 +13,10 @@ description: >-
 |---------|---------|
 | `./deploy.sh 1` | Simulator debug build |
 | `./deploy.sh 2` | Physical device (stamp + install + verify) |
-| `./release.sh` | Release archive + App Store IPA |
+| `./release.sh` | Release archive + upload straight to App Store Connect (`ExportOptions` sets `destination: upload`, so no local IPA is written) |
 | `./scripts/ship.sh doctor` | Toolchain + signing health check |
-| `./scripts/ship.sh beta` | Doctor + TestFlight upload |
-| `./scripts/ship.sh all` | Full pipeline when credentials ready |
+| `./scripts/ship.sh beta` | Doctor → tests → `./release.sh` → Internal Testing group. **The ship path** |
+| `./scripts/ship.sh all` | Still routes through the fastlane `upload_beta` lane, which is broken — see `calarm-testflight-fastlane` |
 
 ## Config
 

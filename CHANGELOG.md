@@ -1,0 +1,183 @@
+# Changelog
+
+What changed, when, and why. Newest first.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project has
+no public releases yet, so entries are grouped by **TestFlight build** rather than by
+semantic version — the build number is the only identifier a tester can see, and it is
+stamped into `CURRENT_PROJECT_VERSION` by `scripts/stamp-build-version.sh`.
+
+Every entry names the commits behind it. Prefer reading the commit messages for detail;
+this file exists so an agent can see the shape of the project's history without running
+`git log` and reconstructing intent from subject lines.
+
+**When you change something, add an entry here.** See [AGENTS.md](AGENTS.md) for the rule.
+
+---
+
+## Build 20260922.1613 — 2026-09-22
+
+Two user-reported bugs, both found to have real causes rather than cosmetic ones.
+
+### Fixed
+
+- **The per-calendar filter hid calendars it had never seen.** It stored an *allow-list*,
+  so a calendar subscribed after the list was written — or one whose EventKit identifier
+  changed on an account resync — was absent from the list and silently excluded from the
+  schedule. Now stores the calendars you switch *off*, with a migration that inverts any
+  existing allow-list. Anything unrecognised defaults to visible. `d5bbb47`
+- **The Dynamic Island countdown stretched the pill.** The compact region asked for a flat
+  58pt regardless of format; `m:ss` needs 38pt, so the digits sat ~31pt short of the pill's
+  right edge. Width is now derived from the format, and the format from the countdown's
+  *total* duration rather than the time remaining at render — the widget body renders once
+  and the system animates the digits from there. `17b9a00`
+
+### Added
+
+- Settings → Calendar reports how many calendars are switched off and offers a one-tap
+  reset. The Events-loaded diagnostic reports enabled-of-total (`4/9 cals`). `d5bbb47`
+- `CalarmTests/CalendarFilterPreferencesTests.swift` — 6 tests covering the deny-list
+  semantics and the allow-list migration, including the case where EventKit has not
+  answered yet. `d5bbb47`
+
+---
+
+## Build 20260922.1501 — 2026-09-22
+
+Deploy-pipeline repair. Three separate defects, all with the same signature: a green
+success message and a build that reached no tester.
+
+### Fixed
+
+- **`release.sh` exited non-zero after a successful upload.** `find build/export` fails
+  under `set -euo pipefail` when the directory does not exist — and with
+  `destination: upload` xcodebuild writes no IPA, so it never does. The script died before
+  reaching the branch that handles exactly that case, taking every chained step with it.
+  `6b879ff`
+- **`ship.sh beta` used the broken path.** It called `fastlane ios upload_beta`, which
+  builds through gym; gym never received the App Store Connect API key auth that
+  `release.sh` passes to xcodebuild, so it failed with *No Accounts / No signing
+  certificate iOS Distribution*. Now calls `./release.sh`. `6b879ff`
+- **Group assignment raced App Store Connect processing.** `asc builds add-groups --latest`
+  resolves to the newest *processed* build, which right after an upload is the previous
+  one — so it re-assigned an already-distributed build and stranded the new one. Now polls
+  for the stamped `CURRENT_PROJECT_VERSION` before assigning. `08ecf1c`
+- **EventKit events vanished when Google returned nothing.** `reload()` suppressed mirrored
+  EventKit events whenever Google was merely *connected*, so a Google fetch that silently
+  returned nothing emptied the schedule. Suppression now requires Google to have actually
+  returned events. `b08db48`
+- **The settings tab bar squared off its own rounded corners.** The selected tab painted an
+  unclipped rectangle inside a 16pt rounded container. `8a2d0e1`
+
+---
+
+## Build 20260922.1332 — 2026-09-22
+
+### Added
+
+- **Alarm journal.** Records intended versus actual fire times so alarm reliability can be
+  measured rather than guessed at — the instrumentation Gate 1 in
+  [STATUS.md](STATUS.md) depends on. Writes to both `os.Logger`
+  (`subsystem: com.calarmapp.calarm`, `category: alarmjournal`) and UserDefaults.
+  `CalarmShared/AlarmJournal.swift` is a pure reconciler with 10 tests; the IO side is
+  `Calarm/Services/AlarmJournalStore.swift`. Reconciles on launch, because `alarmUpdates`
+  is in-process and cannot observe a fire that happened while the app was dead. `ab95c17`
+- **`preAlert: 1` on alarms without a Live Activity.** A one-second pre-alert, and not a
+  cosmetic one: AlarmKit alarms fail to present when the foregrounded app is in landscape,
+  and Apple's own Reminders works around it the same way. `2281589`
+- `HANDOFF.md` and `PLAN.md` — architecture research, since merged into
+  [RESEARCH.md](RESEARCH.md). `493b682`
+
+### Fixed
+
+Five calendar sync bugs in one commit (`443feec`) — each is written up with its evidence in
+[RESEARCH.md § Fixed and verified](RESEARCH.md#fixed-and-verified):
+
+- Background sync was registered too late to exist. `BGTaskScheduler` handlers must be
+  registered before `didFinishLaunchingWithOptions` returns; registration happened from a
+  SwiftUI `.task`. The 6am and hourly syncs were written correctly and had **never been
+  installed**.
+- The same meeting could produce two alarms when a Google account was added to iOS as a
+  generic CalDAV entry.
+- The incremental Google sync was structurally undefined — its sync token was minted from a
+  request carrying parameters Google forbids alongside a `syncToken`.
+- Every calendar ID was double percent-encoded, which broke every Google holiday calendar.
+- Focus blocks would have fired alarms. `eventType` was decoded nowhere.
+
+---
+
+## Build 20260821.2037 — 2026-08-21
+
+### Fixed
+
+- Stale AlarmKit alarms firing hours after their events. `ea79c68`
+- Calendar color hex byte rounding in a unit test. `6965b69`
+
+### Added
+
+- Optional calendar-color tint for the Live Activity and Dynamic Island. `09dc63e`
+
+---
+
+## 2026-08-19
+
+### Fixed
+
+- AlarmKit reschedule races and stale Dynamic Island countdown UX. `c25e229`
+
+### Changed
+
+- TestFlight ship skips Simulator boots on this Mac (RAM constraint). `96ceb3a`
+
+---
+
+## 2026-08-13
+
+### Added
+
+- **Google Calendar direct sync** with EventKit merge — the architectural choice that
+  [RESEARCH.md](RESEARCH.md) later found Fantastical also made, and every indie competitor
+  did not. `85fff46`, `dfb0e93`
+- Agent skills, then under `.cursor/skills/` — moved to `.claude/skills/` on 2026-09-22. `dfb0e93`
+
+---
+
+## 2026-08-12
+
+### Fixed
+
+- Alarm persistence, Dynamic Island theme, countdown sizing. `8a52a86`
+- Stacked countdown notifications. `4ddb51e`
+
+---
+
+## 2026-07-26
+
+### Added
+
+- Alarm scheduling fixes, the release pipeline, and the first Cursor skills. `af0d149`
+
+---
+
+## 2026-07-03
+
+### Added
+
+- App Store publishing scaffold, screenshot automation, GitHub Pages. `571cf69`, `449a4b8`
+- Durable local preferences via `CalarmPersistence`. `f671987`
+
+### Security
+
+- Git history purged of personal data; `SECURITY.md` added. `e985c69`, `83fbe1c`
+
+### Changed
+
+- Bundle ID switched to `com.calarmapp.calarm`. `8e0a7ce`
+
+---
+
+## 2026-06-30
+
+### Added
+
+- Initial app: AlarmKit alarms with Live Activities. `171d7bd`

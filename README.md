@@ -111,9 +111,22 @@ Subagents:
 - `calarm-app-store-prep` — metadata, fastlane, ASC checklist
 - `calarm-ship-ready` — code polish, device deploy, final QA
 
-**Cursor skills** (`.cursor/skills/`): repo-specific playbooks for AlarmKit scheduling, device deploy verification, TestFlight, Live Activity deep links, build stamping, release pipeline, and app icon processing. See [skills README](.cursor/skills/README.md).
+**Agent skills** (`.claude/skills/`): repo-specific playbooks for AlarmKit scheduling, device deploy verification, TestFlight, Live Activity deep links, build stamping, release pipeline, and app icon processing. Read natively by Claude Code, Cursor and Copilot. See [skills README](.claude/skills/README.md).
 
 ## Docs
+
+Working on this repo — start with **[AGENTS.md](AGENTS.md)**, which is also what AI coding
+agents read:
+
+| Doc | Purpose |
+|-----|---------|
+| [AGENTS.md](AGENTS.md) | How to work here: commands, constraints, conventions, traps |
+| [STATUS.md](STATUS.md) | Where the project stands and what comes next |
+| [CHANGELOG.md](CHANGELOG.md) | What changed, when, and why |
+| [RESEARCH.md](RESEARCH.md) | Verified AlarmKit/EventKit/Google facts, with sources |
+| [SECURITY.md](SECURITY.md) | What must never be committed |
+
+External references:
 
 - [AlarmKit](https://developer.apple.com/documentation/alarmkit)
 - [Scheduling an alarm with AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit)

@@ -153,3 +153,7 @@ Calarm/GoogleService-Info.plist
 
 # Graphify local knowledge graph (rebuild with `graphify`)
 graphify-out/
+
+# Agent harness local state — machine-specific, never shared
+.claude/settings.local.json
+.cursor/settings.local.json
