@@ -186,33 +186,6 @@ final class ScheduleStore: ObservableObject {
             var eventKitEvents: [ScheduleEvent] = []
             var googleEvents: [ScheduleEvent] = []
 
-            if canLoadEventKit {
-                let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
-                guard !Task.isCancelled else { return }
-                preferences.migrateLegacyKeys(for: ekEvents)
-                let googleConnected = canLoadGoogle
-                eventKitEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
-                    guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
-                    if googleConnected, calendarService.isGoogleMirroredCalendar(ekEvent.calendar) {
-                        return nil
-                    }
-                    let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)
-                    let trimmed = ekEvent.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    let title = trimmed.isEmpty ? "Untitled" : trimmed
-                    return ScheduleEvent(
-                        id: occurrence.rawValue,
-                        title: title,
-                        startDate: ekEvent.startDate,
-                        endDate: ekEvent.endDate,
-                        location: ekEvent.location,
-                        calendarTitle: ekEvent.calendar.title,
-                        source: .eventKit,
-                        calendarColorHex: CalendarColor.hexString(from: ekEvent.calendar.cgColor),
-                        alarmOffsets: preferences.alarmOffsets(for: occurrence.rawValue)
-                    )
-                })
-            }
-
             if canLoadGoogle {
                 let cachedGoogle = events.filter { $0.source == .google }.map { event in
                     GoogleCalendarFetchedEvent(
@@ -243,6 +216,37 @@ final class ScheduleStore: ObservableObject {
                         source: .google,
                         calendarColorHex: nil,
                         alarmOffsets: preferences.alarmOffsets(for: googleEvent.occurrenceID)
+                    )
+                })
+            }
+
+            if canLoadEventKit {
+                let ekEvents = await calendarService.fetchUpcomingEvents(days: fetchDays)
+                guard !Task.isCancelled else { return }
+                preferences.migrateLegacyKeys(for: ekEvents)
+                // Only suppress mirrored EventKit events once Google has actually returned
+                // something. Suppressing on "connected" alone fails closed: a Google fetch
+                // that silently returns nothing then hides every mirrored event too, and the
+                // schedule goes empty. A missed meeting is this app's worst outcome.
+                let googleDidReturnEvents = !googleEvents.isEmpty
+                eventKitEvents.append(contentsOf: ekEvents.compactMap { ekEvent in
+                    guard let eventIdentifier = ekEvent.eventIdentifier else { return nil }
+                    if googleDidReturnEvents, calendarService.isGoogleMirroredCalendar(ekEvent.calendar) {
+                        return nil
+                    }
+                    let occurrence = EventOccurrenceID(eventIdentifier: eventIdentifier, startDate: ekEvent.startDate)
+                    let trimmed = ekEvent.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let title = trimmed.isEmpty ? "Untitled" : trimmed
+                    return ScheduleEvent(
+                        id: occurrence.rawValue,
+                        title: title,
+                        startDate: ekEvent.startDate,
+                        endDate: ekEvent.endDate,
+                        location: ekEvent.location,
+                        calendarTitle: ekEvent.calendar.title,
+                        source: .eventKit,
+                        calendarColorHex: CalendarColor.hexString(from: ekEvent.calendar.cgColor),
+                        alarmOffsets: preferences.alarmOffsets(for: occurrence.rawValue)
                     )
                 })
             }

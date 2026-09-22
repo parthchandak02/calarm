@@ -323,6 +323,8 @@ struct SettingsSheet: View {
                 SettingsInfoRow(title: "Next ring", value: nextRingLabel, theme: theme)
                 Divider().overlay(theme.surfaceStroke)
                 SettingsInfoRow(title: "Last reschedule", value: lastRescheduleLabel, theme: theme)
+                Divider().overlay(theme.surfaceStroke)
+                SettingsInfoRow(title: "Events loaded", value: eventSourceLabel, theme: theme)
 
                 Divider().overlay(theme.surfaceStroke)
 
@@ -388,6 +390,17 @@ struct SettingsSheet: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         return "\(formatter.string(from: summary.finishedAt)) · \(summary.scheduledCount) ok"
+    }
+
+    /// Answers "why is the list empty" without a rebuild: which source produced events,
+    /// and whether the per-calendar filter is narrowing things.
+    private var eventSourceLabel: String {
+        let eventKit = store.events.filter { $0.source == .eventKit }.count
+        let google = store.events.filter { $0.source == .google }.count
+        let enabled = CalendarFilterPreferences.enabledCalendarIDs.count
+        let filter = enabled == 0 ? "all cals" : "\(enabled) cals"
+        let googlePart = store.googleCalendarService.isConnected ? "google \(google)" : "google off"
+        return "ek \(eventKit) · \(googlePart) · \(filter)"
     }
 
     private var liveActivityCalendarColorSection: some View {
