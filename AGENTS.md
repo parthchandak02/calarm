@@ -213,3 +213,7 @@ never causes double-loading.
 Symlinking `CLAUDE.md → AGENTS.md` looks tempting and is a trap: it breaks Edit/Write, and
 on a Windows clone with `core.symlinks=false` it silently becomes a 9-byte text file
 containing the literal string `AGENTS.md`, with a clean `git status`.
+
+`.agents/skills` degrades the same way on such a clone — verified. That is why the real
+directory is `.claude/skills` and the symlink points at it rather than the reverse: the
+breakage is confined to Codex, and AGENTS.md plus all twelve skills stay intact.
