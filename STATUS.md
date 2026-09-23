@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260922.1613` — `VALID`, `IN_BETA_TESTING` |
+| **Latest build** | `20260923.1106` — `VALID`, `IN_BETA_TESTING` |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Dark.** `GoogleService-Info.plist` is gitignored and absent; sign-in has very likely never completed end to end |
@@ -28,7 +28,7 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**0. Measure AlarmKit's countdown timing (new build, after 2026-09-23).** Keep CALarm open,
+**0. Measure AlarmKit's countdown timing (build 20260923.1106).** Keep CALarm open,
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS
 follows Apple's docs and the phantom 9:00→10:14 countdown needs another explanation;
 *Late · 16s* confirms iOS starts `.fixed` countdowns at the fixed date, which the new
@@ -185,6 +185,9 @@ These need credentials or console access an agent should not have:
   reports Xcode "not selected" even though `xcode-select -p` prints the path it asks for.
   Consequence: an agent on this machine can build and run tests but **cannot drive the UI or
   verify anything visual**. Repairing the Xcode install would remove that blind spot.
+- **`macmini-remote` is on macOS 26.5.2 with Xcode 26.6.** Xcode 27 needs macOS 26.6+, and
+  FileVault is on, so the macOS update's restart could strand the machine at the unlock
+  screen without physical or Screen Sharing access. Deferred until someone can reach it.
 - **The `asc` API key's role cannot read `/builds/{id}/betaGroups`** — returns 403. Verify
   TestFlight distribution via `internalBuildState` instead, which is the state TestFlight
   actually gates on.

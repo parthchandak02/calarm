@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-23
+## Build 20260923.1106 — 2026-09-23
 
 A phantom countdown: at 9:50 the lock screen counted down a 9:00 event toward 10:14:54, a
 time with no event. No snooze was pressed, and no offset of a 9:00 event lands on 10:14:54;
@@ -28,6 +28,7 @@ the fixed fire date (8:59) *plus* the pre-alert does.
   on device it behaved as counting down *from* it. It is now a countdown-mode alarm
   (`schedule: nil`), which starts now and rings after `preAlert` under either reading. This
   is also the likely root of the "stuck countdown" hours-late fires patched in `ea79c68`.
+  `70fbe13`
 - **Opening the app killed a real snooze.** Countdowns past their fire time were cancelled
   after 60s; the grace is now snooze length + 60s.
 - **The Dynamic Island countdown was wider than needed.** Width now follows time remaining
@@ -43,6 +44,14 @@ the fixed fire date (8:59) *plus* the pre-alert does.
 - **Settings → Status → Alarm timing** reports when the 8-second test alarm actually rang
   (~8s on time, ~16s means iOS starts `.fixed` countdowns at the fixed date).
 - `CalarmTests/CountdownPresentationTests.swift` — 8 tests.
+
+### Changed
+
+- The iOS 27 width-limited check compiles only under Swift 6.4. The release Mac runs Xcode
+  26.6, whose SDK lacks it, and the first ship attempt failed its Release build. `a57d5f2`
+- `ship.sh beta` runs the unit tests once. The `| xcbeautify || xcodebuild test` fallback
+  re-ran the suite whenever xcbeautify was missing — which it is on the release Mac — or a
+  test failed.
 
 ### Removed
 
