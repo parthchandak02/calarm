@@ -1,47 +1,43 @@
 #!/usr/bin/env bash
-# Configure Google Calendar OAuth for CALarm (Tier 1 device sync).
+# Wire Google Calendar sign-in into a local checkout. Run once per machine that builds
+# CALarm, including macmini-remote, after placing the iOS OAuth client plist.
 #
-# Prerequisites:
-#   - GCP project useful-field-497119-k5 (Calendar API already enabled)
-#   - gcloud or Google Cloud Console access
+# The plist comes from Google Cloud console → Google Auth Platform → Clients → the iOS
+# client for com.calarmapp.calarm (project useful-field-497119-k5) → Download plist.
 #
-# Steps:
-#   1. Open https://console.cloud.google.com/apis/credentials?project=useful-field-497119-k5
-#   2. Create Credentials → OAuth client ID → iOS
-#   3. Bundle ID: com.calarmapp.calarm
-#   4. Download plist OR copy CLIENT_ID + REVERSED_CLIENT_ID into Calarm/GoogleService-Info.plist
-#   5. Add REVERSED_CLIENT_ID to Info.plist CFBundleURLTypes (see below)
-#   6. OAuth consent screen → add test users for TestFlight/dev builds
+#   ./scripts/setup-google-oauth.sh [path/to/client_….plist]
 #
-# Copy the example plist:
-#   cp Calarm/GoogleService-Info.plist.example Calarm/GoogleService-Info.plist
-#   # edit CLIENT_ID and REVERSED_CLIENT_ID
-#
-# Add URL scheme to Info.plist under CFBundleURLTypes:
-#   <string>YOUR_REVERSED_CLIENT_ID</string>
-#
-# Validate with gws (dev machine):
-#   gws auth login
-#   gws calendar +agenda --days 3
-#
+# Copies it to Calarm/GoogleService-Info.plist (gitignored) and writes
+# Config/Google.local.xcconfig (gitignored), which Config/Calarm.xcconfig includes so
+# Info.plist registers the sign-in callback URL scheme.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLIST="$ROOT/Calarm/GoogleService-Info.plist"
-EXAMPLE="$ROOT/Calarm/GoogleService-Info.plist.example"
+XCCONFIG="$ROOT/Config/Google.local.xcconfig"
+
+if [[ $# -ge 1 ]]; then
+  cp "$1" "$PLIST"
+fi
 
 if [[ ! -f "$PLIST" ]]; then
-  cp "$EXAMPLE" "$PLIST"
-  echo "Created $PLIST — edit CLIENT_ID and REVERSED_CLIENT_ID before building."
-else
-  echo "Found $PLIST"
+  echo "ERROR: $PLIST missing. Pass the downloaded client plist as the first argument." >&2
+  exit 1
 fi
 
-if command -v gws >/dev/null 2>&1; then
-  echo ""
-  echo "GWS auth status:"
-  gws auth status 2>&1 | head -20 || true
+read_key() { /usr/libexec/PlistBuddy -c "Print :$1" "$PLIST" 2>/dev/null || true; }
+CLIENT_ID="$(read_key CLIENT_ID)"
+REVERSED="$(read_key REVERSED_CLIENT_ID)"
+BUNDLE="$(read_key BUNDLE_ID)"
+
+if [[ -z "$CLIENT_ID" || -z "$REVERSED" || "$CLIENT_ID" == REPLACE_* ]]; then
+  echo "ERROR: $PLIST has no real CLIENT_ID / REVERSED_CLIENT_ID." >&2
+  exit 1
+fi
+if [[ -n "$BUNDLE" && "$BUNDLE" != "com.calarmapp.calarm" ]]; then
+  echo "ERROR: plist is for bundle $BUNDLE, not com.calarmapp.calarm." >&2
+  exit 1
 fi
 
-echo ""
-echo "Next: add iOS OAuth client in GCP Console, update GoogleService-Info.plist, add URL scheme to Info.plist."
+printf 'GOOGLE_REVERSED_CLIENT_ID = %s\n' "$REVERSED" > "$XCCONFIG"
+echo "ok Google sign-in configured (client ${CLIENT_ID%%-*}-…)"

@@ -58,6 +58,7 @@
 		E2C100032E52000100FAAD85 /* CalarmTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CalarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5333C0C2E42902200FAAD85 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D5333C0E2E42902300FAAD85 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C0F16A012E70000100FAAD85 /* Calarm.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Calarm.xcconfig; path = Config/Calarm.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -149,6 +150,7 @@
 		D5333BA12E41600E00FAAD85 = {
 			isa = PBXGroup;
 			children = (
+				C0F16A012E70000100FAAD85 /* Calarm.xcconfig */,
 				D5333BAC2E41600E00FAAD85 /* Calarm */,
 				E2B100012E52000100FAAD85 /* CalarmShared */,
 				D5333C102E42902300FAAD85 /* CalarmWidgetExtension */,
@@ -529,6 +531,7 @@
 		};
 		D5333BB62E41600F00FAAD85 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0F16A012E70000100FAAD85 /* Calarm.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -563,6 +566,7 @@
 		};
 		D5333BB72E41600F00FAAD85 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0F16A012E70000100FAAD85 /* Calarm.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

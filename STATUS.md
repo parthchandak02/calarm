@@ -18,7 +18,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | **Latest build** | `20260923.1106` — `VALID`, `IN_BETA_TESTING` |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
-| **Google sync** | **Dark.** `GoogleService-Info.plist` is gitignored and absent; sign-in has very likely never completed end to end |
+| **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |
 | **Backend** | None. No Worker, no relay deployed |
 
 The app is installable from TestFlight and works off EventKit alone. Everything in
@@ -155,13 +155,10 @@ Google round trips are the suspect, not the webhook. Run it ~100 times across a 
 
 These need credentials or console access an agent should not have:
 
-- **Flip the Google OAuth consent screen to "In production".** In Testing status refresh
-  tokens expire after **7 days**. *Skippable entirely if the Worker holds the credential.*
-- **`REVERSED_CLIENT_ID` into `Calarm/Info.plist` `CFBundleURLTypes`.** The plist claims
-  only the `calarm` scheme, so GoogleSignIn's OAuth callback to
-  `com.googleusercontent.apps.<numeric>://` routes nowhere.
-  `scripts/setup-google-oauth.sh:13` describes the step and it was never done. *Also
-  skippable if the Worker holds the credential.*
+- ~~Consent screen "In production"~~ — already was (External, 1/100 user cap, unverified).
+- ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
+- **Google verification** before any public release: calendar read is a sensitive scope, so
+  unverified means a warning screen and a lifetime 100-user cap.
 - **Cloudflare account** — existing or new? Free tier suffices.
 
 ## Open questions

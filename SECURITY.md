@@ -32,6 +32,7 @@ Without Google Calendar connected, the app reads only on-device EventKit calenda
 - `*.p8` / `AuthKey_*.p8`
 - `ExportOptions.plist` (signing export; local)
 - `Calarm/GoogleService-Info.plist` (Google OAuth client ID; local)
+- `Config/Google.local.xcconfig` (generated from that plist by `scripts/setup-google-oauth.sh`)
 - `build/`, `build-device/`, `build-sim/`, `DerivedData/`
 - Device UDIDs or named device identifiers in docs/scripts
 - Personal machine paths (`/Users/...`) in shared docs

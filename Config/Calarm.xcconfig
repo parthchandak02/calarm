@@ -1,0 +1,9 @@
+// Build settings for the Calarm app target.
+//
+// The Google sign-in callback scheme is the iOS OAuth client's reversed client ID. It is
+// not a secret, but the repo keeps Calarm/GoogleService-Info.plist local, so the scheme
+// lives in a gitignored file generated from it by scripts/setup-google-oauth.sh. Without
+// that file this placeholder keeps Info.plist valid and Google sign-in stays off.
+GOOGLE_REVERSED_CLIENT_ID = com.calarmapp.calarm.google-unconfigured
+
+#include? "Google.local.xcconfig"

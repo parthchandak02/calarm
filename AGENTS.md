@@ -125,8 +125,10 @@ role gets 403 on `/builds/{id}/betaGroups`.
   on state changes; width is sized from time remaining at render.
 - **The Simulator cannot ring an AlarmKit alarm** and the app blocks the test alarm there.
   Anything alarm-visual must be verified on device.
-- **`Calarm/GoogleService-Info.plist` is gitignored and absent** — Google sync is dark on
-  any fresh clone.
+- **`Calarm/GoogleService-Info.plist` and `Config/Google.local.xcconfig` are gitignored** —
+  Google sign-in is off on a fresh clone until `./scripts/setup-google-oauth.sh <client
+  plist>` runs. The plist is in Google Cloud console → Google Auth Platform → Clients →
+  "CALarm iOS" (project `useful-field-497119-k5`, account parth.chandak02@gmail.com).
 - **A separate Apps Script mutates this calendar.** "Focus Block Creator" converts solo
   events via insert-then-remove, which **changes the event ID** and orphans preferences
   keyed to it.

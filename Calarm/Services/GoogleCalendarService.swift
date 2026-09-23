@@ -55,21 +55,11 @@ final class GoogleCalendarService: ObservableObject {
         availableCalendars = try await api.listCalendars(accessToken: token)
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
-        let ids = availableCalendars.map(\.id)
-        if preferences.enabledCalendarIDs.isEmpty {
-            preferences.enabledCalendarIDs = Set(ids.filter { $0 == "primary" || ($0.contains("@") && $0.contains(".com")) })
-            if preferences.enabledCalendarIDs.isEmpty {
-                preferences.enabledCalendarIDs = Set(ids)
-            }
-        }
+        preferences.migrateAllowListIfNeeded(allCalendarIDs: availableCalendars.map(\.id))
     }
 
     func setCalendarEnabled(_ calendarID: String, enabled: Bool) {
-        preferences.setCalendarEnabled(
-            calendarID,
-            enabled: enabled,
-            allCalendarIDs: availableCalendars.map(\.id)
-        )
+        preferences.setCalendarEnabled(calendarID, enabled: enabled)
     }
 
     func isCalendarEnabled(_ calendarID: String) -> Bool {

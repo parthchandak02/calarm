@@ -15,6 +15,27 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-23 (Google sign-in)
+
+### Added
+
+- **Google Calendar sign-in is wired end to end.** iOS OAuth client "CALarm iOS" created in
+  project `useful-field-497119-k5` (consent screen already *In production*, External, so no
+  7-day token expiry; unverified, so a warning screen and a 100-user cap). The sign-in
+  callback scheme — the missing `REVERSED_CLIENT_ID` in `CFBundleURLTypes` that meant sign-in
+  had never completed — now comes from `$(GOOGLE_REVERSED_CLIENT_ID)`, set by the committed
+  `Config/Calarm.xcconfig` and overridden by a gitignored `Config/Google.local.xcconfig`.
+- `scripts/setup-google-oauth.sh <client plist>` installs the plist and writes that local
+  xcconfig; run once per building Mac. `ship.sh doctor` warns when it has not been run.
+
+### Fixed
+
+- **Google calendars subscribed after first sign-in were hidden.** Same allow-list bug as the
+  EventKit filter in build 1613; now a deny-list with a migration.
+  `CalarmTests/GoogleCalendarPreferencesTests.swift` — 4 tests.
+
+---
+
 ## Build 20260923.1106 — 2026-09-23
 
 A phantom countdown: at 9:50 the lock screen counted down a 9:00 event toward 10:14:54, a

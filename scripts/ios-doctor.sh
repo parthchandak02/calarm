@@ -46,6 +46,11 @@ check "apple-docs-pp-cli" "command -v apple-docs-pp-cli"
 check "ExportOptions.plist" "test -f ExportOptions.plist"
 check "Privacy manifest" "test -f Calarm/PrivacyInfo.xcprivacy"
 check "fastlane/.env exists" "test -f fastlane/.env"
+if [[ -f Calarm/GoogleService-Info.plist && -f Config/Google.local.xcconfig ]]; then
+  echo -e "${GREEN}✓${NC} Google sign-in configured"
+else
+  warn_item "Google sign-in not configured — this build ships with it off. Run ./scripts/setup-google-oauth.sh <client plist>"
+fi
 
 if [[ -f fastlane/.env ]]; then
   check "ASC_KEY_ID" "test -n \"${ASC_KEY_ID:-}\""
