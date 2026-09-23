@@ -71,16 +71,15 @@ run_calarm_unit_tests() {
     warn "iPhone 17 simulator not found; using generic iOS Simulator"
     destination="generic/platform=iOS Simulator"
   fi
-  xcodebuild test \
-    -project "$XCODE_PROJECT" \
-    -scheme "$XCODE_SCHEME" \
-    -destination "$destination" \
-    -only-testing:CalarmTests \
-    | xcbeautify 2>/dev/null || xcodebuild test \
-      -project "$XCODE_PROJECT" \
-      -scheme "$XCODE_SCHEME" \
-      -destination "$destination" \
-      -only-testing:CalarmTests
+  # Decide on the formatter up front. The old `| xcbeautify || xcodebuild test` fallback
+  # re-ran the whole suite whenever xcbeautify was missing -- or whenever a test failed.
+  local cmd=(xcodebuild test -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" \
+    -destination "$destination" -only-testing:CalarmTests)
+  if command -v xcbeautify >/dev/null 2>&1; then
+    "${cmd[@]}" | xcbeautify
+  else
+    "${cmd[@]}"
+  fi
 }
 
 warn() {
