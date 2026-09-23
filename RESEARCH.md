@@ -164,11 +164,14 @@ Measured glyph widths for `.system(size: 11, weight: .semibold, design: .rounded
 
 ### Countdown timing and Island width (researched 2026-09-23)
 
-- **`preAlert` with a `.fixed` schedule counts down *to* the fire date.** `Alarm.countdownDuration`
-  doc: *"The UI will appear at a time equal to the next scheduled alert date minus the
-  duration."* So calarm's `preAlert: fireDate.timeIntervalSinceNow` is correct per the docs.
-  **CONFIRMED** (doc). No public on-device report either way — the 8-second test alarm
-  (8s fire, 8s pre-alert) settles it: rings at ~8s if the docs hold, ~16s if not.
+- **On device, `.fixed` plus `preAlert` counts down *from* the fixed date, not to it —
+  contradicting the docs.** `Alarm.countdownDuration` doc: *"The UI will appear at a time
+  equal to the next scheduled alert date minus the duration."* But on 2026-09-23 (iOS 27,
+  build 20260922.1613) an alarm `.fixed(8:59)` with `preAlert` ≈ 1h16m **did not ring at
+  8:59**, and at 9:50 its Live Activity was counting toward 10:14:54 = 8:59 + pre-alert. No
+  snooze was pressed (snooze was 5 min). **CONFIRMED by device observation**, one instance.
+  The Live Activity alarm now uses `schedule: nil` instead. The 8-second test alarm
+  (Settings → Status → Alarm timing) re-measures it: ~8s docs, ~16s this behaviour.
 - **A snoozed alarm's Live Activity counts to press time + `postAlert`**, not to the event, and
   keeps the event title. `SnoozeAlarmIntent` also calls `AlarmManager.countdown(id:)` on top of
   the system's `.countdown` secondary behaviour. **INFERRED.**
@@ -570,6 +573,10 @@ EventKit-based subset.
 
 **"Cloudflare Workers need Firebase to reach APNs."** Wrong. Workers expose WebCrypto ECDSA
 P-256 and their production egress negotiates HTTP/2.
+
+**"`.fixed` + `preAlert` counts down to the fixed date."** Apple's docs say so; the device
+did the opposite and the 8:59 alarm never rang. See
+[Countdown timing](#countdown-timing-and-island-width-researched-2026-09-23).
 
 **"The Apps Script read-API can meet ≤60s."** Wrong — not an Apps Script failing. iOS will
 not let a rarely-opened app poll in the background at all.

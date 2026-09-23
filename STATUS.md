@@ -32,7 +32,8 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS
 follows Apple's docs and the phantom 9:00→10:14 countdown needs another explanation;
 *Late · 16s* confirms iOS starts `.fixed` countdowns at the fixed date, which the new
-countdown-mode Live Activity alarm already sidesteps. Either way, record it in RESEARCH.md.
+countdown-mode Live Activity alarm already sidesteps. (Already strongly indicated: the 8:59
+alarm on 2026-09-23 never rang — see RESEARCH.md.) Either way, record it in RESEARCH.md.
 Then watch the next real alarm: the lock-screen card should read *Starts <time>* and ring on
 time.
 
