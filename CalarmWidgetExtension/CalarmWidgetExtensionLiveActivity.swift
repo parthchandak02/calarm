@@ -143,14 +143,21 @@ private struct CompactCountdown: View {
     let tint: Color
 
     var body: some View {
+        #if compiler(>=6.4)
         if #available(iOS 27.0, *) {
             LimitedWidthAware(context: context, tint: tint)
         } else {
             CountdownText(context: context, style: .compact, tint: tint)
         }
+        #else
+        CountdownText(context: context, style: .compact, tint: tint)
+        #endif
     }
 }
 
+// The iOS 27 SDK (Xcode 27, Swift 6.4) is the first with this environment value. The
+// release Mac builds with Xcode 26, so the check has to compile away there.
+#if compiler(>=6.4)
 @available(iOS 27.0, *)
 private struct LimitedWidthAware: View {
     let context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
@@ -167,6 +174,7 @@ private struct LimitedWidthAware: View {
         }
     }
 }
+#endif
 
 private struct CountdownText: View {
     let context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>

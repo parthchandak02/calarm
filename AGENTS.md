@@ -70,6 +70,15 @@ its own security session. The owner types the password; do not handle it.
 ssh -t macmini-remote 'security unlock-keychain ~/Library/Keychains/login.keychain-db && cd ~/projects/calarm && git pull --ff-only origin main && ./scripts/ship.sh beta'
 ```
 
+**`macmini-remote` runs Xcode 26 (Swift 6.3); this Mac runs Xcode 27 (Swift 6.4).** An iOS 27
+SDK API compiles here and breaks the release build there. Wrap such code in
+`#if compiler(>=6.4)` as well as `#available(iOS 27.0, *)`, and compile on the mini before
+shipping — no keychain needed for a simulator build:
+
+```bash
+ssh macmini-remote 'cd ~/projects/calarm && git pull --ff-only origin main && xcodebuild build -project Calarm.xcodeproj -scheme Calarm -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO -quiet'
+```
+
 **Verify a ship against App Store Connect, not the script's output.** This pipeline has
 printed success with a build that reached nobody, three times in one day. The signal is
 `internalBuildState == IN_BETA_TESTING` on the build's `buildBetaDetail`; the API key's
