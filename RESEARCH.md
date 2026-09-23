@@ -162,6 +162,35 @@ the rate as unmeasured.
 Measured glyph widths for `.system(size: 11, weight: .semibold, design: .rounded)`:
 `59:59` = 33pt, `23:59:59` = 51pt. calarm reserves 38pt and 58pt respectively.
 
+### Countdown timing and Island width (researched 2026-09-23)
+
+- **`preAlert` with a `.fixed` schedule counts down *to* the fire date.** `Alarm.countdownDuration`
+  doc: *"The UI will appear at a time equal to the next scheduled alert date minus the
+  duration."* So calarm's `preAlert: fireDate.timeIntervalSinceNow` is correct per the docs.
+  **CONFIRMED** (doc). No public on-device report either way — the 8-second test alarm
+  (8s fire, 8s pre-alert) settles it: rings at ~8s if the docs hold, ~16s if not.
+- **A snoozed alarm's Live Activity counts to press time + `postAlert`**, not to the event, and
+  keeps the event title. `SnoozeAlarmIntent` also calls `AlarmManager.countdown(id:)` on top of
+  the system's `.countdown` secondary behaviour. **INFERRED.**
+- **The compact Island cannot shrink during an uninterrupted countdown.** Every timer text API
+  (`Text(timerInterval:)`, `.timer` style, iOS 18 `SystemFormatStyle.Timer`) drops the hour field
+  in its *text* but reserves maximum *width* at render, and AlarmKit re-renders only on
+  countdown/paused/alert changes. Apple's WWDC26/223 sample caps width with
+  `.frame(maxWidth:)` too. Best available: key width to time remaining *at render*.
+  **CONFIRMED** (SDK doc comments, [723316](https://developer.apple.com/forums/thread/723316),
+  [WWDC26/223](https://developer.apple.com/videos/play/wwdc2026/223/)).
+- **`isDynamicIslandLimitedInWidth`** (WidgetKit, iOS 27) reports a width-limited Island
+  (landscape); Apple's sample shows an icon instead of a timer then. **CONFIRMED.**
+- **Widget-side `isActivityExpired` cannot work**: it reads `Date()` at render and Live
+  Activities have no timeline, so it never re-evaluates. **INFERRED, high confidence.**
+- New forum threads: late firing reproduced by Apple DTS with sample code, *"I do not know a
+  workaround"* ([846063](https://developer.apple.com/forums/thread/846063)); zombie Live
+  Activity unremovable by the app, still in 27 beta 8, FB22791285
+  ([819556](https://developer.apple.com/forums/thread/819556)); lock-screen touch dismisses an
+  alarm without running either intent, leaving it `.alerting` forever, FB24407814
+  ([842638](https://developer.apple.com/forums/thread/842638), REPORTED); `stopIntent` skipped
+  on swipe-away ([815064](https://developer.apple.com/forums/thread/815064), REPORTED).
+
 ---
 
 ## EventKit

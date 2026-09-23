@@ -27,6 +27,9 @@ enum CalarmPersistence {
         static let disabledCalendarIDs = "calarm.disabledCalendarIDs"
         /// When true, Live Activity / Dynamic Island tint follows the EventKit calendar color.
         static let useCalendarColorInLiveActivity = "calarm.liveActivity.useCalendarColor"
+        /// Intended ring time of each countdown-mode alarm, keyed by alarm UUID. AlarmKit
+        /// keeps no fire date for an alarm without a schedule.
+        static let countdownTargets = "calarm.alarm.countdownTargets"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.

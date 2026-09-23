@@ -43,6 +43,8 @@ final class AlarmScheduler {
 
         let desired = buildDesiredInstances(from: events)
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        // AlarmKit deletes spent alarms silently, so their stored targets go with them here.
+        Self.pruneCountdownTargets(keeping: Set(currentAlarms.map(\.id)))
 
         for instance in desired {
             guard !Task.isCancelled else { break }
@@ -112,6 +114,7 @@ final class AlarmScheduler {
         let id = stableAlarmID(for: occurrenceID, offset: offset)
         do {
             try AlarmManager.shared.cancel(id: id)
+            Self.setCountdownTarget(nil, for: id)
             AlarmJournalStore.record(.cancelled, alarmID: id.uuidString, occurrenceID: occurrenceID)
             return true
         } catch {
@@ -121,7 +124,9 @@ final class AlarmScheduler {
     }
 
     func scheduleTestAlarm(snoozeSeconds: TimeInterval) async -> String? {
-        let fireDate = Date().addingTimeInterval(8)
+        let testPreAlert: TimeInterval = 8
+        let scheduledAt = Date()
+        let fireDate = scheduledAt.addingTimeInterval(testPreAlert)
         let testID = "calarm.test.\(Int(fireDate.timeIntervalSince1970))"
         let alarmID = AlarmSchedulingHelpers.stableAlarmID(occurrenceID: testID, offsetRawValue: "test")
         let idString = alarmID.uuidString
@@ -149,13 +154,17 @@ final class AlarmScheduler {
                 tintColor: resolvedAccentColor()
             )
             let configuration = AlarmConfiguration(
-                countdownDuration: Alarm.CountdownDuration(preAlert: 8, postAlert: snoozeSeconds),
+                // Deliberately `.fixed` plus an equal pre-alert, unlike real alarms: it is the
+                // probe for how AlarmKit times that combination. See AlarmTimingProbe.
+                countdownDuration: Alarm.CountdownDuration(preAlert: testPreAlert, postAlert: snoozeSeconds),
                 schedule: .fixed(fireDate),
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: idString),
                 secondaryIntent: SnoozeAlarmIntent(alarmID: idString)
             )
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
+            AlarmJournalStore.record(.scheduled, alarmID: idString, occurrenceID: testID, intendedFire: fireDate)
+            AlarmJournalStore.recordTestProbe(alarmID: idString, scheduledAt: scheduledAt, preAlert: testPreAlert)
             return nil
         } catch {
             return error.localizedDescription
@@ -176,7 +185,7 @@ final class AlarmScheduler {
         guard let alarms = try? AlarmManager.shared.alarms else { return false }
         return alarms.contains { alarm in
             guard case .countdown = alarm.state else { return false }
-            guard let fireDate = fixedFireDate(for: alarm) else { return true }
+            guard let fireDate = intendedFireDate(for: alarm) else { return true }
             return AlarmSchedulingHelpers.hasUpcomingFireDate(fireDate)
         }
     }
@@ -201,7 +210,7 @@ final class AlarmScheduler {
             guard !Task.isCancelled else { break }
             guard lookup[alarm.id] == nil else { continue }
 
-            if let fireDate = fixedFireDate(for: alarm) {
+            if let fireDate = intendedFireDate(for: alarm) {
                 guard shouldTerminateOrphan(alarm: alarm, fireDate: fireDate) else { continue }
             } else if !isAlerting(alarm), case .scheduled = alarm.state {
                 continue
@@ -225,7 +234,7 @@ final class AlarmScheduler {
 
         for alarm in currentAlarms where lookup[alarm.id] != nil {
             guard !Task.isCancelled else { break }
-            guard let fireDate = fixedFireDate(for: alarm) else { continue }
+            guard let fireDate = intendedFireDate(for: alarm) else { continue }
             let event = lookup[alarm.id]
             guard shouldTerminateStale(alarm: alarm, event: event, fireDate: fireDate) else { continue }
 
@@ -252,7 +261,7 @@ final class AlarmScheduler {
             guard !desiredIDs.contains(alarm.id) else { continue }
 
             if isAlerting(alarm), let event = lookup[alarm.id], !AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate) {
-                if let fireDate = fixedFireDate(for: alarm),
+                if let fireDate = intendedFireDate(for: alarm),
                    !AlarmSchedulingHelpers.isStaleAlarm(
                        fireDate: fireDate,
                        graceAfterFire: AlarmSchedulingHelpers.alertingCleanupGrace
@@ -364,13 +373,11 @@ final class AlarmScheduler {
     private func needsReschedule(existing: Alarm, instance: DesiredInstance, snoozeSeconds: TimeInterval) -> Bool {
         if case .alerting = existing.state { return false }
 
-        guard case .fixed(let scheduledDate) = existing.schedule else { return true }
+        guard let scheduledDate = intendedFireDate(for: existing) else { return true }
         if abs(scheduledDate.timeIntervalSince(instance.fireDate)) > 0.5 { return true }
 
-        let wantsPreAlert = instance.withLiveActivity
-        let preAlert = existing.countdownDuration?.preAlert ?? 0
-        let hasPreAlert = preAlert > 1
-        if wantsPreAlert != hasPreAlert { return true }
+        let isCountdownMode = existing.schedule == nil
+        if instance.withLiveActivity != isCountdownMode { return true }
 
         let postAlert = existing.countdownDuration?.postAlert ?? 0
         if abs(postAlert - snoozeSeconds) > 0.5 { return true }
@@ -391,10 +398,12 @@ final class AlarmScheduler {
         switch alarm.state {
         case .countdown, .paused:
             // Cancel stuck countdowns once fire time passes — do not wait for event.endDate.
-            // A long meeting block otherwise keeps a missed alarm alive for hours (PR #10 regression).
+            // A long meeting block otherwise keeps a missed alarm alive for hours (PR #10
+            // regression). The grace outlasts one snooze, since that is what a countdown past
+            // its fire time normally is.
             return AlarmSchedulingHelpers.isStaleAlarm(
                 fireDate: fireDate,
-                graceAfterFire: AlarmSchedulingHelpers.countdownCleanupGrace
+                graceAfterFire: snoozeAwareCountdownGrace
             )
         case .alerting:
             return AlarmSchedulingHelpers.isStaleAlarm(
@@ -416,7 +425,7 @@ final class AlarmScheduler {
         case .countdown, .paused:
             return AlarmSchedulingHelpers.isStaleAlarm(
                 fireDate: fireDate,
-                graceAfterFire: AlarmSchedulingHelpers.countdownCleanupGrace
+                graceAfterFire: snoozeAwareCountdownGrace
             )
         default:
             return AlarmSchedulingHelpers.isStaleAlarm(fireDate: fireDate)
@@ -434,6 +443,7 @@ final class AlarmScheduler {
         }
         do {
             try AlarmManager.shared.cancel(id: alarm.id)
+            Self.setCountdownTarget(nil, for: alarm.id)
             return true
         } catch {
             SchedulerLog.warning("cancel failed \(alarm.id): \(error.localizedDescription)")
@@ -451,9 +461,48 @@ final class AlarmScheduler {
         return lookup
     }
 
-    private func fixedFireDate(for alarm: Alarm) -> Date? {
-        guard case .fixed(let date) = alarm.schedule else { return nil }
-        return date
+    /// The fixed date for a scheduled alarm, or the stored target for a countdown-mode alarm,
+    /// which AlarmKit keeps no date for.
+    private func intendedFireDate(for alarm: Alarm) -> Date? {
+        if case .fixed(let date) = alarm.schedule { return date }
+        return Self.countdownTarget(for: alarm.id)
+    }
+
+    private static func countdownTargets() -> [String: TimeInterval] {
+        CalarmPersistence.decode([String: TimeInterval].self, forKey: CalarmPersistence.Key.countdownTargets) ?? [:]
+    }
+
+    private static func countdownTarget(for id: UUID) -> Date? {
+        countdownTargets()[id.uuidString].map(Date.init(timeIntervalSince1970:))
+    }
+
+    private static func setCountdownTarget(_ date: Date?, for id: UUID) {
+        var targets = countdownTargets()
+        guard targets[id.uuidString] != date?.timeIntervalSince1970 else { return }
+        targets[id.uuidString] = date?.timeIntervalSince1970
+        if targets.isEmpty {
+            CalarmPersistence.remove(forKey: CalarmPersistence.Key.countdownTargets)
+        } else {
+            CalarmPersistence.encode(targets, forKey: CalarmPersistence.Key.countdownTargets)
+        }
+    }
+
+    private static func pruneCountdownTargets(keeping ids: Set<UUID>) {
+        let targets = countdownTargets()
+        let kept = targets.filter { key, _ in UUID(uuidString: key).map(ids.contains) ?? false }
+        guard kept.count != targets.count else { return }
+        if kept.isEmpty {
+            CalarmPersistence.remove(forKey: CalarmPersistence.Key.countdownTargets)
+        } else {
+            CalarmPersistence.encode(kept, forKey: CalarmPersistence.Key.countdownTargets)
+        }
+    }
+
+    private var snoozeAwareCountdownGrace: TimeInterval {
+        let minutes = CalarmPersistence.objectExists(forKey: CalarmPersistence.Key.defaultSnoozeMinutes)
+            ? CalarmPersistence.integer(forKey: CalarmPersistence.Key.defaultSnoozeMinutes)
+            : SnoozeDurationOption.fiveMinutes.rawValue
+        return AlarmSchedulingHelpers.snoozeAwareCountdownGrace(snoozeSeconds: TimeInterval(minutes * 60))
     }
 
     private func schedule(
@@ -507,38 +556,51 @@ final class AlarmScheduler {
                     offsetLabel: offset.title,
                     eventID: event.id,
                     accentRawValue: accentRaw,
-                    eventEndTimestamp: event.endDate.timeIntervalSince1970
+                    eventEndTimestamp: event.endDate.timeIntervalSince1970,
+                    eventStartTimestamp: event.startDate.timeIntervalSince1970
                 ),
                 tintColor: resolvedLiveActivityTint(for: event)
             )
 
             let countdownDuration: Alarm.CountdownDuration?
+            let alarmSchedule: Alarm.Schedule?
             if withLiveActivity {
+                // No schedule: a countdown that starts now and rings after `preAlert`, the
+                // one combination Apple documents unambiguously. `.fixed` plus a pre-alert is
+                // documented to count down *to* the fixed date, but on device a 9:00 event's
+                // countdown was still running at 9:50 toward 10:14:54 — exactly the fixed
+                // date plus the pre-alert, as if the countdown started *at* the fixed date.
+                // That also explains the "stuck countdown" hours-late fires fixed in ea79c68.
+                // The 8-second test alarm probes which behaviour the device has.
                 countdownDuration = Alarm.CountdownDuration(
                     preAlert: secondsUntilAlarm,
                     postAlert: snoozeSeconds
                 )
+                alarmSchedule = nil
             } else {
                 // A one second pre-alert, and it is not cosmetic. AlarmKit alarms fail to
                 // present when the foregrounded app is in landscape; Apple's own Reminders
                 // works around it with exactly this, and the WWDC demo had the bug.
-                // `needsReschedule` tests `preAlert > 1`, so 1 still reads as "no Live
-                // Activity" and this does not cause reschedule churn.
+                // `needsReschedule` keys Live Activity on schedule type, not pre-alert, so
+                // this does not cause reschedule churn. Under the start-at-fixed-date
+                // behaviour this rings one second late, which is harmless.
                 countdownDuration = Alarm.CountdownDuration(
                     preAlert: 1,
                     postAlert: snoozeSeconds
                 )
+                alarmSchedule = .fixed(fireDate)
             }
 
             let configuration = AlarmConfiguration(
                 countdownDuration: countdownDuration,
-                schedule: .fixed(fireDate),
+                schedule: alarmSchedule,
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: idString),
                 secondaryIntent: SnoozeAlarmIntent(alarmID: idString)
             )
 
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
+            Self.setCountdownTarget(withLiveActivity ? fireDate : nil, for: alarmID)
             AlarmJournalStore.record(
                 .scheduled,
                 alarmID: idString,

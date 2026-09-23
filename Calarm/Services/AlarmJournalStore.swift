@@ -15,6 +15,7 @@ import os
 nonisolated enum AlarmJournalStore {
     static let entriesKey = "alarmJournalEntries"
     static let entryLimit = 500
+    static let testProbeKey = "calarm.alarm.testAlarmProbe"
 
     private static let log = Logger(subsystem: "com.calarmapp.calarm", category: "alarmjournal")
     private static let lock = NSLock()
@@ -97,6 +98,33 @@ nonisolated enum AlarmJournalStore {
                 """
             )
         }
+    }
+
+    private nonisolated struct TestProbe: Codable {
+        let alarmID: String
+        let scheduledAt: Date
+        let preAlert: TimeInterval
+    }
+
+    static func recordTestProbe(alarmID: String, scheduledAt: Date, preAlert: TimeInterval) {
+        let probe = TestProbe(alarmID: alarmID, scheduledAt: scheduledAt, preAlert: preAlert)
+        guard let data = try? JSONEncoder().encode(probe) else { return }
+        UserDefaults.standard.set(data, forKey: testProbeKey)
+    }
+
+    /// Nil until a test alarm has been scheduled. The ring is only observed while the app is
+    /// running, so it stays `.pending` if the app was closed when it rang.
+    static func testProbeVerdict() -> AlarmTimingProbe.Verdict? {
+        guard let data = UserDefaults.standard.data(forKey: testProbeKey),
+              let probe = try? JSONDecoder().decode(TestProbe.self, from: data) else { return nil }
+        let observed = load().first { entry in
+            entry.alarmID == probe.alarmID && entry.event == .alerting && entry.wallClock >= probe.scheduledAt
+        }
+        return AlarmTimingProbe.verdict(
+            scheduledAt: probe.scheduledAt,
+            preAlert: probe.preAlert,
+            observedAt: observed?.wallClock
+        )
     }
 
     static func reset() {

@@ -31,6 +31,15 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 - Compute `nextLiveActivityKey` from **all** instances sorted by `fireDate`.
 - Only the earliest upcoming instance gets `withLiveActivity: true`.
 - All others get alert-only presentation.
+- **The Live Activity alarm has no schedule** — `schedule: nil`, `preAlert` = seconds until
+  fire — so it counts down from now and rings on time. `.fixed` plus a big `preAlert` put a
+  9:00 event's countdown on screen at 9:50 heading for 10:14:54 (fixed date + pre-alert).
+  AlarmKit stores no fire date for such an alarm, so `AlarmScheduler` keeps one per UUID
+  under `CalarmPersistence.Key.countdownTargets`; `intendedFireDate(for:)` reads either.
+  `needsReschedule` keys Live Activity on schedule type (`nil` = countdown), not `preAlert`.
+- Every other alarm stays `.fixed` with `preAlert: 1` (landscape workaround).
+- Settings → Status → **Alarm timing** reports the 8-second test alarm's actual ring time,
+  which tells you how the device times `.fixed` + `preAlert`.
 
 ## Guard behavior
 
@@ -79,7 +88,7 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 
 **Fix (AlarmScheduler):**
 
-1. `shouldTerminateStale` — cancel `.countdown`/`.paused` after `fireDate + countdownCleanupGrace` (60s), not `event.endDate`.
+1. `shouldTerminateStale` — cancel `.countdown`/`.paused` after `fireDate + snoozeAwareCountdownGrace` (snooze + 60s), not `event.endDate`. A flat 60s killed real snoozes.
 2. `cancelUndesiredAlarms` — only preserve `.alerting` within `alertingCleanupGrace` (5 min snooze window).
 3. `reconcileOrphanAlarms` — terminate AlarmKit alarms not in current schedule lookup (dropped events, ID migrations).
 4. `ScheduleStore.refreshOnForeground()` — call `reconcileAlarmLifecycle` **before** EventKit reload.

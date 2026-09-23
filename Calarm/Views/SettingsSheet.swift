@@ -346,6 +346,8 @@ struct SettingsSheet: View {
                 SettingsInfoRow(title: "Last reschedule", value: lastRescheduleLabel, theme: theme)
                 Divider().overlay(theme.surfaceStroke)
                 SettingsInfoRow(title: "Events loaded", value: eventSourceLabel, theme: theme)
+                Divider().overlay(theme.surfaceStroke)
+                SettingsInfoRow(title: "Alarm timing", value: alarmTimingLabel, theme: theme)
 
                 Divider().overlay(theme.surfaceStroke)
 
@@ -362,7 +364,7 @@ struct SettingsSheet: View {
                     isSchedulingTestAlarm = true
                     Task {
                         testAlarmMessage = await store.scheduleTestAlarm()
-                            ?? "Test alarm scheduled — it should ring in about 8 seconds."
+                            ?? "Test alarm scheduled — it should ring in about 8 seconds. Keep CALarm open so Alarm timing can measure it."
                         isSchedulingTestAlarm = false
                     }
                 }
@@ -374,6 +376,16 @@ struct SettingsSheet: View {
                     .font(CalarmFont.caption)
                     .foregroundStyle(theme.textSecondary)
             }
+        }
+    }
+
+    private var alarmTimingLabel: String {
+        switch AlarmJournalStore.testProbeVerdict() {
+        case nil: "Run the test alarm"
+        case .pending: "Waiting for test ring"
+        case .onTime(let seconds): "On time · \(seconds)s"
+        case .countdownStartsAtFireDate(let seconds): "Late · \(seconds)s (iOS countdown bug)"
+        case .other(let seconds): "Unexpected · \(seconds)s"
         }
     }
 

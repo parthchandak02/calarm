@@ -15,6 +15,42 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-23
+
+A phantom countdown: at 9:50 the lock screen counted down a 9:00 event toward 10:14:54, a
+time with no event. No snooze was pressed, and no offset of a 9:00 event lands on 10:14:54;
+the fixed fire date (8:59) *plus* the pre-alert does.
+
+### Fixed
+
+- **The Live Activity alarm rang late by its own pre-alert.** It was `.fixed(fireDate)` with
+  `preAlert` = seconds until fire. Apple documents that as counting down *to* the fixed date;
+  on device it behaved as counting down *from* it. It is now a countdown-mode alarm
+  (`schedule: nil`), which starts now and rings after `preAlert` under either reading. This
+  is also the likely root of the "stuck countdown" hours-late fires patched in `ea79c68`.
+- **Opening the app killed a real snooze.** Countdowns past their fire time were cancelled
+  after 60s; the grace is now snooze length + 60s.
+- **The Dynamic Island countdown was wider than needed.** Width now follows time remaining
+  at render — 28pt under 10 min, 38pt under an hour, 58pt above. It still cannot shrink
+  mid-countdown; AlarmKit does not re-render between state changes.
+
+### Added
+
+- Live Activity shows **"Starts 9:00 AM"**, or **"Snoozed · starts 9:00 AM"**, so a
+  countdown that outlives its meeting explains itself.
+- Paused Live Activity shows the time left instead of the bare word "Paused".
+- iOS 27: a width-limited Island (landscape) shows an icon instead of digits.
+- **Settings → Status → Alarm timing** reports when the 8-second test alarm actually rang
+  (~8s on time, ~16s means iOS starts `.fixed` countdowns at the fixed date).
+- `CalarmTests/CountdownPresentationTests.swift` — 8 tests.
+
+### Removed
+
+- The widget's `isActivityExpired` check. It read the clock only at render, and Live
+  Activities have no timeline, so it could never hide anything on time.
+
+---
+
 ## Build 20260922.1613 — 2026-09-22
 
 Two user-reported bugs, both found to have real causes rather than cosmetic ones.

@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-22** — update this date whenever you change this file.
+**Last updated: 2026-09-23** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -27,6 +27,14 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 ---
 
 ## Waiting on the owner
+
+**0. Measure AlarmKit's countdown timing (new build, after 2026-09-23).** Keep CALarm open,
+tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS
+follows Apple's docs and the phantom 9:00→10:14 countdown needs another explanation;
+*Late · 16s* confirms iOS starts `.fixed` countdowns at the fixed date, which the new
+countdown-mode Live Activity alarm already sidesteps. Either way, record it in RESEARCH.md.
+Then watch the next real alarm: the lock-screen card should read *Starts <time>* and ring on
+time.
 
 **1. Confirm the calendar fix.** Build 1613 changed the per-calendar filter from an
 allow-list to a deny-list. The previous build reported `ek 40 · google off · 4 cals`,
