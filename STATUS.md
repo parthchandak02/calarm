@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260923.1106` — `VALID`, `IN_BETA_TESTING` |
+| **Latest build** | `20260923.1426` — `VALID`, `IN_BETA_TESTING` (first with Google sign-in) |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |
@@ -28,7 +28,7 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**0. Measure AlarmKit's countdown timing (build 20260923.1106).** Keep CALarm open,
+**0. Measure AlarmKit's countdown timing (build 20260923.1106 or later).** Keep CALarm open,
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS
 follows Apple's docs and the phantom 9:00→10:14 countdown needs another explanation;
 *Late · 16s* confirms iOS starts `.fixed` countdowns at the fixed date, which the new

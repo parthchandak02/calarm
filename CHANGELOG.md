@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-23 (Google sign-in)
+## Build 20260923.1426 — 2026-09-23
 
 ### Added
 
@@ -27,6 +27,7 @@ this file exists so an agent can see the shape of the project's history without 
   `Config/Calarm.xcconfig` and overridden by a gitignored `Config/Google.local.xcconfig`.
 - `scripts/setup-google-oauth.sh <client plist>` installs the plist and writes that local
   xcconfig; run once per building Mac. `ship.sh doctor` warns when it has not been run.
+  `3c3cea3`
 
 ### Fixed
 
