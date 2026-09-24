@@ -46,6 +46,12 @@ A three-way audit (docs, code review, build/config) after the day's builds.
   `systemUptime`.
 - `reference-photos/` is gitignored.
 
+### Removed
+
+- All ten `origin/cursor/*` branches (2026-08-12..21), at the owner's request; `main` is the
+  only branch. Nine held unmerged commits, unreviewed. Final tips, for recovery while GitHub
+  still has the objects: `alarm-persistence-countdown-fix-b61b` 052ad9f, `calendar-live-activity-color-ece7` 09dc63e, `consolidated-release-86bd` 0779934, `dynamic-island-width-fix-597e` 4aef4e7, `google-calendar-sync-b61b` 4cdedbf, `ios-ui-design-skill-597e` 0b4e1f3, `p0-ui-fixes-b7e6` 0779934, `review-fixes-ece7` 9ab74c3, `settings-tabs-design-597e` c64e210, `testflight-ship-aec2` 3ec54e6.
+
 ### Changed
 
 - Docs and skills brought in line with the day's code: the ship flow is

@@ -49,10 +49,6 @@ at the same time.
 turn the Focus on, and fire the next alarm. If it rings instead of vibrating, the Focus change
 did not reach a terminated app (RESEARCH.md § Known problems) — expected, but confirm.
 
-**Prune stale remote branches — owner's call.** Nine `origin/cursor/*` branches from
-2026-08-12..21 hold unmerged commits; `calendar-live-activity-color-ece7` is merged. Nobody has
-reviewed whether any unmerged work is still wanted. Do not delete without the owner.
-
 [redacted]
 through the personal Google account. The owner chose to keep it on and check policy
 themselves (2026-09-24). Do not file anything for them.
