@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-23** — update this date whenever you change this file.
+**Last updated: 2026-09-24** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -27,6 +27,11 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 ---
 
 ## Waiting on the owner
+
+**Ship and confirm the double-alarm fix.** Duplicate orphaned alarms (see CHANGELOG,
+Unreleased) are now cancelled. After installing, open CALarm once so it reconciles alarms
+already on the phone, then check the next meeting rings once. If it still rings twice,
+the two alarms are not orphan-plus-replacement and the alarm journal is the next place to look.
 
 **0. Measure AlarmKit's countdown timing (build 20260923.1106 or later).** Keep CALarm open,
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS

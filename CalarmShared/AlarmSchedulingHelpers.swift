@@ -47,6 +47,17 @@ enum AlarmSchedulingHelpers {
         ]).joined(separator: "|")
     }
 
+    /// Window within which an orphaned alarm counts as ringing alongside a managed one. Wide
+    /// enough to cover the collision stagger, far narrower than the gap between two offsets.
+    static let duplicateFireTolerance: TimeInterval = 30
+
+    /// True when `fireDate` lands on top of an alarm that is still managed. An orphan left by
+    /// an occurrence-ID change (EventKit to Google, a re-inserted event) is the same meeting
+    /// ringing a second time, so it is safe to cancel: the managed alarm still rings.
+    static func isDuplicateFire(_ fireDate: Date, of managedFireDates: [Date]) -> Bool {
+        managedFireDates.contains { abs($0.timeIntervalSince(fireDate)) <= duplicateFireTolerance }
+    }
+
     static func collisionGroupsSortedByFireDate(
         instances: [(occurrenceID: String, offsetRawValue: String, fireDate: Date)]
     ) -> [(occurrenceID: String, offsetRawValue: String, fireDate: Date)] {

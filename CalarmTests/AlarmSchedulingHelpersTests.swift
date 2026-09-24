@@ -87,4 +87,16 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         XCTAssertTrue(AlarmSchedulingHelpers.isEventEnded(endDate: ended))
         XCTAssertFalse(AlarmSchedulingHelpers.isEventEnded(endDate: ongoing))
     }
+
+    func testOrphanOnTopOfManagedAlarmIsDuplicate() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertTrue(AlarmSchedulingHelpers.isDuplicateFire(base, of: [base]))
+        XCTAssertTrue(AlarmSchedulingHelpers.isDuplicateFire(base, of: [base.addingTimeInterval(2)]))
+    }
+
+    func testOrphanAtItsOwnTimeIsKept() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertFalse(AlarmSchedulingHelpers.isDuplicateFire(base, of: []))
+        XCTAssertFalse(AlarmSchedulingHelpers.isDuplicateFire(base, of: [base.addingTimeInterval(60)]))
+    }
 }

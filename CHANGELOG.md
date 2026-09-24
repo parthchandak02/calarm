@@ -15,6 +15,22 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Fixed
+
+- **Every alarm rang twice, back to back.** When a meeting's occurrence ID changed — EventKit
+  events swapped for their Google copies once Google sign-in returned events, the Focus Block
+  Creator re-inserting an event, or a reload cancelled before `cancelRemoved` finished — the
+  old AlarmKit alarm became an orphan, and `reconcileOrphanAlarms` kept every *future* orphan
+  until it fired, alongside the new alarm for the same meeting. An orphan is now cancelled
+  when a managed alarm fires within 30s of it; orphans at their own time are still kept, so
+  a meeting briefly missing from a fetch still rings. The orphan pass also runs after each
+  reschedule, once the replacement exists, and `cancelRemoved` no longer stops on task
+  cancellation. `CalarmTests/AlarmSchedulingHelpersTests.swift` — 2 tests.
+
+---
+
 ## Build 20260923.1426 — 2026-09-23
 
 ### Added

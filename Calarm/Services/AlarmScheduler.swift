@@ -87,7 +87,8 @@ final class AlarmScheduler {
             }
         }
 
-        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) cleaned=\(cleaned) failures=\(failures.count)")
+        let duplicates = await reconcileOrphanAlarms(events: events)
+        SchedulerLog.info("reschedule complete scheduled=\(scheduledCount) cleaned=\(cleaned + duplicates) failures=\(failures.count)")
         return RescheduleResult(
             scheduledCount: scheduledCount,
             failures: failures,
@@ -97,8 +98,9 @@ final class AlarmScheduler {
     }
 
     func cancelRemoved(eventIDs: Set<String>) async {
+        // Not cancellable: by now `events` no longer lists these IDs, so a skipped cancel
+        // leaves an orphan that rings next to its replacement.
         for eventID in eventIDs {
-            guard !Task.isCancelled else { break }
             await cancelAll(for: eventID)
         }
     }
@@ -204,6 +206,7 @@ final class AlarmScheduler {
     func reconcileOrphanAlarms(events: [ScheduleEvent]) async -> Int {
         let lookup = alarmEventLookup(for: events)
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        let managedFireDates = currentAlarms.filter { lookup[$0.id] != nil }.compactMap(intendedFireDate(for:))
         var terminated = 0
 
         for alarm in currentAlarms {
@@ -211,7 +214,10 @@ final class AlarmScheduler {
             guard lookup[alarm.id] == nil else { continue }
 
             if let fireDate = intendedFireDate(for: alarm) {
-                guard shouldTerminateOrphan(alarm: alarm, fireDate: fireDate) else { continue }
+                // A future orphan is kept so a meeting briefly missing from a fetch still
+                // rings, unless a managed alarm already rings at the same moment.
+                let duplicate = AlarmSchedulingHelpers.isDuplicateFire(fireDate, of: managedFireDates)
+                guard duplicate || shouldTerminateOrphan(alarm: alarm, fireDate: fireDate) else { continue }
             } else if !isAlerting(alarm), case .scheduled = alarm.state {
                 continue
             }

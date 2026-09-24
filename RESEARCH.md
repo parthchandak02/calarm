@@ -696,6 +696,12 @@ and **nobody has ever seen the diagnostic**. Pure helpers and DTOs need explicit
 
 ## Known problems not fixed, and why
 
+- **An occurrence-ID change leaves an orphan alarm behind.** AlarmKit's `Alarm` carries no
+  metadata, so an orphan cannot be tied back to its meeting; only its fire date is known.
+  Orphans at a fire time no managed alarm shares are still kept until they fire (fail open),
+  which means an event deleted in another session can still ring once. Orphans that coincide
+  with a managed alarm are cancelled as duplicates since 2026-09-24.
+
 - **`ScheduleStore` is a ~600-line god object** with 14 `@Published` properties that
   instantiates its own services, so it cannot be constructed in a test without EventKit and
   AlarmKit. This is the structural obstacle to extending the app. Chip at it by extracting
