@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-24 (audit)
+## Build 20260924.1518 — 2026-09-24
 
 A three-way audit (docs, code review, build/config) after the day's builds.
 
