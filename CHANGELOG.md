@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-24
+## Build 20260924.1039 — 2026-09-24
 
 ### Fixed
 
@@ -27,7 +27,7 @@ this file exists so an agent can see the shape of the project's history without 
   when a managed alarm fires within 30s of it; orphans at their own time are still kept, so
   a meeting briefly missing from a fetch still rings. The orphan pass also runs after each
   reschedule, once the replacement exists, and `cancelRemoved` no longer stops on task
-  cancellation. `CalarmTests/AlarmSchedulingHelpersTests.swift` — 2 tests.
+  cancellation. `e2a1ad9` `CalarmTests/AlarmSchedulingHelpersTests.swift` — 2 tests.
 
 ---
 

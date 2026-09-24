@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260923.1426` — `VALID`, `IN_BETA_TESTING` (first with Google sign-in) |
+| **Latest build** | `20260924.1039` — `VALID`, `IN_BETA_TESTING` (double-alarm fix) |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |
@@ -28,8 +28,8 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Ship and confirm the double-alarm fix.** Duplicate orphaned alarms (see CHANGELOG,
-Unreleased) are now cancelled. After installing, open CALarm once so it reconciles alarms
+**Ship and confirm the double-alarm fix.** Duplicate orphaned alarms (see CHANGELOG, build
+20260924.1039) are now cancelled. After installing, open CALarm once so it reconciles alarms
 already on the phone, then check the next meeting rings once. If it still rings twice,
 the two alarms are not orphan-plus-replacement and the alarm journal is the next place to look.
 
