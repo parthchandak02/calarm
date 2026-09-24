@@ -28,11 +28,7 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Ship the audit fixes: `ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'`.** `main` carries fixes found on 2026-09-24 that matter for vibrate
-mode — above all, the ringing fallback was cancelled the moment its vibration started
-whenever CALarm was resident. Ship before relying on vibrate mode.
-
-**Verify vibrate mode on device (after that ship).** Turn on Settings → Alarms → Vibrate
+**Verify vibrate mode on device (build 20260924.1518+).** Turn on Settings → Alarms → Vibrate
 instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound (the
 test alarm has no fallback). Then leave a **real event's** vibrating alarm undismissed: a
 normal ring should follow a minute later. Snooze one: a ring should follow a minute after the
