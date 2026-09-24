@@ -396,6 +396,7 @@ struct SettingsSheet: View {
         case .denied: "Denied"
         case .restricted: "Restricted"
         case .writeOnly: "Write only"
+        case .notDetermined: "Not asked yet"
         @unknown default: "Unknown"
         }
     }

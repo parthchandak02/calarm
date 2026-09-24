@@ -128,7 +128,8 @@ Read from the iOS 27.0 SDK `AlarmKit.swiftinterface`. **CONFIRMED.**
   `LiveActivityIntent`**; a plain one runs only while the app is in the foreground.
   **REPORTED** ([home-assistant/iOS#5656](https://github.com/home-assistant/iOS/pull/5656),
   [Apple docs](https://developer.apple.com/documentation/appintents/setfocusfilterintent)).
-  iOS calls `perform` with the default values when the Focus turns off.
+  iOS calls `perform` with the default values when the Focus turns off — **REPORTED**,
+  unverified on device.
 
 ### AlarmKit owns the Live Activity — do not create your own
 
@@ -509,8 +510,8 @@ Cloudflare Worker  ── holds the refresh token (single-tenant)
 
 calarm becomes a client with **no Google dependency at all** — one URL and one bearer token
 in the Keychain. That deletes GoogleSignIn + AppAuth (8 SPM packages),
-`GoogleService-Info.plist`, and the `REVERSED_CLIENT_ID` plist work that was never done and
-is very likely why Google sign-in has never once completed end to end in this app.
+`GoogleService-Info.plist`, and the `REVERSED_CLIENT_ID` URL-scheme plumbing (fixed
+2026-09-23; its absence was why sign-in never completed before build 20260923.1426).
 
 Three layers of defence, because a missed meeting is this app's worst outcome: push on
 change (seconds) → Worker hourly poll (catches Google's dropped notifications) → app refresh
@@ -569,6 +570,10 @@ keeps that property.
 
 Each of these was reached confidently and then found wrong. They are the traps most likely
 to be re-entered.
+
+**"Google sign-in has never once completed."** True until build 20260923.1426 wired the
+`REVERSED_CLIENT_ID` callback scheme. On 2026-09-24 the phone showed the signed-in account
+and its Google calendar list in Settings → Calendar, so sign-in works on device.
 
 **"The syncToken branch is dead code."** Wrong. The stated reason — that `timeMin`/`timeMax`/
 `orderBy` make a response ineligible for `nextSyncToken` — is backwards. The token minted
@@ -726,13 +731,29 @@ and **nobody has ever seen the diagnostic**. Pure helpers and DTOs need explicit
 
 ## Known problems not fixed, and why
 
+- **A Focus change while CALarm is not running does not reschedule.**
+  `ScheduleStore.applyFocusVibrate` persists `Key.focusVibrate` but reschedules only if
+  `ScheduleStore.active` exists. Armed alarms keep their old sound until the next launch or
+  foreground. Turning vibrate *off* that way leaves alarms silent-with-fallback for a while.
+- **A snoozed vibrating alarm has no fallback.** `SnoozeAlarmIntent` cancels the fallback,
+  and the snooze re-alert still uses `calarm-silence.caf`, so a missed snooze vibration never
+  rings.
+- **A fallback can ring after the vibration was dismissed** if iOS dismisses the alert without
+  running `stopIntent`. Accepted: it fails open.
+- **The test alarm vibrates in vibrate mode but has no fallback.** It tests vibration only.
+- **`Key.alarmTitles` stores a signature, not a title** (`title|ring` / `title|vibrate`). The
+  name is historical; renaming needs a migration and buys nothing.
+- **Fallbacks landing on another alarm's minute are dropped.** In a run of minute-by-minute
+  alarms only the last carries a fallback, so a missed vibration can wait several minutes
+  for a ring.
+
 - **An occurrence-ID change leaves an orphan alarm behind.** AlarmKit's `Alarm` carries no
   metadata, so an orphan cannot be tied back to its meeting; only its fire date is known.
   Orphans at a fire time no managed alarm shares are still kept until they fire (fail open),
   which means an event deleted in another session can still ring once. Orphans that coincide
   with a managed alarm are cancelled as duplicates since 2026-09-24.
 
-- **`ScheduleStore` is a ~600-line god object** with 14 `@Published` properties that
+- **`ScheduleStore` is a ~640-line god object** with 16 `@Published` properties that
   instantiates its own services, so it cannot be constructed in a test without EventKit and
   AlarmKit. This is the structural obstacle to extending the app. Chip at it by extracting
   pure functions, as `ScheduleEventSourcePolicy` did. Do not attempt a big refactor.

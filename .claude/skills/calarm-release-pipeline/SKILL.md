@@ -11,6 +11,7 @@ description: >-
 
 | Command | Purpose |
 |---------|---------|
+| `./scripts/ship-remote.sh` | **Run from this Mac.** Ships on `macmini-remote` and commits the build stamp to `main` |
 | `./deploy.sh 1` | Simulator debug build |
 | `./deploy.sh 2` | Physical device (stamp + install + verify) |
 | `./release.sh` | Release archive + upload straight to App Store Connect (`ExportOptions` sets `destination: upload`, so no local IPA is written) |

@@ -41,8 +41,8 @@ Apply minimal, accurate fixes:
 
 - **Info.plist**: User-facing permission strings must match actual behavior (calendar read for schedule + per-event alarms; AlarmKit for countdown alarms + Live Activities). Remove `UIBackgroundModes` and `BGTaskSchedulerPermittedIdentifiers` if no BGTask code exists.
 - **PrivacyInfo.xcprivacy**: Declare `NSPrivacyAccessedAPICategoryUserDefaults` with `CA92.1`. Declare calendar data collection if EventKit is used. Set `NSPrivacyTracking` false unless tracking exists.
-- **Release tooling**: Ensure `release.sh` archives with **Release** config, exports `app-store-connect` IPA, and documents upload commands.
-- **fastlane**: Maintain lanes for `build_release`, `upload_beta` (TestFlight), `upload_metadata`, `precheck`. Use App Store Connect API key env vars — never commit `.p8` keys.
+- **Release tooling**: Ensure `release.sh` archives with **Release** config and uploads straight to ASC (`destination: upload`, no local IPA). TestFlight ships go through `./scripts/ship-remote.sh`.
+- **fastlane**: Maintain lanes for `build_release`, `upload_metadata`, `precheck`. `upload_beta` is broken for binaries (see `calarm-testflight-fastlane`). Use App Store Connect API key env vars — never commit `.p8` keys.
 - **Metadata drafts**: Keep `fastlane/metadata/en-US/*.txt` accurate and conservative; no unverifiable claims.
 - **Docs**: Update `APP_STORE_CHECKLIST.md` — separate **Agent-done** vs **Human-only**.
 
@@ -80,14 +80,17 @@ Always end with:
 ```bash
 bundle install
 bundle exec fastlane ios build_release   # archive + export IPA
-bundle exec fastlane ios upload_beta     # TestFlight (needs API key)
+# TestFlight: ./scripts/ship-remote.sh — upload_beta is broken for binaries
 bundle exec fastlane ios upload_metadata # descriptions, keywords (no binary)
 bundle exec fastlane ios precheck        # catch common review issues
 ```
 
 Auth via env: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` or `ASC_KEY_CONTENT`.
 
-### Apple-native upload (no fastlane)
+### Apple-native upload (no fastlane) — legacy
+
+`release.sh` no longer writes `build/export/Calarm.ipa`; this applies only to a manually
+exported IPA.
 
 ```bash
 xcrun altool --validate-app -f build/export/Calarm.ipa -t ios \

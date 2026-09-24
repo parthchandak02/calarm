@@ -27,4 +27,24 @@ final class AlarmSoundPolicyTests: XCTestCase {
     func testSilentSoundShipsInTheAppBundle() {
         XCTAssertNotNil(Bundle.main.url(forResource: AlarmSoundPolicy.silentSoundName, withExtension: nil))
     }
+
+    func testFallbackSurvivesItsAlarmFiring() {
+        let fire = Date(timeIntervalSince1970: 1_800_000_000)
+        let now = fire.addingTimeInterval(10)
+        XCTAssertEqual(
+            AlarmSoundPolicy.fallbackFireDate(anchor: fire, upcomingFireDates: [], now: now),
+            fire.addingTimeInterval(60)
+        )
+    }
+
+    func testFallbackEndsOnceItsTimePasses() {
+        let fire = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertNil(AlarmSoundPolicy.fallbackFireDate(anchor: fire, upcomingFireDates: [], now: fire.addingTimeInterval(61)))
+    }
+
+    func testFallbackYieldsToAnAlarmInItsMinute() {
+        let fire = Date(timeIntervalSince1970: 1_800_000_000 - 1_800_000_000.truncatingRemainder(dividingBy: 60))
+        let next = fire.addingTimeInterval(60)
+        XCTAssertNil(AlarmSoundPolicy.fallbackFireDate(anchor: fire, upcomingFireDates: [next], now: fire.addingTimeInterval(-5)))
+    }
 }

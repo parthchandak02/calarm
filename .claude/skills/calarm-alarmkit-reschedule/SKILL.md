@@ -56,9 +56,10 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 `AlarmGrouping` merges every alarm firing in the same minute into **one** AlarmKit alarm,
 carried by the primary member's stable ID (titled events lead "Busy" busy-only blocks) and
 titled "First + N more". The other members' IDs fall out of the desired set and are cancelled
-by `cancelUndesiredAlarms`. AlarmKit exposes no attributes, so the title each alarm was
-scheduled with is stored under `CalarmPersistence.Key.alarmTitles` and `needsReschedule`
-compares it. (This replaced a 2s stagger that rang each same-time event back to back.)
+by `cancelUndesiredAlarms`. AlarmKit exposes no attributes, so each alarm's signature
+(`title|ring` or `title|vibrate`, `DesiredInstance.signature`) is stored under
+`CalarmPersistence.Key.alarmTitles` and `needsReschedule` compares it. The key and the
+`title(for:)`/`setTitle` names predate vibrate mode; the value is not a display title. (This replaced a 2s stagger that rang each same-time event back to back.)
 
 ## Vibrate mode
 
@@ -77,6 +78,10 @@ vibrate mode turns off. The stored per-alarm signature is title plus sound.
 - `Calarm/Services/AlarmScheduler.swift`
 - `Calarm/Services/RescheduleCoordinator.swift`
 - `Calarm/Store/ScheduleStore.swift`
+- `Calarm/Models/AlarmGrouping.swift`
+- `Calarm/Models/AlarmSoundPolicy.swift`
+- `Calarm/Intents/CalarmFocusFilter.swift`
+- `CalarmShared/AlarmSchedulingHelpers.swift`
 
 ## Anti-patterns
 
@@ -103,7 +108,10 @@ vibrate mode turns off. The stored per-alarm signature is title plus sound.
 
 1. `shouldTerminateStale` — cancel `.countdown`/`.paused` after `fireDate + snoozeAwareCountdownGrace` (snooze + 60s), not `event.endDate`. A flat 60s killed real snoozes.
 2. `cancelUndesiredAlarms` — only preserve `.alerting` within `alertingCleanupGrace` (5 min snooze window).
-3. `reconcileOrphanAlarms` — terminate AlarmKit alarms not in current schedule lookup (dropped events, ID migrations).
+3. `reconcileOrphanAlarms` — for alarms not in the current lookup: terminate once stale, and
+   terminate a *future* orphan only when `AlarmSchedulingHelpers.isDuplicateFire` finds a
+   managed alarm within 30s (the same meeting under a changed ID). Other future orphans are
+   kept — fail open. Also runs after each reschedule, once replacements exist.
 4. `ScheduleStore.refreshOnForeground()` — call `reconcileAlarmLifecycle` **before** EventKit reload.
 
 **Helpers:** `AlarmSchedulingHelpers.isStaleAlarm(fireDate:graceAfterFire:)`, `countdownCleanupGrace`, `alertingCleanupGrace`.

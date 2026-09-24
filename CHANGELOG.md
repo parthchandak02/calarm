@@ -15,6 +15,47 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24 (audit)
+
+A three-way audit (docs, code review, build/config) after the day's builds.
+
+### Fixed
+
+- **The vibrate fallback was cancelled the moment its vibration started.** Desired alarms
+  were built from future fire times only, so once the vibrating alarm fired, its fallback was
+  "undesired" and the reconcile its own alerting triggered cancelled it. Alarms that fired
+  within the last minute now still anchor their fallback (`AlarmSoundPolicy.fallbackFireDate
+  (anchor:upcomingFireDates:now:)`).
+- **Snoozing a vibrating alarm left the post-snooze vibration with no fallback.**
+  `SnoozeAlarmIntent` now moves the fallback to snooze end + 60s
+  (`AlarmScheduler.moveFallbackAfterSnooze`), and reconcile leaves a fallback alone while its
+  vibrating alarm is ringing or snoozed.
+- **An orphan could be cancelled against an alarm that would never ring.** The duplicate check
+  counted fallbacks and alarms about to be cancelled; it now counts desired primaries only.
+- **A Focus change could be lost to suspension.** `applyFocusVibrate` awaits the reschedule.
+- **The list could hide the busy block responsible for an alarm** when its titled twin had
+  alarms off. It now stays unless the twin also rings.
+- Settings → Status showed "Unknown" for a calendar permission not yet asked.
+- `ship.sh all` still used the broken fastlane `upload_beta` lane; it now uses `release.sh`.
+- `ship-remote.sh` rebases the stamp commit before pushing, so a push to `main` during the
+  build no longer strands the mini.
+
+### Added
+
+- Privacy manifest declares `SystemBootTime` (`35F9.1`) for the alarm journal's
+  `systemUptime`.
+- `reference-photos/` is gitignored.
+
+### Changed
+
+- Docs and skills brought in line with the day's code: the ship flow is
+  `./scripts/ship-remote.sh`, orphan and signature semantics, vibrate-mode known problems,
+  Google sign-in confirmed on device.
+
+`CalarmTests` — 102 passing (4 new).
+
+---
+
 ## Build 20260924.1447 — 2026-09-24
 
 ### Added
@@ -50,11 +91,18 @@ this file exists so an agent can see the shape of the project's history without 
 - A row whose reminder had passed said "Reminder passed" twice.
 
 `CalarmTests/AlarmGroupingTests.swift` — 4 tests; `ScheduleEventSourcePolicyTests` — 3 more.
-`259336c`. Shipping now commits the build stamp to `main` (`scripts/ship-remote.sh`, `db57cd2`).
+`259336c`.
+
+### Changed (tooling)
+
+- Ship with `./scripts/ship-remote.sh`, which commits the build stamp to `main` (`db57cd2`).
+  Stamps: 1342 `bfb441c`, 1447 `a341b6a`.
 
 ---
 
 ## Build 20260924.1039 — 2026-09-24
+
+Stamp not committed to `main`; this build predates `ship-remote.sh`.
 
 ### Fixed
 

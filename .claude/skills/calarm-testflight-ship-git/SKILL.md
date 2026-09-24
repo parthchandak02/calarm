@@ -35,9 +35,9 @@ git push origin main
 
 ## Pre-ship checklist
 
-1. On the branch that contains the changes to ship
-2. Merge or rebase `origin/main` if needed; resolve conflicts
-3. Compile check (no Simulator.app, no booted sim unless the user explicitly asks):
+1. On `main`, committed and pushed — the mini ships whatever `origin/main` holds. No side
+   branches for ship work.
+2. Compile check (no Simulator.app, no booted sim unless the user explicitly asks):
 
 ```bash
 xcodebuild -project Calarm.xcodeproj -scheme Calarm \
@@ -47,7 +47,7 @@ xcodebuild -project Calarm.xcodeproj -scheme Calarm \
 
 Do **not** run `xcodebuild test` or boot simulators on this Mac unless the user says to. Tests eat RAM. Prefer a prior TEST SUCCEEDED run, or skip tests and archive.
 
-4. Doctor:
+3. Doctor:
 
 ```bash
 ./scripts/ios-doctor.sh
@@ -61,21 +61,22 @@ each `ssh` gets its own security session, so unlocking in a separate invocation 
 nothing. The owner types the password; do not handle it.
 
 ```bash
-ssh -t macmini-remote 'security unlock-keychain ~/Library/Keychains/login.keychain-db && cd ~/projects/calarm && git pull --ff-only origin main && ./scripts/ship.sh beta'
+./scripts/ship-remote.sh
 ```
 
-Runs: doctor → unit tests → `./release.sh` → Internal Testing group.
+Runs on the mini, in one SSH session: unlock keychain (owner types it) → reset
+`project.pbxproj` → `git pull --ff-only` → `ship.sh beta` (doctor → unit tests →
+`./release.sh` → Internal Testing group) → commit `Stamp build N (uploaded to TestFlight)`
+and push it to `main`. Then it pulls that commit locally. The owner may paste the same steps
+as a one-line `ssh -t` instead; the stamp commit must still happen.
 
 **Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the
 ASC API key auth `release.sh` passes to xcodebuild, and fails with *No Accounts / No signing
 certificate "iOS Distribution" found*. See the `calarm-testflight-fastlane` skill.
 
-After a successful ship, commit the stamp the script wrote:
-
-```bash
-ssh macmini-remote 'cd ~/projects/calarm && git add -A && git commit -m "Stamp build YYYYMMDD.HHmm (uploaded to TestFlight)" && git push origin main'
-git pull --ff-only origin main
-```
+After it finishes, verify `IN_BETA_TESTING` in ASC (below), then commit
+`Record build N as in beta testing` updating STATUS.md *Latest build* and the CHANGELOG
+heading.
 
 ### Update release notes
 

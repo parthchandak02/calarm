@@ -14,11 +14,11 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 
 | | |
 |---|---|
-| **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260924.1447` — `VALID`, `IN_BETA_TESTING` (vibrate mode) |
-| **Tests** | Passing (`CalarmTests`) |
+| **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
+| **Latest build** | `20260924.1447` — `VALID`, `IN_BETA_TESTING` (vibrate mode). `main` is ahead of it with the audit fixes below, unshipped |
+| **Tests** | 102 passing (`CalarmTests`, 2026-09-24) |
 | **Doctor** | 0 warnings |
-| **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |
+| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including `work account` busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
 
 The app is installable from TestFlight and works off EventKit alone. Everything in
@@ -28,20 +28,36 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Verify vibrate mode on device (build 20260924.1447).** Turn on Settings → Alarms → Vibrate
-instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound. Then
-leave one vibrating alarm undismissed: a normal ring should follow a minute later. If the test
+**Ship the audit fixes.** `main` carries fixes found on 2026-09-24 that matter for vibrate
+mode — above all, the ringing fallback was cancelled the moment its vibration started
+whenever CALarm was resident. Ship before relying on vibrate mode.
+
+**Verify vibrate mode on device (after that ship).** Turn on Settings → Alarms → Vibrate
+instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound (the
+test alarm has no fallback). Then leave a **real event's** vibrating alarm undismissed: a
+normal ring should follow a minute later. Snooze one: a ring should follow a minute after the
+snooze ends if that is missed too. If the test
 alarm makes a sound or stays silent without vibrating, the silent-sound approach fails on this
 iOS version (see RESEARCH.md § Alarm sound and vibration).
 
-**Ship and confirm one ring per minute.** After installing, open CALarm once. A minute with
+**Confirm one ring per minute (build 20260924.1342+).** After installing, open CALarm once. A minute with
 several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, titled
 "<event> + N more", and the list should no longer show a "Busy" block next to a titled event
 at the same time.
 
+**Test the Focus filter with CALarm force-quit.** Add CALarm to a Focus, force-quit the app,
+turn the Focus on, and fire the next alarm. If it rings instead of vibrating, the Focus change
+did not reach a terminated app (RESEARCH.md § Known problems) — expected, but confirm.
+
+**Prune stale remote branches — owner's call.** Nine `origin/cursor/*` branches from
+2026-08-12..21 hold unmerged commits; `calendar-live-activity-color-ece7` is merged. Nobody has
+reviewed whether any unmerged work is still wanted. Do not delete without the owner.
+
 [redacted]
 through the personal Google account. The owner chose to keep it on and check policy
 themselves (2026-09-24). Do not file anything for them.
+
+*Older items below are from builds 1106–1613 and have not been confirmed done.*
 
 **0. Measure AlarmKit's countdown timing (build 20260923.1106 or later).** Keep CALarm open,
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS

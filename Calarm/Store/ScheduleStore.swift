@@ -469,12 +469,20 @@ final class ScheduleStore: ObservableObject {
 
     /// If iOS had terminated CALarm there is no store, and the change applies on next launch:
     /// every reschedule reads the persisted flag.
-    static func applyFocusVibrate(_ enabled: Bool) {
+    /// Awaits the reschedule: iOS may suspend the process as soon as the intent returns.
+    static func applyFocusVibrate(_ enabled: Bool) async {
         CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.focusVibrate)
         guard let store = active else { return }
         store.focusVibrate = enabled
         store.lastScheduledFingerprint = nil
-        store.requestReschedule(force: true)
+        await store.rescheduleCoordinator.requestRescheduleImmediate { [weak store] in
+            await store?.rescheduleIfNeeded(force: true) ?? RescheduleSummary(
+                finishedAt: Date(),
+                scheduledCount: 0,
+                failureCount: 0,
+                skippedDuringAlerting: false
+            )
+        }
     }
 
     func refreshAfterThemeChange() {

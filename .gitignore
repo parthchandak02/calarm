@@ -158,3 +158,6 @@ graphify-out/
 # Agent harness local state — machine-specific, never shared
 .claude/settings.local.json
 .cursor/settings.local.json
+
+# Owner's reference screenshots and recordings — personal, large, never committed
+reference-photos/

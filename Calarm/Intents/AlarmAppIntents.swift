@@ -10,12 +10,12 @@ import Foundation
 // MARK: - Shared helpers
 
 private enum AlarmIntentSupport {
-    static func uuid(from alarmID: String) -> UUID? {
+    nonisolated static func uuid(from alarmID: String) -> UUID? {
         UUID(uuidString: alarmID)
     }
 
     /// The user noticed the vibration, so the ringing fallback behind it is not needed.
-    static func cancelFallback(for id: UUID) {
+    nonisolated static func cancelFallback(for id: UUID) {
         try? AlarmManager.shared.cancel(id: AlarmSchedulingHelpers.fallbackAlarmID(for: id))
     }
 }
@@ -65,8 +65,8 @@ public struct SnoozeAlarmIntent: LiveActivityIntent {
         // AlarmKit handles .countdown secondary behavior; intent satisfies configuration contract.
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
         AlarmJournalStore.record(.snoozed, alarmID: id.uuidString)
-        AlarmIntentSupport.cancelFallback(for: id)
         try? AlarmManager.shared.countdown(id: id)
+        await AlarmScheduler().moveFallbackAfterSnooze(primaryID: id)
         return .result()
     }
 }

@@ -53,7 +53,10 @@ case "$CMD" in
     "$SCRIPT_DIR/ios-doctor.sh"
     log_step "Unit tests"
     run_calarm_unit_tests
-    bundle exec fastlane ios upload_beta
+    log_step "TestFlight upload"
+    ./release.sh
+    log_step "Internal Testing group"
+    "$SCRIPT_DIR/add-testflight-internal-group.sh"
     bundle exec fastlane ios upload_metadata screenshots:true
     ;;
   *)

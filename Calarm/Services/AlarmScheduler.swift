@@ -27,6 +27,7 @@ final class AlarmScheduler {
         let withLiveActivity: Bool
         let alarmID: UUID
         let vibrates: Bool
+        let isFallback: Bool
 
         /// Title plus sound: what AlarmKit will not report back, so `needsReschedule` compares
         /// the stored copy.
@@ -54,9 +55,14 @@ final class AlarmScheduler {
         Self.pruneCountdownTargets(keeping: Set(currentAlarms.map(\.id)))
         Self.pruneTitles(keeping: Set(currentAlarms.map(\.id)))
 
+        let fallbackPrimaries = fallbackPrimaries(for: events)
         for instance in desired {
             guard !Task.isCancelled else { break }
             let existing = currentAlarms.first { $0.id == instance.alarmID }
+            if instance.isFallback,
+               isHeldBySnoozeOrAlert(fallbackID: instance.alarmID, primaries: fallbackPrimaries, alarms: currentAlarms) {
+                continue
+            }
             if !force, let existing, !needsReschedule(existing: existing, instance: instance, snoozeSeconds: snoozeSeconds) {
                 continue
             }
@@ -183,6 +189,47 @@ final class AlarmScheduler {
         }
     }
 
+    /// Moves a vibrating alarm's ringing fallback to follow its snooze. Cancelling it outright
+    /// left the post-snooze vibration with nothing behind it.
+    func moveFallbackAfterSnooze(primaryID: UUID) async {
+        let fallbackID = AlarmSchedulingHelpers.fallbackAlarmID(for: primaryID)
+        try? AlarmManager.shared.cancel(id: fallbackID)
+        Self.setTitle(nil, for: fallbackID)
+        let vibrateSuffix = "|vibrate"
+        guard let signature = Self.title(for: primaryID), signature.hasSuffix(vibrateSuffix) else { return }
+        let title = String(signature.dropLast(vibrateSuffix.count))
+        let snoozeSeconds = persistedSnoozeSeconds
+        let fireDate = Date().addingTimeInterval(snoozeSeconds + AlarmSoundPolicy.fallbackDelay)
+        let idString = fallbackID.uuidString
+
+        do {
+            let alert = AlarmPresentation.Alert(
+                title: LocalizedStringResource(stringLiteral: title),
+                stopButton: AlarmButton(text: "Dismiss", textColor: .white, systemImageName: "stop.circle"),
+                secondaryButton: AlarmButton(text: "Snooze", textColor: .white, systemImageName: "zzz"),
+                secondaryButtonBehavior: .countdown
+            )
+            let attributes = AlarmAttributes<AlarmAppMetadata>(
+                presentation: AlarmPresentation(alert: alert),
+                metadata: AlarmAppMetadata(title: title, accentRawValue: CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent)),
+                tintColor: resolvedAccentColor()
+            )
+            let configuration = AlarmConfiguration(
+                countdownDuration: Alarm.CountdownDuration(preAlert: 1, postAlert: snoozeSeconds),
+                schedule: .fixed(fireDate),
+                attributes: attributes,
+                stopIntent: StopAlarmIntent(alarmID: idString),
+                secondaryIntent: SnoozeAlarmIntent(alarmID: idString),
+                sound: .default
+            )
+            _ = try await AlarmManager.shared.schedule(id: fallbackID, configuration: configuration)
+            Self.setTitle("\(title)|ring", for: fallbackID)
+            AlarmJournalStore.record(.scheduled, alarmID: idString, intendedFire: fireDate)
+        } catch {
+            SchedulerLog.error("snooze fallback failed \(primaryID): \(error.localizedDescription)")
+        }
+    }
+
     func hasAlertingAlarms() -> Bool {
         guard let alarms = try? AlarmManager.shared.alarms else { return false }
         return alarms.contains { isAlerting($0) }
@@ -211,12 +258,16 @@ final class AlarmScheduler {
         return orphans + stale + undesired
     }
 
-    /// Cancel AlarmKit alarms that no longer map to the current schedule (dropped events, ID migrations).
+    /// Cancel orphaned AlarmKit alarms (dropped events, ID migrations) once stale, or earlier
+    /// when a managed alarm already rings at the same moment. Other future orphans are kept.
     @discardableResult
     func reconcileOrphanAlarms(events: [ScheduleEvent]) async -> Int {
         let lookup = alarmEventLookup(for: events)
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
-        let managedFireDates = currentAlarms.filter { lookup[$0.id] != nil }.compactMap(intendedFireDate(for:))
+        // Only alarms that will actually ring stand in for an orphan: not fallbacks, which a
+        // dismissed vibration cancels, and not alarms about to be cancelled as undesired.
+        let primaryIDs = Set(buildDesiredInstances(from: events).filter { !$0.isFallback }.map(\.alarmID))
+        let managedFireDates = currentAlarms.filter { primaryIDs.contains($0.id) }.compactMap(intendedFireDate(for:))
         var terminated = 0
 
         for alarm in currentAlarms {
@@ -269,12 +320,14 @@ final class AlarmScheduler {
         let desiredIDs = Set(buildDesiredInstances(from: events).map(\.alarmID))
         let lookup = alarmEventLookup(for: events)
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
+        let fallbackPrimaries = fallbackPrimaries(for: events)
         var terminated = 0
 
         for alarm in currentAlarms {
             guard !Task.isCancelled else { break }
             guard lookup[alarm.id] != nil else { continue }
             guard !desiredIDs.contains(alarm.id) else { continue }
+            if isHeldBySnoozeOrAlert(fallbackID: alarm.id, primaries: fallbackPrimaries, alarms: currentAlarms) { continue }
 
             if isAlerting(alarm), let event = lookup[alarm.id], !AlarmSchedulingHelpers.isEventEnded(endDate: event.endDate) {
                 if let fireDate = intendedFireDate(for: alarm),
@@ -328,8 +381,18 @@ final class AlarmScheduler {
         case failed(String)
     }
 
-    private func buildDesiredInstances(from events: [ScheduleEvent]) -> [DesiredInstance] {
-        let sources = events.flatMap { event in event.scheduledAlarms.map { (event: event, alarm: $0) } }
+    private func buildDesiredInstances(from events: [ScheduleEvent], now: Date = Date()) -> [DesiredInstance] {
+        let vibrates = AlarmSoundPolicy.vibratesNow
+        // While vibrating, an alarm that fired within the last minute still anchors the
+        // fallback behind it. Dropping it the moment it fired cancelled that fallback on the
+        // very reconcile its own alerting triggered.
+        let earliest = vibrates ? now.addingTimeInterval(-AlarmSoundPolicy.fallbackDelay) : now
+        let sources = events.flatMap { event in
+            event.alarmOffsets
+                .map { ScheduledAlarm(offset: $0, fireDate: $0.fireDate(for: event.startDate)) }
+                .filter { $0.fireDate > earliest }
+                .map { (event: event, alarm: $0) }
+        }
         let sourceByKey = Dictionary(
             sources.map {
                 (AlarmSchedulingHelpers.liveActivityKey(occurrenceID: $0.event.id, offsetRawValue: $0.alarm.offset.rawValue), $0)
@@ -348,41 +411,77 @@ final class AlarmScheduler {
             )
         })
 
-        let vibrates = AlarmSoundPolicy.vibratesNow
-        let primaries: [DesiredInstance] = groups.enumerated().compactMap { index, group in
+        let anchors: [(group: AlarmGrouping.Group, source: (event: ScheduleEvent, alarm: ScheduledAlarm))] = groups.compactMap { group in
             let key = AlarmSchedulingHelpers.liveActivityKey(
                 occurrenceID: group.primary.occurrenceID,
                 offsetRawValue: group.primary.offsetRawValue
             )
-            guard let source = sourceByKey[key] else { return nil }
-            return DesiredInstance(
-                event: source.event,
-                alarm: source.alarm,
-                fireDate: group.fireDate,
-                title: group.title,
+            return sourceByKey[key].map { (group, $0) }
+        }
+
+        let upcoming = anchors.filter { $0.group.fireDate > now }
+        let primaries: [DesiredInstance] = upcoming.enumerated().map { index, anchor in
+            DesiredInstance(
+                event: anchor.source.event,
+                alarm: anchor.source.alarm,
+                fireDate: anchor.group.fireDate,
+                title: anchor.group.title,
                 withLiveActivity: index == 0,
-                alarmID: stableAlarmID(for: source.event.id, offset: source.alarm.offset),
-                vibrates: vibrates
+                alarmID: stableAlarmID(for: anchor.source.event.id, offset: anchor.source.alarm.offset),
+                vibrates: vibrates,
+                isFallback: false
             )
         }
         guard vibrates else { return primaries }
 
-        // A fallback landing in the same minute as another alarm would ring over it; that
-        // alarm's own fallback, a minute later, covers the missed one instead.
-        let primaryMinutes = Set(primaries.map { Int($0.fireDate.timeIntervalSince1970 / 60) })
-        let fallbacks = primaries.map {
-            DesiredInstance(
-                event: $0.event,
-                alarm: $0.alarm,
-                fireDate: AlarmSoundPolicy.fallbackFireDate(after: $0.fireDate),
-                title: $0.title,
+        let upcomingFireDates = primaries.map(\.fireDate)
+        let fallbacks: [DesiredInstance] = anchors.compactMap { anchor in
+            guard let fireDate = AlarmSoundPolicy.fallbackFireDate(
+                anchor: anchor.group.fireDate,
+                upcomingFireDates: upcomingFireDates,
+                now: now
+            ) else { return nil }
+            return DesiredInstance(
+                event: anchor.source.event,
+                alarm: anchor.source.alarm,
+                fireDate: fireDate,
+                title: anchor.group.title,
                 withLiveActivity: false,
-                alarmID: AlarmSchedulingHelpers.fallbackAlarmID(for: $0.alarmID),
-                vibrates: false
+                alarmID: AlarmSchedulingHelpers.fallbackAlarmID(
+                    for: stableAlarmID(for: anchor.source.event.id, offset: anchor.source.alarm.offset)
+                ),
+                vibrates: false,
+                isFallback: true
             )
         }
-        .filter { !primaryMinutes.contains(Int($0.fireDate.timeIntervalSince1970 / 60)) }
         return (primaries + fallbacks).sorted { $0.fireDate < $1.fireDate }
+    }
+
+    /// Fallback ID → the vibrating alarm it backs, for every alarm these events could own.
+    private func fallbackPrimaries(for events: [ScheduleEvent]) -> [UUID: UUID] {
+        var map: [UUID: UUID] = [:]
+        for event in events {
+            for offset in AlarmOffsetOption.schedulableOffsets {
+                let id = stableAlarmID(for: event.id, offset: offset)
+                map[AlarmSchedulingHelpers.fallbackAlarmID(for: id)] = id
+            }
+        }
+        return map
+    }
+
+    /// A fallback whose vibrating alarm is ringing or snoozed is live, whatever the schedule
+    /// says: the snooze intent moved it to follow the snooze.
+    private func isHeldBySnoozeOrAlert(fallbackID: UUID, primaries: [UUID: UUID], alarms: [Alarm], now: Date = Date()) -> Bool {
+        guard let primaryID = primaries[fallbackID],
+              let primary = alarms.first(where: { $0.id == primaryID }) else { return false }
+        switch primary.state {
+        case .alerting:
+            return true
+        case .countdown, .paused:
+            return intendedFireDate(for: primary).map { $0 <= now } ?? false
+        default:
+            return false
+        }
     }
 
     private func managedAlarmIDs(for events: [ScheduleEvent]) -> Set<UUID> {
@@ -558,11 +657,15 @@ final class AlarmScheduler {
         }
     }
 
-    private var snoozeAwareCountdownGrace: TimeInterval {
+    private var persistedSnoozeSeconds: TimeInterval {
         let minutes = CalarmPersistence.objectExists(forKey: CalarmPersistence.Key.defaultSnoozeMinutes)
             ? CalarmPersistence.integer(forKey: CalarmPersistence.Key.defaultSnoozeMinutes)
             : SnoozeDurationOption.fiveMinutes.rawValue
-        return AlarmSchedulingHelpers.snoozeAwareCountdownGrace(snoozeSeconds: TimeInterval(minutes * 60))
+        return TimeInterval(minutes * 60)
+    }
+
+    private var snoozeAwareCountdownGrace: TimeInterval {
+        AlarmSchedulingHelpers.snoozeAwareCountdownGrace(snoozeSeconds: persistedSnoozeSeconds)
     }
 
     private func alertSound(vibrates: Bool) -> AlertConfiguration.AlertSound {

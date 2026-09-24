@@ -80,7 +80,7 @@ SDK API compiles here and breaks the release build there. Wrap such code in
 shipping — no keychain needed for a simulator build:
 
 ```bash
-ssh macmini-remote 'cd ~/projects/calarm && git pull --ff-only origin main && xcodebuild build -project Calarm.xcodeproj -scheme Calarm -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO -quiet'
+ssh macmini-remote 'cd ~/projects/calarm && git checkout -- Calarm.xcodeproj/project.pbxproj && git pull --ff-only origin main && xcodebuild build -project Calarm.xcodeproj -scheme Calarm -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO -quiet'
 ```
 
 **Verify a ship against App Store Connect, not the script's output.** This pipeline has

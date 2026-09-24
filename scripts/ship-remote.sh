@@ -12,6 +12,9 @@ git pull --ff-only origin main
 ./scripts/ship.sh beta
 build=$(grep -m1 -o "CURRENT_PROJECT_VERSION = [0-9.]*" Calarm.xcodeproj/project.pbxproj | cut -d" " -f3)
 git commit -qm "Stamp build $build (uploaded to TestFlight)" Calarm.xcodeproj/project.pbxproj
+# The build takes minutes; if main moved meanwhile, replay the stamp on top rather than
+# leave the mini diverged, which would block the next run'"'"'s fast-forward pull.
+git pull -q --rebase origin main
 git push -q origin main
 echo "Shipped build $build and pushed its stamp to main"'
 

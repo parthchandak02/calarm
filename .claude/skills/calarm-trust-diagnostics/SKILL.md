@@ -18,7 +18,9 @@ description: >-
 
 ## Test alarm
 
-Settings → Diagnostics → **Test alarm (8 seconds)**. Device only; Simulator shows explanation.
+Settings → Status → **Test alarm (8 seconds)**. Device only; Simulator shows explanation.
+Uses the current sound mode (silent + vibrate in vibrate mode) but has **no ringing
+fallback**, so it tests vibration, not the fallback.
 
 ## Logging
 

@@ -170,4 +170,11 @@ final class ScheduleEventSourcePolicyTests: XCTestCase {
         let events = [listed("A", minute: 100, busy: false), listed("B", minute: 100, busy: false)]
         XCTAssertEqual(ScheduleEventSourcePolicy.hidingBusyTwins(events).count, 2)
     }
+
+    func testBusyBlockThatRingsStaysWhenItsTwinIsSilent() {
+        var titled = listed("AI Assembly", minute: 100, busy: false)
+        titled.alarmOffsets = []
+        let events = [listed("Busy", minute: 100, busy: true), titled]
+        XCTAssertEqual(ScheduleEventSourcePolicy.hidingBusyTwins(events).count, 2)
+    }
 }

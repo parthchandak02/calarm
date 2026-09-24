@@ -57,10 +57,19 @@ enum ScheduleEventSourcePolicy {
 
     /// Drops busy-only placeholders that start in the same minute as a titled event: the
     /// same meeting seen through a free/busy share. Only busy-only events are ever dropped,
-    /// and only when something titled is there to take their place.
+    /// and a busy block that would ring stays unless its titled twin rings too, so the list
+    /// never hides the one event responsible for an alarm.
     nonisolated static func hidingBusyTwins(_ events: [ScheduleEvent]) -> [ScheduleEvent] {
-        let titledMinutes = Set(events.filter { !$0.isBusyOnly }.map(startMinute))
-        return events.filter { !$0.isBusyOnly || !titledMinutes.contains(startMinute(of: $0)) }
+        let titled = events.filter { !$0.isBusyOnly }
+        let titledMinutes = Set(titled.map(startMinute))
+        let ringingTitledMinutes = Set(titled.filter(\.alarmEnabled).map(startMinute))
+        return events.filter { event in
+            guard event.isBusyOnly else { return true }
+            let minute = startMinute(of: event)
+            let twinRings = ringingTitledMinutes.contains(minute)
+            let hideable = event.alarmEnabled ? twinRings : titledMinutes.contains(minute)
+            return !hideable
+        }
     }
 
     nonisolated private static func startMinute(of event: ScheduleEvent) -> Int {
