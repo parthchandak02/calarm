@@ -64,19 +64,20 @@ nothing. The owner types the password; do not handle it.
 ./scripts/ship-remote.sh
 ```
 
-Runs on the mini, in one SSH session: unlock keychain (owner types it) → reset
-`project.pbxproj` → `git pull --ff-only` → `ship.sh beta` (doctor → unit tests →
-`./release.sh` → Internal Testing group) → commit `Stamp build N (uploaded to TestFlight)`
-and push it to `main`. Then it pulls that commit locally. The owner may paste the same steps
-as a one-line `ssh -t` instead; the stamp commit must still happen.
+One command, the owner types only the keychain password. In one SSH session on the mini:
+unlock → discard uncommitted changes → `git pull --ff-only` → `scripts/ship-on-mini.sh`:
+`ship.sh beta` (doctor → tests → `./release.sh` → Internal Testing group) → poll ASC until
+`IN_BETA_TESTING` → `scripts/record-build.sh N` (STATUS *Latest build*, top `## Unreleased`
+CHANGELOG heading → `## Build N`) → commit `Ship build N to TestFlight` → rebase → push.
+Then it pulls here. Timed log in `build/logs/ship-*.log`. Never hand the owner an inline
+`ssh` one-liner.
 
 **Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the
 ASC API key auth `release.sh` passes to xcodebuild, and fails with *No Accounts / No signing
 certificate "iOS Distribution" found*. See the `calarm-testflight-fastlane` skill.
 
-After it finishes, verify `IN_BETA_TESTING` in ASC (below), then commit
-`Record build N as in beta testing` updating STATUS.md *Latest build* and the CHANGELOG
-heading.
+No follow-up commit is needed; the script verifies ASC and records the build itself.
+If it stops at step 2 with a non-`IN_BETA_TESTING` state, see *Verify on ASC* below.
 
 ### Update release notes
 

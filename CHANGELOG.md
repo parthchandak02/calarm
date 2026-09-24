@@ -39,6 +39,10 @@ A three-way audit (docs, code review, build/config) after the day's builds.
 - `ship.sh all` still used the broken fastlane `upload_beta` lane; it now uses `release.sh`.
 - `ship-remote.sh` rebases the stamp commit before pushing, so a push to `main` during the
   build no longer strands the mini.
+- **Shipping is one command, `./scripts/ship-remote.sh`.** New `scripts/ship-on-mini.sh`
+  waits for `IN_BETA_TESTING` in ASC before recording anything, and `scripts/record-build.sh`
+  writes the build into STATUS and CHANGELOG, so no agent follow-up is needed. Timed steps,
+  full log in `build/logs/`.
 
 ### Added
 

@@ -70,9 +70,13 @@ its own security session. The owner types the password; do not handle it.
 ./scripts/ship-remote.sh
 ```
 
-It pulls `main` on the mini, ships, then commits the build stamp and pushes it back to
-`main`, so every build number lands on the one branch. Work happens on `main`; do not
-open side branches for ship work.
+**This is the whole ship.** The owner types the mini's keychain password; everything else
+is scripted: pull on the mini → `ship.sh beta` (doctor, tests, archive, upload, tester group)
+→ wait for `IN_BETA_TESTING` in ASC → `record-build.sh` updates STATUS *Latest build* and
+turns the top `## Unreleased` CHANGELOG heading into `## Build N` → commit and push → pull
+back here. A timed log lands in `build/logs/`. Hand the owner exactly `./scripts/ship-remote.sh`,
+never an inline `ssh` one-liner. Work happens on `main`; no side branches. Before shipping,
+title pending CHANGELOG work `## Unreleased — YYYY-MM-DD` so it gets the build number.
 
 **`macmini-remote` runs Xcode 26 (Swift 6.3); this Mac runs Xcode 27 (Swift 6.4).** An iOS 27
 SDK API compiles here and breaks the release build there. Wrap such code in
