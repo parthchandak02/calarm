@@ -30,6 +30,9 @@ enum CalarmPersistence {
         /// Intended ring time of each countdown-mode alarm, keyed by alarm UUID. AlarmKit
         /// keeps no fire date for an alarm without a schedule.
         static let countdownTargets = "calarm.alarm.countdownTargets"
+        /// Title each alarm was scheduled with, keyed by alarm UUID. AlarmKit does not expose
+        /// an alarm's attributes, and a grouped alarm's title changes with its members.
+        static let alarmTitles = "calarm.alarm.titles"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.

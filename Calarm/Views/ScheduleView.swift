@@ -402,14 +402,14 @@ private struct EventRow: View {
                         .multilineTextAlignment(.leading)
 
                     HStack(spacing: 8) {
-                        if event.alarmEnabled {
-                            Text(event.alarmSummary)
-                                .font(CalarmFont.caption)
-                                .foregroundStyle(theme.accentMuted)
-                        } else {
+                        if !event.alarmEnabled {
                             Text("Alarm off")
                                 .font(CalarmFont.caption)
                                 .foregroundStyle(theme.textSecondary)
+                        } else if !event.isReminderPassed {
+                            Text(event.alarmSummary)
+                                .font(CalarmFont.caption)
+                                .foregroundStyle(theme.accentMuted)
                         }
 
                         if event.isReminderPassed {

@@ -22,12 +22,6 @@ enum AlarmSchedulingHelpers {
         "\(occurrenceID).\(offsetRawValue)"
     }
 
-    /// Stagger alarms that share the same fire date by 2s per index (deterministic).
-    static func staggeredFireDate(base: Date, collisionIndex: Int) -> Date {
-        guard collisionIndex > 0 else { return base }
-        return base.addingTimeInterval(TimeInterval(collisionIndex * 2))
-    }
-
     /// Stable fingerprint of desired AlarmKit schedules (occurrence, offset, fire time, snooze, accent).
     static func schedulingFingerprint(
         instances: [(occurrenceID: String, offsetRawValue: String, fireDate: Date)],
@@ -47,8 +41,8 @@ enum AlarmSchedulingHelpers {
         ]).joined(separator: "|")
     }
 
-    /// Window within which an orphaned alarm counts as ringing alongside a managed one. Wide
-    /// enough to cover the collision stagger, far narrower than the gap between two offsets.
+    /// Window within which an orphaned alarm counts as ringing alongside a managed one. Narrower
+    /// than the one-minute gap between any two distinct alarm times.
     static let duplicateFireTolerance: TimeInterval = 30
 
     /// True when `fireDate` lands on top of an alarm that is still managed. An orphan left by
@@ -56,20 +50,6 @@ enum AlarmSchedulingHelpers {
     /// ringing a second time, so it is safe to cancel: the managed alarm still rings.
     static func isDuplicateFire(_ fireDate: Date, of managedFireDates: [Date]) -> Bool {
         managedFireDates.contains { abs($0.timeIntervalSince(fireDate)) <= duplicateFireTolerance }
-    }
-
-    static func collisionGroupsSortedByFireDate(
-        instances: [(occurrenceID: String, offsetRawValue: String, fireDate: Date)]
-    ) -> [(occurrenceID: String, offsetRawValue: String, fireDate: Date)] {
-        let sorted = instances.sorted { $0.fireDate < $1.fireDate }
-        var counts: [TimeInterval: Int] = [:]
-        return sorted.map { item in
-            let key = item.fireDate.timeIntervalSince1970
-            let index = counts[key, default: 0]
-            counts[key] = index + 1
-            let adjusted = staggeredFireDate(base: item.fireDate, collisionIndex: index)
-            return (item.occurrenceID, item.offsetRawValue, adjusted)
-        }
     }
 
     /// True when a fixed-schedule alarm's fire time has elapsed and it should be cancelled.

@@ -53,7 +53,12 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 
 ## Collision policy
 
-`AlarmSchedulingHelpers.collisionGroupsSortedByFireDate` staggers duplicate fire times by 2s.
+`AlarmGrouping` merges every alarm firing in the same minute into **one** AlarmKit alarm,
+carried by the primary member's stable ID (titled events lead "Busy" busy-only blocks) and
+titled "First + N more". The other members' IDs fall out of the desired set and are cancelled
+by `cancelUndesiredAlarms`. AlarmKit exposes no attributes, so the title each alarm was
+scheduled with is stored under `CalarmPersistence.Key.alarmTitles` and `needsReschedule`
+compares it. (This replaced a 2s stagger that rang each same-time event back to back.)
 
 ## Stable IDs
 

@@ -22,6 +22,7 @@ final class AlarmScheduler {
         let event: ScheduleEvent
         let alarm: ScheduledAlarm
         let fireDate: Date
+        let title: String
         let withLiveActivity: Bool
         let alarmID: UUID
 
@@ -45,6 +46,7 @@ final class AlarmScheduler {
         let currentAlarms = (try? AlarmManager.shared.alarms) ?? []
         // AlarmKit deletes spent alarms silently, so their stored targets go with them here.
         Self.pruneCountdownTargets(keeping: Set(currentAlarms.map(\.id)))
+        Self.pruneTitles(keeping: Set(currentAlarms.map(\.id)))
 
         for instance in desired {
             guard !Task.isCancelled else { break }
@@ -69,6 +71,7 @@ final class AlarmScheduler {
                 instance.event,
                 offset: instance.offset,
                 fireDate: instance.fireDate,
+                title: instance.title,
                 withLiveActivity: instance.withLiveActivity,
                 snoozeSeconds: snoozeSeconds
             )
@@ -117,6 +120,7 @@ final class AlarmScheduler {
         do {
             try AlarmManager.shared.cancel(id: id)
             Self.setCountdownTarget(nil, for: id)
+            Self.setTitle(nil, for: id)
             AlarmJournalStore.record(.cancelled, alarmID: id.uuidString, occurrenceID: occurrenceID)
             return true
         } catch {
@@ -291,7 +295,7 @@ final class AlarmScheduler {
             AlarmSchedulingHelpers.liveActivityKey(occurrenceID: $0.occurrenceID, offsetRawValue: $0.offset.rawValue)
         }
         let rows = desired.map {
-            ($0.occurrenceID, $0.offset.rawValue, $0.fireDate)
+            ("\($0.occurrenceID)|\($0.title)", $0.offset.rawValue, $0.fireDate)
         }
         let accentRaw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent) ?? CalarmAccent.orange.rawValue
         let liveActivityEvent = desired.first(where: \.withLiveActivity)?.event
@@ -319,49 +323,38 @@ final class AlarmScheduler {
     }
 
     private func buildDesiredInstances(from events: [ScheduleEvent]) -> [DesiredInstance] {
-        let rawInstances = events.flatMap { event in
-            event.scheduledAlarms.map { alarm in
-                (
-                    event: event,
-                    alarm: alarm,
-                    occurrenceID: event.id,
-                    offsetRaw: alarm.offset.rawValue,
-                    fireDate: alarm.fireDate
-                )
-            }
-        }
-
-        let staggered = AlarmSchedulingHelpers.collisionGroupsSortedByFireDate(
-            instances: rawInstances.map { ($0.occurrenceID, $0.offsetRaw, $0.fireDate) }
+        let sources = events.flatMap { event in event.scheduledAlarms.map { (event: event, alarm: $0) } }
+        let sourceByKey = Dictionary(
+            sources.map {
+                (AlarmSchedulingHelpers.liveActivityKey(occurrenceID: $0.event.id, offsetRawValue: $0.alarm.offset.rawValue), $0)
+            },
+            uniquingKeysWith: { first, _ in first }
         )
 
-        let instanceByKey = Dictionary(
-            uniqueKeysWithValues: rawInstances.map {
-                (AlarmSchedulingHelpers.liveActivityKey(occurrenceID: $0.occurrenceID, offsetRawValue: $0.offsetRaw), $0)
-            }
-        )
-
-        let orderedInstances: [(event: ScheduleEvent, alarm: ScheduledAlarm, fireDate: Date)] = staggered.compactMap { row in
-            let key = AlarmSchedulingHelpers.liveActivityKey(occurrenceID: row.occurrenceID, offsetRawValue: row.offsetRawValue)
-            guard let source = instanceByKey[key] else { return nil }
-            return (source.event, source.alarm, row.fireDate)
-        }
-
-        let nextLiveActivityKey = orderedInstances.first.map {
-            AlarmSchedulingHelpers.liveActivityKey(occurrenceID: $0.event.id, offsetRawValue: $0.alarm.offset.rawValue)
-        }
-
-        return orderedInstances.map { instance in
-            let key = AlarmSchedulingHelpers.liveActivityKey(
-                occurrenceID: instance.event.id,
-                offsetRawValue: instance.alarm.offset.rawValue
+        let groups = AlarmGrouping.groups(sources.map {
+            AlarmGrouping.Member(
+                occurrenceID: $0.event.id,
+                offsetRawValue: $0.alarm.offset.rawValue,
+                fireDate: $0.alarm.fireDate,
+                title: $0.event.title,
+                startDate: $0.event.startDate,
+                isBusyOnly: $0.event.isBusyOnly
             )
+        })
+
+        return groups.enumerated().compactMap { index, group in
+            let key = AlarmSchedulingHelpers.liveActivityKey(
+                occurrenceID: group.primary.occurrenceID,
+                offsetRawValue: group.primary.offsetRawValue
+            )
+            guard let source = sourceByKey[key] else { return nil }
             return DesiredInstance(
-                event: instance.event,
-                alarm: instance.alarm,
-                fireDate: instance.fireDate,
-                withLiveActivity: key == nextLiveActivityKey,
-                alarmID: stableAlarmID(for: instance.event.id, offset: instance.alarm.offset)
+                event: source.event,
+                alarm: source.alarm,
+                fireDate: group.fireDate,
+                title: group.title,
+                withLiveActivity: index == 0,
+                alarmID: stableAlarmID(for: source.event.id, offset: source.alarm.offset)
             )
         }
     }
@@ -381,6 +374,8 @@ final class AlarmScheduler {
 
         guard let scheduledDate = intendedFireDate(for: existing) else { return true }
         if abs(scheduledDate.timeIntervalSince(instance.fireDate)) > 0.5 { return true }
+
+        if Self.title(for: existing.id) != instance.title { return true }
 
         let isCountdownMode = existing.schedule == nil
         if instance.withLiveActivity != isCountdownMode { return true }
@@ -450,6 +445,7 @@ final class AlarmScheduler {
         do {
             try AlarmManager.shared.cancel(id: alarm.id)
             Self.setCountdownTarget(nil, for: alarm.id)
+            Self.setTitle(nil, for: alarm.id)
             return true
         } catch {
             SchedulerLog.warning("cancel failed \(alarm.id): \(error.localizedDescription)")
@@ -493,6 +489,36 @@ final class AlarmScheduler {
         }
     }
 
+    private static func titles() -> [String: String] {
+        CalarmPersistence.decode([String: String].self, forKey: CalarmPersistence.Key.alarmTitles) ?? [:]
+    }
+
+    private static func title(for id: UUID) -> String? {
+        titles()[id.uuidString]
+    }
+
+    private static func setTitle(_ title: String?, for id: UUID) {
+        var all = titles()
+        guard all[id.uuidString] != title else { return }
+        all[id.uuidString] = title
+        saveTitles(all)
+    }
+
+    private static func pruneTitles(keeping ids: Set<UUID>) {
+        let all = titles()
+        let kept = all.filter { key, _ in UUID(uuidString: key).map(ids.contains) ?? false }
+        guard kept.count != all.count else { return }
+        saveTitles(kept)
+    }
+
+    private static func saveTitles(_ titles: [String: String]) {
+        if titles.isEmpty {
+            CalarmPersistence.remove(forKey: CalarmPersistence.Key.alarmTitles)
+        } else {
+            CalarmPersistence.encode(titles, forKey: CalarmPersistence.Key.alarmTitles)
+        }
+    }
+
     private static func pruneCountdownTargets(keeping ids: Set<UUID>) {
         let targets = countdownTargets()
         let kept = targets.filter { key, _ in UUID(uuidString: key).map(ids.contains) ?? false }
@@ -515,6 +541,7 @@ final class AlarmScheduler {
         _ event: ScheduleEvent,
         offset: AlarmOffsetOption,
         fireDate: Date,
+        title: String,
         withLiveActivity: Bool,
         snoozeSeconds: TimeInterval
     ) async -> ScheduleOutcome {
@@ -528,7 +555,7 @@ final class AlarmScheduler {
             let stopButton = AlarmButton(text: "Dismiss", textColor: .white, systemImageName: "stop.circle")
             let snoozeButton = AlarmButton(text: "Snooze", textColor: .white, systemImageName: "zzz")
             let alertPresentation = AlarmPresentation.Alert(
-                title: LocalizedStringResource(stringLiteral: event.title),
+                title: LocalizedStringResource(stringLiteral: title),
                 stopButton: stopButton,
                 secondaryButton: snoozeButton,
                 secondaryButtonBehavior: .countdown
@@ -542,7 +569,7 @@ final class AlarmScheduler {
                 presentation = AlarmPresentation(
                     alert: alertPresentation,
                     countdown: AlarmPresentation.Countdown(
-                        title: LocalizedStringResource(stringLiteral: event.title),
+                        title: LocalizedStringResource(stringLiteral: title),
                         pauseButton: pauseButton
                     ),
                     paused: AlarmPresentation.Paused(
@@ -558,7 +585,7 @@ final class AlarmScheduler {
             let attributes = AlarmAttributes<AlarmAppMetadata>(
                 presentation: presentation,
                 metadata: AlarmAppMetadata(
-                    title: event.title,
+                    title: title,
                     offsetLabel: offset.title,
                     eventID: event.id,
                     accentRawValue: accentRaw,
@@ -607,6 +634,7 @@ final class AlarmScheduler {
 
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
             Self.setCountdownTarget(withLiveActivity ? fireDate : nil, for: alarmID)
+            Self.setTitle(title, for: alarmID)
             AlarmJournalStore.record(
                 .scheduled,
                 alarmID: idString,

@@ -49,8 +49,13 @@ final class ScheduleStore: ObservableObject {
         googleCalendarService.lastSyncError
     }
 
+    /// What the schedule shows. `events` stays complete, so a hidden busy block still rings.
+    var listedEvents: [ScheduleEvent] {
+        ScheduleEventSourcePolicy.hidingBusyTwins(events)
+    }
+
     var nextUpcomingAlarm: ScheduleEvent? {
-        events
+        listedEvents
             .filter { $0.alarmEnabled && $0.isEventUpcoming }
             .min { lhs, rhs in
                 let lhsDate = lhs.nextAlarmDate ?? lhs.startDate
@@ -61,7 +66,7 @@ final class ScheduleStore: ObservableObject {
 
     var groupedDays: [DaySection] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: events) { event in
+        let grouped = Dictionary(grouping: listedEvents) { event in
             calendar.startOfDay(for: event.startDate)
         }
 
@@ -196,7 +201,7 @@ final class ScheduleStore: ObservableObject {
                         location: event.location,
                         calendarID: "",
                         calendarTitle: event.calendarTitle,
-                        isBusyOnly: false,
+                        isBusyOnly: event.isBusyOnly,
                         occurrenceID: event.id
                     )
                 }
@@ -215,7 +220,8 @@ final class ScheduleStore: ObservableObject {
                         calendarTitle: googleEvent.calendarTitle,
                         source: .google,
                         calendarColorHex: nil,
-                        alarmOffsets: preferences.alarmOffsets(for: googleEvent.occurrenceID)
+                        alarmOffsets: preferences.alarmOffsets(for: googleEvent.occurrenceID),
+                        isBusyOnly: googleEvent.isBusyOnly
                     )
                 })
             }

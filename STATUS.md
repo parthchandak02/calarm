@@ -28,10 +28,14 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Ship and confirm the double-alarm fix.** Duplicate orphaned alarms (see CHANGELOG, build
-20260924.1039) are now cancelled. After installing, open CALarm once so it reconciles alarms
-already on the phone, then check the next meeting rings once. If it still rings twice,
-the two alarms are not orphan-plus-replacement and the alarm journal is the next place to look.
+**Ship and confirm one ring per minute.** After installing, open CALarm once. A minute with
+several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, titled
+"<event> + N more", and the list should no longer show a "Busy" block next to a titled event
+at the same time.
+
+[redacted]
+through the personal Google account. The owner chose to keep it on and check policy
+themselves (2026-09-24). Do not file anything for them.
 
 **0. Measure AlarmKit's countdown timing (build 20260923.1106 or later).** Keep CALarm open,
 tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS

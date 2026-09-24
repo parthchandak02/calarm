@@ -68,6 +68,12 @@ Two consequences:
 **Do not propose reading the work calendar from the phone without the owner clearing it
 [redacted]
 
+**Open question (2026-09-24):** the owner's `work account` calendar is shared into the
+personal Google account as free/busy, and CALarm reads those busy blocks through Google sign-in
+[redacted]
+[redacted]
+set it and do not re-raise it.
+
 What *is* sanctioned: the Mac. predecessor app on macOS reads the work calendar through `gws`,
 [redacted]
 may use. `gws` is a Node.js CLI and **cannot run on iOS** under any configuration.

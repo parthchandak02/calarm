@@ -17,6 +17,8 @@ struct ScheduleEvent: Identifiable, Equatable {
     let calendarColorHex: String?
 
     var alarmOffsets: [AlarmOffsetOption]
+    /// From a calendar shared as free/busy only, so the title is a placeholder.
+    var isBusyOnly: Bool = false
 
     var alarmEnabled: Bool {
         !alarmOffsets.isEmpty

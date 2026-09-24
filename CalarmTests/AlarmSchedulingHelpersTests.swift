@@ -7,18 +7,6 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         XCTAssertEqual(a, b)
     }
 
-    func testStaggerCollidingFireDates() {
-        let base = Date(timeIntervalSince1970: 1_800_000_000)
-        let instances = [
-            (occurrenceID: "a", offsetRawValue: "tenMinutes", fireDate: base),
-            (occurrenceID: "b", offsetRawValue: "fiveMinutes", fireDate: base)
-        ]
-        let staggered = AlarmSchedulingHelpers.collisionGroupsSortedByFireDate(instances: instances)
-        XCTAssertEqual(staggered.count, 2)
-        XCTAssertEqual(staggered[0].fireDate, base)
-        XCTAssertEqual(staggered[1].fireDate, base.addingTimeInterval(2))
-    }
-
     func testSchedulingFingerprintIncludesLiveActivityKey() {
         let base = Date(timeIntervalSince1970: 1_800_000_000)
         let instances = [

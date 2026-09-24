@@ -15,6 +15,28 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Changed
+
+- **Alarms in the same minute ring once.** The same meeting reaches the app through several
+  calendars under different titles — "Busy" from the `work account` free/busy share next
+  to the titled invite, a flight from both Flighty and Gmail — so title-and-minute dedup never
+  paired them, and each rang 2s after the last. `AlarmGrouping` now merges every alarm firing
+  in the same minute into one AlarmKit alarm titled "First + N more"; titled events lead busy
+  blocks. No event is hidden from alarming. The 2s collision stagger is gone. Each alarm's
+  scheduled title is stored (`Key.alarmTitles`) so a group gaining a member reschedules.
+- **The schedule hides a busy-only block when a titled event starts the same minute.** List
+  only; the block still counts towards the grouped alarm. `ScheduleEvent.isBusyOnly` is new.
+
+### Fixed
+
+- A row whose reminder had passed said "Reminder passed" twice.
+
+`CalarmTests/AlarmGroupingTests.swift` — 4 tests; `ScheduleEventSourcePolicyTests` — 3 more.
+
+---
+
 ## Build 20260924.1039 — 2026-09-24
 
 ### Fixed

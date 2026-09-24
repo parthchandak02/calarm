@@ -139,4 +139,35 @@ final class ScheduleEventSourcePolicyTests: XCTestCase {
         XCTAssertEqual(merged.count, 1)
         XCTAssertEqual(merged.first?.source, .eventKit)
     }
+
+    private func listed(_ title: String, minute: Int, busy: Bool) -> ScheduleEvent {
+        let start = Date(timeIntervalSince1970: TimeInterval(minute * 60))
+        return ScheduleEvent(
+            id: "\(title).\(minute)",
+            title: title,
+            startDate: start,
+            endDate: start.addingTimeInterval(1800),
+            location: nil,
+            calendarTitle: "Cal",
+            source: .google,
+            calendarColorHex: nil,
+            alarmOffsets: [.oneMinute],
+            isBusyOnly: busy
+        )
+    }
+
+    func testBusyTwinOfTitledEventIsHidden() {
+        let events = [listed("Busy", minute: 100, busy: true), listed("AI Assembly", minute: 100, busy: false)]
+        XCTAssertEqual(ScheduleEventSourcePolicy.hidingBusyTwins(events).map(\.title), ["AI Assembly"])
+    }
+
+    func testLoneBusyBlockStays() {
+        let events = [listed("Busy", minute: 100, busy: true), listed("Lunch", minute: 101, busy: false)]
+        XCTAssertEqual(ScheduleEventSourcePolicy.hidingBusyTwins(events).count, 2)
+    }
+
+    func testTitledEventsAreNeverHidden() {
+        let events = [listed("A", minute: 100, busy: false), listed("B", minute: 100, busy: false)]
+        XCTAssertEqual(ScheduleEventSourcePolicy.hidingBusyTwins(events).count, 2)
+    }
 }
