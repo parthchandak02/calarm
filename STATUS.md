@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260924.1039` — `VALID`, `IN_BETA_TESTING` (double-alarm fix) |
+| **Latest build** | `20260924.1342` — `VALID`, `IN_BETA_TESTING` (one ring per minute) |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |

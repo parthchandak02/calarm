@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-24
+## Build 20260924.1342 — 2026-09-24
 
 ### Changed
 
@@ -34,6 +34,7 @@ this file exists so an agent can see the shape of the project's history without 
 - A row whose reminder had passed said "Reminder passed" twice.
 
 `CalarmTests/AlarmGroupingTests.swift` — 4 tests; `ScheduleEventSourcePolicyTests` — 3 more.
+`259336c`. Shipping now commits the build stamp to `main` (`scripts/ship-remote.sh`, `db57cd2`).
 
 ---
 
