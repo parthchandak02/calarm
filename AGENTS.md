@@ -67,15 +67,16 @@ The keychain must be unlocked **in the same SSH session as the build** — each 
 its own security session. The owner types the password; do not handle it.
 
 ```bash
-./scripts/ship-remote.sh
+ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
 ```
 
-**This is the whole ship.** The owner types the mini's keychain password; everything else
-is scripted: pull on the mini → `ship.sh beta` (doctor, tests, archive, upload, tester group)
-→ wait for `IN_BETA_TESTING` in ASC → `record-build.sh` updates STATUS *Latest build* and
-turns the top `## Unreleased` CHANGELOG heading into `## Build N` → commit and push → pull
-back here. A timed log lands in `build/logs/`. Hand the owner exactly `./scripts/ship-remote.sh`,
-never an inline `ssh` one-liner. Work happens on `main`; no side branches. Before shipping,
+**This is the whole ship, and the exact command to hand the owner** — nothing longer, and no
+wrapper script on this Mac. `scripts/ship-on-mini.sh` lives in the repo and runs on the mini:
+it updates itself from `main`, prompts for the keychain password (the owner types it), runs
+`ship.sh beta` (doctor, tests, archive, upload, tester group), waits for `IN_BETA_TESTING` in
+ASC, runs `record-build.sh` (STATUS *Latest build*; the top `## Unreleased` CHANGELOG heading
+becomes `## Build N`), commits and pushes. Timed log in the mini's `build/logs/`. Afterwards
+`git pull` here. Work happens on `main`; no side branches. Before shipping,
 title pending CHANGELOG work `## Unreleased — YYYY-MM-DD` so it gets the build number.
 
 **`macmini-remote` runs Xcode 26 (Swift 6.3); this Mac runs Xcode 27 (Swift 6.4).** An iOS 27

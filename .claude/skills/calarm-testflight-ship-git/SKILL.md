@@ -61,15 +61,15 @@ each `ssh` gets its own security session, so unlocking in a separate invocation 
 nothing. The owner types the password; do not handle it.
 
 ```bash
-./scripts/ship-remote.sh
+ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
 ```
 
 One command, the owner types only the keychain password. In one SSH session on the mini:
-unlock → discard uncommitted changes → `git pull --ff-only` → `scripts/ship-on-mini.sh`:
-`ship.sh beta` (doctor → tests → `./release.sh` → Internal Testing group) → poll ASC until
+`scripts/ship-on-mini.sh` discards uncommitted changes → `git pull --ff-only` → re-runs its
+updated self → keychain prompt → `ship.sh beta` (doctor → tests → `./release.sh` → Internal Testing group) → poll ASC until
 `IN_BETA_TESTING` → `scripts/record-build.sh N` (STATUS *Latest build*, top `## Unreleased`
 CHANGELOG heading → `## Build N`) → commit `Ship build N to TestFlight` → rebase → push.
-Then it pulls here. Timed log in `build/logs/ship-*.log`. Never hand the owner an inline
+Then `git pull` here. Timed log in the mini's `build/logs/ship-*.log`. Never hand the owner an inline
 `ssh` one-liner.
 
 **Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the

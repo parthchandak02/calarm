@@ -1,11 +1,35 @@
 #!/usr/bin/env bash
-# Runs on macmini-remote with the keychain already unlocked; started by ship-remote.sh.
-# Ships, verifies the build actually reached testers, records it in the docs, and pushes.
+# The whole TestFlight ship, run on macmini-remote (the only Mac with the signing identity
+# and ASC key). From anywhere:
+#
+#   ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
+#
+# The one manual step is the keychain password prompt; it has to be typed in the same SSH
+# session as the build. The script updates itself from main first, then ships, waits for
+# IN_BETA_TESTING, records the build in STATUS and CHANGELOG, and pushes.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Phase one: bring the checkout to origin/main, then re-run the updated copy of this file,
+# so a ship always uses the script that is on main. Uncommitted changes on the mini are only
+# ever a stamp from a failed run.
+if [[ "${1:-}" != --updated ]]; then
+  git reset -q --hard HEAD
+  git pull -q --ff-only origin main
+  exec "$0" --updated
+fi
+
+mkdir -p build/logs
+log="build/logs/ship-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$log") 2>&1
+
 started=$(date +%s)
 step() { printf '\n==> [%s +%ss] %s\n' "$(date +%H:%M:%S)" "$(( $(date +%s) - started ))" "$*"; }
+
+echo "Shipping $(git log -1 --format='%h %s') — full log: ~/projects/calarm/$log"
+
+step "0/4 Unlock the login keychain (type the Mac mini password)"
+security unlock-keychain ~/Library/Keychains/login.keychain-db
 
 step "1/4 Ship: doctor, unit tests, archive, upload, Internal Testing group"
 ./scripts/ship.sh beta

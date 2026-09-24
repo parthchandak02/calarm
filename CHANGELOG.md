@@ -39,10 +39,11 @@ A three-way audit (docs, code review, build/config) after the day's builds.
 - `ship.sh all` still used the broken fastlane `upload_beta` lane; it now uses `release.sh`.
 - `ship-remote.sh` rebases the stamp commit before pushing, so a push to `main` during the
   build no longer strands the mini.
-- **Shipping is one command, `./scripts/ship-remote.sh`.** New `scripts/ship-on-mini.sh`
-  waits for `IN_BETA_TESTING` in ASC before recording anything, and `scripts/record-build.sh`
+- **Shipping is one command, `ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'`.** `scripts/ship-on-mini.sh` updates
+  itself from `main`, prompts for the keychain, ships, waits for `IN_BETA_TESTING` in ASC before recording anything, and `scripts/record-build.sh`
   writes the build into STATUS and CHANGELOG, so no agent follow-up is needed. Timed steps,
-  full log in `build/logs/`.
+  full log in the mini's `build/logs/`. The short-lived local wrapper `scripts/ship-remote.sh`
+  is gone.
 
 ### Added
 
@@ -59,7 +60,7 @@ A three-way audit (docs, code review, build/config) after the day's builds.
 ### Changed
 
 - Docs and skills brought in line with the day's code: the ship flow is
-  `./scripts/ship-remote.sh`, orphan and signature semantics, vibrate-mode known problems,
+  `scripts/ship-on-mini.sh`, orphan and signature semantics, vibrate-mode known problems,
   Google sign-in confirmed on device.
 
 `CalarmTests` — 102 passing (4 new).
