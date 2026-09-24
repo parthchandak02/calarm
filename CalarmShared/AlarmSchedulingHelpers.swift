@@ -18,6 +18,12 @@ enum AlarmSchedulingHelpers {
         ))
     }
 
+    /// The ringing alarm that follows a vibrating one. Derived from the vibrating alarm's ID
+    /// so the stop and snooze intents can cancel it knowing only that ID.
+    static func fallbackAlarmID(for alarmID: UUID) -> UUID {
+        stableAlarmID(occurrenceID: alarmID.uuidString, offsetRawValue: "fallback")
+    }
+
     static func liveActivityKey(occurrenceID: String, offsetRawValue: String) -> String {
         "\(occurrenceID).\(offsetRawValue)"
     }

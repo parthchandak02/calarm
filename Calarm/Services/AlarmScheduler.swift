@@ -3,6 +3,7 @@
 //  Calarm
 //
 
+import ActivityKit
 import AlarmKit
 import Foundation
 import SwiftUI
@@ -25,6 +26,11 @@ final class AlarmScheduler {
         let title: String
         let withLiveActivity: Bool
         let alarmID: UUID
+        let vibrates: Bool
+
+        /// Title plus sound: what AlarmKit will not report back, so `needsReschedule` compares
+        /// the stored copy.
+        var signature: String { "\(title)|\(vibrates ? "vibrate" : "ring")" }
 
         var occurrenceID: String { event.id }
         var offset: AlarmOffsetOption { alarm.offset }
@@ -56,7 +62,7 @@ final class AlarmScheduler {
             }
             if let existing, isAlerting(existing) { continue }
 
-            let cancelled = await cancel(occurrenceID: instance.occurrenceID, offset: instance.offset)
+            let cancelled = cancel(alarmID: instance.alarmID, occurrenceID: instance.occurrenceID)
             if !cancelled, existing != nil {
                 failures.append(ScheduleFailure(
                     occurrenceID: instance.occurrenceID,
@@ -67,14 +73,7 @@ final class AlarmScheduler {
                 continue
             }
 
-            let outcome = await schedule(
-                instance.event,
-                offset: instance.offset,
-                fireDate: instance.fireDate,
-                title: instance.title,
-                withLiveActivity: instance.withLiveActivity,
-                snoozeSeconds: snoozeSeconds
-            )
+            let outcome = await schedule(instance, snoozeSeconds: snoozeSeconds)
             switch outcome {
             case .scheduled:
                 scheduledCount += 1
@@ -117,6 +116,12 @@ final class AlarmScheduler {
     @discardableResult
     func cancel(occurrenceID: String, offset: AlarmOffsetOption) async -> Bool {
         let id = stableAlarmID(for: occurrenceID, offset: offset)
+        try? AlarmManager.shared.cancel(id: AlarmSchedulingHelpers.fallbackAlarmID(for: id))
+        return cancel(alarmID: id, occurrenceID: occurrenceID)
+    }
+
+    @discardableResult
+    private func cancel(alarmID id: UUID, occurrenceID: String) -> Bool {
         do {
             try AlarmManager.shared.cancel(id: id)
             Self.setCountdownTarget(nil, for: id)
@@ -124,7 +129,7 @@ final class AlarmScheduler {
             AlarmJournalStore.record(.cancelled, alarmID: id.uuidString, occurrenceID: occurrenceID)
             return true
         } catch {
-            SchedulerLog.warning("cancel failed \(occurrenceID) \(offset.rawValue): \(error.localizedDescription)")
+            SchedulerLog.warning("cancel failed \(occurrenceID) \(id): \(error.localizedDescription)")
             return false
         }
     }
@@ -166,7 +171,8 @@ final class AlarmScheduler {
                 schedule: .fixed(fireDate),
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: idString),
-                secondaryIntent: SnoozeAlarmIntent(alarmID: idString)
+                secondaryIntent: SnoozeAlarmIntent(alarmID: idString),
+                sound: alertSound(vibrates: AlarmSoundPolicy.vibratesNow)
             )
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
             AlarmJournalStore.record(.scheduled, alarmID: idString, occurrenceID: testID, intendedFire: fireDate)
@@ -302,7 +308,7 @@ final class AlarmScheduler {
         return AlarmSchedulingHelpers.schedulingFingerprint(
             instances: rows,
             nextLiveActivityKey: nextKey,
-            snoozeRawValue: String(Int(snoozeSeconds)),
+            snoozeRawValue: "\(Int(snoozeSeconds))|\(AlarmSoundPolicy.vibratesNow ? "vibrate" : "ring")",
             accentRawValue: accentRaw,
             liveActivityTintKey: liveActivityTintKey(for: liveActivityEvent, accentRaw: accentRaw)
         )
@@ -342,7 +348,8 @@ final class AlarmScheduler {
             )
         })
 
-        return groups.enumerated().compactMap { index, group in
+        let vibrates = AlarmSoundPolicy.vibratesNow
+        let primaries: [DesiredInstance] = groups.enumerated().compactMap { index, group in
             let key = AlarmSchedulingHelpers.liveActivityKey(
                 occurrenceID: group.primary.occurrenceID,
                 offsetRawValue: group.primary.offsetRawValue
@@ -354,9 +361,28 @@ final class AlarmScheduler {
                 fireDate: group.fireDate,
                 title: group.title,
                 withLiveActivity: index == 0,
-                alarmID: stableAlarmID(for: source.event.id, offset: source.alarm.offset)
+                alarmID: stableAlarmID(for: source.event.id, offset: source.alarm.offset),
+                vibrates: vibrates
             )
         }
+        guard vibrates else { return primaries }
+
+        // A fallback landing in the same minute as another alarm would ring over it; that
+        // alarm's own fallback, a minute later, covers the missed one instead.
+        let primaryMinutes = Set(primaries.map { Int($0.fireDate.timeIntervalSince1970 / 60) })
+        let fallbacks = primaries.map {
+            DesiredInstance(
+                event: $0.event,
+                alarm: $0.alarm,
+                fireDate: AlarmSoundPolicy.fallbackFireDate(after: $0.fireDate),
+                title: $0.title,
+                withLiveActivity: false,
+                alarmID: AlarmSchedulingHelpers.fallbackAlarmID(for: $0.alarmID),
+                vibrates: false
+            )
+        }
+        .filter { !primaryMinutes.contains(Int($0.fireDate.timeIntervalSince1970 / 60)) }
+        return (primaries + fallbacks).sorted { $0.fireDate < $1.fireDate }
     }
 
     private func managedAlarmIDs(for events: [ScheduleEvent]) -> Set<UUID> {
@@ -375,7 +401,7 @@ final class AlarmScheduler {
         guard let scheduledDate = intendedFireDate(for: existing) else { return true }
         if abs(scheduledDate.timeIntervalSince(instance.fireDate)) > 0.5 { return true }
 
-        if Self.title(for: existing.id) != instance.title { return true }
+        if Self.title(for: existing.id) != instance.signature { return true }
 
         let isCountdownMode = existing.schedule == nil
         if instance.withLiveActivity != isCountdownMode { return true }
@@ -457,7 +483,9 @@ final class AlarmScheduler {
         var lookup: [UUID: ScheduleEvent] = [:]
         for event in events {
             for offset in AlarmOffsetOption.schedulableOffsets {
-                lookup[stableAlarmID(for: event.id, offset: offset)] = event
+                let id = stableAlarmID(for: event.id, offset: offset)
+                lookup[id] = event
+                lookup[AlarmSchedulingHelpers.fallbackAlarmID(for: id)] = event
             }
         }
         return lookup
@@ -537,16 +565,18 @@ final class AlarmScheduler {
         return AlarmSchedulingHelpers.snoozeAwareCountdownGrace(snoozeSeconds: TimeInterval(minutes * 60))
     }
 
-    private func schedule(
-        _ event: ScheduleEvent,
-        offset: AlarmOffsetOption,
-        fireDate: Date,
-        title: String,
-        withLiveActivity: Bool,
-        snoozeSeconds: TimeInterval
-    ) async -> ScheduleOutcome {
+    private func alertSound(vibrates: Bool) -> AlertConfiguration.AlertSound {
+        vibrates ? .named(AlarmSoundPolicy.silentSoundName) : .default
+    }
+
+    private func schedule(_ instance: DesiredInstance, snoozeSeconds: TimeInterval) async -> ScheduleOutcome {
+        let event = instance.event
+        let offset = instance.offset
+        let fireDate = instance.fireDate
+        let title = instance.title
+        let withLiveActivity = instance.withLiveActivity
         guard offset.isSchedulable else { return .failed("Offset not schedulable") }
-        let alarmID = stableAlarmID(for: event.id, offset: offset)
+        let alarmID = instance.alarmID
         let idString = alarmID.uuidString
         let secondsUntilAlarm = fireDate.timeIntervalSinceNow
         guard secondsUntilAlarm > 1 else { return .tooSoon }
@@ -629,19 +659,20 @@ final class AlarmScheduler {
                 schedule: alarmSchedule,
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: idString),
-                secondaryIntent: SnoozeAlarmIntent(alarmID: idString)
+                secondaryIntent: SnoozeAlarmIntent(alarmID: idString),
+                sound: alertSound(vibrates: instance.vibrates)
             )
 
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
             Self.setCountdownTarget(withLiveActivity ? fireDate : nil, for: alarmID)
-            Self.setTitle(title, for: alarmID)
+            Self.setTitle(instance.signature, for: alarmID)
             AlarmJournalStore.record(
                 .scheduled,
                 alarmID: idString,
                 occurrenceID: event.id,
                 intendedFire: fireDate
             )
-            SchedulerLog.info("scheduled \(event.id) \(offset.rawValue) fire=\(fireDate) liveActivity=\(withLiveActivity)")
+            SchedulerLog.info("scheduled \(event.id) \(offset.rawValue) fire=\(fireDate) liveActivity=\(withLiveActivity) vibrates=\(instance.vibrates)")
             return .scheduled
         } catch {
             let message = error.localizedDescription

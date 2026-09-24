@@ -25,6 +25,11 @@ final class ScheduleStore: ObservableObject {
     @Published private(set) var deepLinkFailureMessage: String?
     @Published var showBulkEnableConfirmation = false
     @Published private(set) var eventsIdentityToken: String = ""
+    @Published private(set) var vibrateInsteadOfRinging = CalarmPersistence.bool(forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
+    @Published private(set) var focusVibrate = CalarmPersistence.bool(forKey: CalarmPersistence.Key.focusVibrate)
+
+    /// The live store, for intents that run in this process without a view to reach it.
+    private(set) static weak var active: ScheduleStore?
 
     let calendarService = CalendarService()
     let googleCalendarService = GoogleCalendarService()
@@ -81,6 +86,7 @@ final class ScheduleStore: ObservableObject {
     }
 
     init() {
+        defer { Self.active = self }
         defaultAlarmOffset = preferences.defaultAlarmOffset
         defaultSnooze = preferences.defaultSnooze
         authorizationStatus = calendarService.authorizationStatus
@@ -452,6 +458,23 @@ final class ScheduleStore: ObservableObject {
 
     func clearGoogleSyncError() {
         googleCalendarService.clearLastSyncError()
+    }
+
+    func setVibrateInsteadOfRinging(_ enabled: Bool) {
+        CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
+        vibrateInsteadOfRinging = enabled
+        lastScheduledFingerprint = nil
+        requestReschedule(force: true)
+    }
+
+    /// If iOS had terminated CALarm there is no store, and the change applies on next launch:
+    /// every reschedule reads the persisted flag.
+    static func applyFocusVibrate(_ enabled: Bool) {
+        CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.focusVibrate)
+        guard let store = active else { return }
+        store.focusVibrate = enabled
+        store.lastScheduledFingerprint = nil
+        store.requestReschedule(force: true)
     }
 
     func refreshAfterThemeChange() {

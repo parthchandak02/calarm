@@ -60,6 +60,14 @@ by `cancelUndesiredAlarms`. AlarmKit exposes no attributes, so the title each al
 scheduled with is stored under `CalarmPersistence.Key.alarmTitles` and `needsReschedule`
 compares it. (This replaced a 2s stagger that rang each same-time event back to back.)
 
+## Vibrate mode
+
+`AlarmSoundPolicy.vibratesNow` (manual setting or `CalarmFocusFilter`) makes every primary
+alarm use the silent `calarm-silence.caf` and adds a ringing fallback one minute later, ID
+`AlarmSchedulingHelpers.fallbackAlarmID(for:)`, cancelled by the stop and snooze intents.
+Fallback IDs are in `alarmEventLookup`, so they are cancelled like any undesired alarm when
+vibrate mode turns off. The stored per-alarm signature is title plus sound.
+
 ## Stable IDs
 
 `calarm.{occurrenceID}.{offset}` via `EventOccurrenceID.rawValue`.

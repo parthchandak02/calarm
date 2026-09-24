@@ -33,6 +33,10 @@ enum CalarmPersistence {
         /// Title each alarm was scheduled with, keyed by alarm UUID. AlarmKit does not expose
         /// an alarm's attributes, and a grouped alarm's title changes with its members.
         static let alarmTitles = "calarm.alarm.titles"
+        /// Settings → Alarms → Vibrate instead of ringing.
+        static let vibrateInsteadOfRinging = "calarm.alarm.vibrateInsteadOfRinging"
+        /// Set by `CalarmFocusFilter` while a Focus asks for vibration.
+        static let focusVibrate = "calarm.alarm.focusVibrate"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.

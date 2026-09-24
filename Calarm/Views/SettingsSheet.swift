@@ -146,6 +146,7 @@ struct SettingsSheet: View {
         case .alarms:
             VStack(alignment: .leading, spacing: 28) {
                 defaultAlarmSection
+                alarmSoundSection
                 snoozeSection
             }
             .accessibilityIdentifier("settings.panel.alarms")
@@ -551,6 +552,39 @@ struct SettingsSheet: View {
         .padding(.bottom, 12)
         .background(theme.background)
         .accessibilityIdentifier("settings.developerInfo")
+    }
+
+    private var alarmSoundSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader(title: "Alarm sound", theme: theme)
+
+            Text("iOS doesn’t let apps see the silent switch, so vibrating is set here or by a Focus: Settings → Focus → pick a Focus → Focus Filters → CALarm. If you don’t dismiss a vibrating alarm within a minute, it rings normally.")
+                .font(CalarmFont.subheadline)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            SettingsOptionList(theme: theme) {
+                Toggle(isOn: Binding(
+                    get: { store.vibrateInsteadOfRinging },
+                    set: { store.setVibrateInsteadOfRinging($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Vibrate instead of ringing")
+                            .font(CalarmFont.bodyMedium)
+                            .foregroundStyle(theme.textPrimary)
+                        if store.focusVibrate {
+                            Text("On now because of a Focus")
+                                .font(CalarmFont.caption)
+                                .foregroundStyle(theme.accentMuted)
+                        }
+                    }
+                }
+                .tint(theme.accent)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .accessibilityIdentifier("settings.alarms.vibrateInsteadOfRinging")
+            }
+        }
     }
 
     private var snoozeSection: some View {

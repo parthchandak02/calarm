@@ -28,6 +28,12 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
+**Verify vibrate mode on device (unreleased build).** Turn on Settings → Alarms → Vibrate
+instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound. Then
+leave one vibrating alarm undismissed: a normal ring should follow a minute later. If the test
+alarm makes a sound or stays silent without vibrating, the silent-sound approach fails on this
+iOS version (see RESEARCH.md § Alarm sound and vibration).
+
 **Ship and confirm one ring per minute.** After installing, open CALarm once. A minute with
 several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, titled
 "<event> + N more", and the list should no longer show a "Busy" block next to a titled event

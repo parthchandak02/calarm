@@ -15,6 +15,22 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Added
+
+- **Vibrate instead of ringing.** Settings → Alarms → Alarm sound, or automatically while a
+  chosen Focus is on (Settings → Focus → a Focus → Focus Filters → CALarm, via
+  `CalarmFocusFilter`). A vibrating alarm uses the bundled silent sound
+  `calarm-silence.caf`; AlarmKit has no vibrate-only option. **A ringing fallback follows one
+  minute later** unless the vibration is dismissed or snoozed (the stop and snooze intents
+  cancel it by `AlarmSchedulingHelpers.fallbackAlarmID`). A fallback that would land on
+  another alarm's minute is dropped; that alarm's own fallback covers it. The test alarm uses
+  the current sound mode, so it doubles as the vibration check.
+  `CalarmTests/AlarmSoundPolicyTests.swift` — 4 tests.
+
+---
+
 ## Build 20260924.1342 — 2026-09-24
 
 ### Changed

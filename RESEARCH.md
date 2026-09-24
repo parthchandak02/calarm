@@ -106,6 +106,30 @@ Read from the iOS 27.0 SDK `AlarmKit.swiftinterface`. **CONFIRMED.**
   *"this would be the duration of a timer."* Any non-nil `countdownDuration` puts the alarm
   into `.countdown` mode. Set `preAlert: nil` (not `0`) for a plain scheduled alarm.
 
+### Alarm sound and vibration (researched 2026-09-24)
+
+- **No public API reads the Ring/Silent switch**, and none notifies on change. Workarounds
+  time a played sound or use private API. **CONFIRMED**
+  ([forums 718945](https://developer.apple.com/forums/thread/718945)). It would not help anyway:
+  the app is not running when an AlarmKit alarm fires.
+- **AlarmKit rings through silent mode by design**, like Clock alarms
+  ([Apple Support](https://support.apple.com/en-us/118444)). **CONFIRMED**
+- **The only sound choices are `AlertConfiguration.AlertSound.default` and `.named(_:)`**, a
+  `sound:` parameter on `AlarmConfiguration`. No vibrate-only or haptics option. **CONFIRMED**
+  from the iOS 27 SDK `.swiftinterface`.
+- **Custom AlarmKit sounds were broken in iOS 26.0**, playing an error tone or the default
+  sound; bundle `.caf` files work in later builds, `Library/Sounds` did not
+  ([802620](https://developer.apple.com/forums/thread/802620),
+  [798140](https://developer.apple.com/forums/thread/798140)). **REPORTED**
+- **Whether a silent `.named` sound still vibrates is unverified.** Clock's "None" sound
+  vibrates only in silent mode. calarm's vibrate mode depends on this; verify with the test
+  alarm on device.
+- **A `SetFocusFilterIntent` runs in the background only if it also conforms to
+  `LiveActivityIntent`**; a plain one runs only while the app is in the foreground.
+  **REPORTED** ([home-assistant/iOS#5656](https://github.com/home-assistant/iOS/pull/5656),
+  [Apple docs](https://developer.apple.com/documentation/appintents/setfocusfilterintent)).
+  iOS calls `perform` with the default values when the Focus turns off.
+
 ### AlarmKit owns the Live Activity — do not create your own
 
 **CONFIRMED.** The app supplies only the *views*, via a widget extension declaring
