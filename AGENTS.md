@@ -67,8 +67,12 @@ The keychain must be unlocked **in the same SSH session as the build** — each 
 its own security session. The owner types the password; do not handle it.
 
 ```bash
-ssh -t macmini-remote 'security unlock-keychain ~/Library/Keychains/login.keychain-db && cd ~/projects/calarm && git pull --ff-only origin main && ./scripts/ship.sh beta'
+./scripts/ship-remote.sh
 ```
+
+It pulls `main` on the mini, ships, then commits the build stamp and pushes it back to
+`main`, so every build number lands on the one branch. Work happens on `main`; do not
+open side branches for ship work.
 
 **`macmini-remote` runs Xcode 26 (Swift 6.3); this Mac runs Xcode 27 (Swift 6.4).** An iOS 27
 SDK API compiles here and breaks the release build there. Wrap such code in
