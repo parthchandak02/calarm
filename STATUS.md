@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, clean, pushed |
-| **Latest build** | `20260924.1342` — `VALID`, `IN_BETA_TESTING` (one ring per minute) |
+| **Latest build** | `20260924.1447` — `VALID`, `IN_BETA_TESTING` (vibrate mode) |
 | **Tests** | Passing (`CalarmTests`) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Wired, unverified on device.** iOS OAuth client created 2026-09-23; plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote`. Sign-in has not yet been tried on the phone |
@@ -28,7 +28,7 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Verify vibrate mode on device (unreleased build).** Turn on Settings → Alarms → Vibrate
+**Verify vibrate mode on device (build 20260924.1447).** Turn on Settings → Alarms → Vibrate
 instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound. Then
 leave one vibrating alarm undismissed: a normal ring should follow a minute later. If the test
 alarm makes a sound or stays silent without vibrating, the silent-sound approach fails on this

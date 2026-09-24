@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-24
+## Build 20260924.1447 — 2026-09-24
 
 ### Added
 
@@ -27,7 +27,7 @@ this file exists so an agent can see the shape of the project's history without 
   cancel it by `AlarmSchedulingHelpers.fallbackAlarmID`). A fallback that would land on
   another alarm's minute is dropped; that alarm's own fallback covers it. The test alarm uses
   the current sound mode, so it doubles as the vibration check.
-  `CalarmTests/AlarmSoundPolicyTests.swift` — 4 tests.
+  `CalarmTests/AlarmSoundPolicyTests.swift` — 4 tests. `738fbaf`
 
 ---
 
