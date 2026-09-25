@@ -108,7 +108,9 @@ final class ScheduleStore: ObservableObject {
 
         alarmUpdatesObserver.onAlarmsChanged = { [weak self] alarms in
             for alarm in alarms where alarm.state == .alerting {
-                AlarmJournalStore.recordAlertingOnce(alarmID: alarm.id.uuidString)
+                if AlarmJournalStore.recordAlertingOnce(alarmID: alarm.id.uuidString) {
+                    ActivityLog.record(.rang, AlarmScheduler.displayTitle(for: alarm.id))
+                }
             }
             Task { @MainActor in
                 await self?.handleAlarmKitUpdate()
@@ -272,6 +274,10 @@ final class ScheduleStore: ObservableObject {
             guard !Task.isCancelled else { return }
             events = mergedEvents
             refreshEventsIdentityToken()
+            ActivityLog.record(.sync, [
+                canLoadGoogle ? "google \(googleEvents.count)" : nil,
+                canLoadEventKit ? "ios \(eventKitEvents.count)" : nil,
+            ].compactMap { $0 }.joined(separator: " · "))
 
             let currentIDs = Set(mergedEvents.map(\.id))
             let removedIDs = previousIDs.subtracting(currentIDs)
@@ -449,7 +455,9 @@ final class ScheduleStore: ObservableObject {
         guard alarmAuthorization == .authorized else {
             return "Enable alarm permission for CALarm in Settings first."
         }
-        return await alarmScheduler.scheduleTestAlarm(snoozeSeconds: defaultSnooze.seconds)
+        let error = await alarmScheduler.scheduleTestAlarm(snoozeSeconds: defaultSnooze.seconds)
+        ActivityLog.record(error == nil ? .test : .fail, error ?? "scheduled · rings in 8s")
+        return error
     }
 
     func clearScheduleFailures() {
@@ -472,6 +480,7 @@ final class ScheduleStore: ObservableObject {
     /// Awaits the reschedule: iOS may suspend the process as soon as the intent returns.
     static func applyFocusVibrate(_ enabled: Bool) async {
         CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.focusVibrate)
+        ActivityLog.record(.focus, enabled ? "on · vibrate" : "off · ring")
         guard let store = active else { return }
         store.focusVibrate = enabled
         store.lastScheduledFingerprint = nil
@@ -580,6 +589,13 @@ final class ScheduleStore: ObservableObject {
             skippedDuringAlerting: result.skippedDuringAlerting
         )
         lastRescheduleSummary = summary
+        if !result.skippedDuringAlerting {
+            let next = nextUpcomingAlarm?.nextAlarmDate.map { " · next \(CalarmTheme.eventTimeString($0))" } ?? ""
+            ActivityLog.record(.resched, "\(result.scheduledCount) alarms\(next)")
+        }
+        for failure in result.failures {
+            ActivityLog.record(.fail, "\(failure.eventTitle): \(failure.message)")
+        }
         if !result.skippedDuringAlerting, result.failures.isEmpty {
             lastScheduledFingerprint = fingerprint ?? alarmScheduler.schedulingFingerprint(
                 for: events,

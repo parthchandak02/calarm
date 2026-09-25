@@ -26,83 +26,97 @@ extension ScheduleStore {
     }
 }
 
-/// Verdict first: one line says whether alarms will ring, problems follow with their fix,
-/// and the passing checks fold into one line.
+/// An activity log: what CALarm did, newest first, with any current problem pinned on top
+/// as a NOW line carrying its fix. The owner debugs "why didn't it ring?" this way.
 struct SettingsStatusPage: View {
     @EnvironmentObject private var store: ScheduleStore
     @Environment(\.calarmTheme) private var theme
 
-    @State private var showsChecks = false
+    @State private var entries: [ActivityLog.Entry] = []
 
     var body: some View {
         let problems = store.statusProblems
+        let days = ActivityLog.days(entries, now: .now)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                verdict(problems)
-
                 if !problems.isEmpty {
-                    BoardSectionLabel(title: "Fix")
+                    BoardSectionLabel(title: "Now")
                     ForEach(Array(problems.enumerated()), id: \.offset) { _, problem in
-                        BoardLine(title: problem.title, detail: problem.detail, titleColor: theme.destructive) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            logLine(time: "NOW", kind: .fail, text: "\(problem.title) · \(problem.detail)")
                             fixButton(problem.fix)
                         }
                     }
                 }
 
-                BoardSectionLabel(title: "Checks")
-                Button {
-                    withAnimation(.snappy) { showsChecks.toggle() }
-                } label: {
-                    BoardLine(
-                        title: showsChecks ? "Hide details" : "\(checks.count) checks",
-                        value: showsChecks ? "" : checks.map(\.value).prefix(2).joined(separator: " · "),
-                        showsChevron: true
-                    )
-                }
-                .buttonStyle(.plain)
-
-                if showsChecks {
-                    ForEach(checks, id: \.title) { check in
-                        BoardLine(title: check.title) {
-                            HStack(spacing: 8) {
-                                StatusLight(isProblem: check.isProblem)
-                                BoardValue(text: check.value, color: check.isProblem ? theme.destructive : nil)
-                            }
+                if days.isEmpty {
+                    BoardSectionLabel(title: "Today")
+                    Text("Nothing logged yet. Entries appear as CALarm syncs, schedules and rings.")
+                        .font(CalarmFont.boardDetail)
+                        .foregroundStyle(theme.textSecondary)
+                } else {
+                    ForEach(days, id: \.title) { day in
+                        BoardSectionLabel(title: day.title)
+                        ForEach(Array(day.entries.enumerated()), id: \.offset) { _, entry in
+                            logLine(time: CalarmTheme.eventTimeString(entry.date), kind: entry.kind, text: entry.text)
                         }
                     }
                 }
 
-                NextRingBlock()
-                TestAlarmButton(isProminent: true)
-                    .padding(.top, 16)
+                TestAlarmButton()
+                    .padding(.top, 20)
+
+                Text("Log stays on this phone and is cleared after 7 days.")
+                    .font(CalarmFont.boardDetail)
+                    .foregroundStyle(theme.textSecondary)
+                    .padding(.top, 10)
+
+                Text(checks.map { "\($0.title.lowercased()) \($0.value)" }.joined(separator: " · "))
+                    .font(CalarmFont.boardDetail)
+                    .foregroundStyle(theme.textSecondary.opacity(0.7))
+                    .padding(.top, 6)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 #if targetEnvironment(simulator)
                 Text("Alarm sound and AlarmKit behavior require a physical device.")
                     .font(CalarmFont.boardDetail)
                     .foregroundStyle(theme.textSecondary)
-                    .padding(.top, 10)
+                    .padding(.top, 6)
                 #endif
             }
             .padding(.horizontal, CalarmTheme.rowPaddingH)
             .padding(.bottom, 24)
         }
+        .refreshable { entries = ActivityLog.load() }
+        .onAppear { entries = ActivityLog.load() }
+        .onChange(of: store.lastRescheduleSummary) { _, _ in entries = ActivityLog.load() }
         .boardNavigationTitle("Status")
     }
 
-    private func verdict(_ problems: [StatusVerdict.Problem]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                StatusLight(isProblem: !problems.isEmpty)
-                Text(StatusVerdict.headline(for: problems))
-                    .font(CalarmFont.title2)
-                    .foregroundStyle(theme.textPrimary)
-            }
-            Text(StatusVerdict.subline(for: problems, hasUpcomingAlarm: store.nextUpcomingAlarm != nil))
-                .font(CalarmFont.boardDetail)
+    private func logLine(time: String, kind: ActivityLog.Kind, text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(time)
+                .foregroundStyle(theme.textPrimary)
+                .frame(width: 64, alignment: .leading)
+            Text(kind.label)
+                .foregroundStyle(color(for: kind))
+            Text(text)
                 .foregroundStyle(theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.top, 12)
+        .font(CalarmFont.boardDetail)
+        .monospacedDigit()
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+
+    private func color(for kind: ActivityLog.Kind) -> Color {
+        switch kind {
+        case .fail: theme.destructive
+        case .resched, .rang, .snoozed, .dismissed, .test: theme.accent
+        case .sync, .focus: theme.textSecondary
+        }
     }
 
     @ViewBuilder

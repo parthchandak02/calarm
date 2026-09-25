@@ -52,13 +52,14 @@ nonisolated enum AlarmJournalStore {
 
     /// `alarmUpdates` re-emits for the whole duration of a ring, so only the first
     /// observation is kept. The reconciler uses the earliest one anyway.
-    static func recordAlertingOnce(alarmID: String) {
+    @discardableResult
+    static func recordAlertingOnce(alarmID: String) -> Bool {
         lock.lock()
         var entries = load()
         let alreadySeen = entries.last { $0.alarmID == alarmID }?.event == .alerting
         if alreadySeen {
             lock.unlock()
-            return
+            return false
         }
         let entry = AlarmJournalEntry(event: .alerting, alarmID: alarmID)
         entries.append(entry)
@@ -69,6 +70,7 @@ nonisolated enum AlarmJournalStore {
         lock.unlock()
 
         logEntry(entry)
+        return true
     }
 
     static func load() -> [AlarmJournalEntry] {

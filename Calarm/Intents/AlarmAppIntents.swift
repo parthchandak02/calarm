@@ -66,6 +66,7 @@ public struct SnoozeAlarmIntent: LiveActivityIntent {
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
         AlarmJournalStore.record(.snoozed, alarmID: id.uuidString)
         try? AlarmManager.shared.countdown(id: id)
+        await MainActor.run { ActivityLog.record(.snoozed, AlarmScheduler.displayTitle(for: id)) }
         await AlarmScheduler().moveFallbackAfterSnooze(primaryID: id)
         return .result()
     }
@@ -94,6 +95,7 @@ public struct StopAlarmIntent: LiveActivityIntent {
         AlarmJournalStore.record(.stopped, alarmID: id.uuidString)
         AlarmIntentSupport.cancelFallback(for: id)
         try? AlarmManager.shared.stop(id: id)
+        await MainActor.run { ActivityLog.record(.dismissed, AlarmScheduler.displayTitle(for: id)) }
         return .result()
     }
 }

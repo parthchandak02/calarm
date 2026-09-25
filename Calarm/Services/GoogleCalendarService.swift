@@ -167,6 +167,7 @@ final class GoogleCalendarService: ObservableObject {
                 .sorted { $0.startDate < $1.startDate }
         } catch {
             lastSyncError = error.localizedDescription
+            ActivityLog.record(.fail, "google \(error.localizedDescription)")
             SchedulerLog.error("google calendar sync failed")
             if cachedEvents.isEmpty {
                 return []

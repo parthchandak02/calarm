@@ -628,6 +628,13 @@ final class AlarmScheduler {
         titles()[id.uuidString]
     }
 
+    /// The event title an alarm was scheduled with, for the activity log. The stored value
+    /// is a signature, `title|ring` or `title|vibrate`.
+    static func displayTitle(for id: UUID) -> String {
+        guard let signature = title(for: id), let bar = signature.lastIndex(of: "|") else { return "Alarm" }
+        return String(signature[..<bar])
+    }
+
     private static func setTitle(_ title: String?, for id: UUID) {
         var all = titles()
         guard all[id.uuidString] != title else { return }

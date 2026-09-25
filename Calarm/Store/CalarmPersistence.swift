@@ -16,6 +16,7 @@ enum CalarmPersistence {
     enum Key {
         static let storageSchemaVersion = "calarm.storage.schemaVersion"
         static let themeAccent = "calarm.theme.accent"
+        static let activityLog = "calarm.activityLog"
         static let themeAppearance = "calarm.theme.appearance"
         static let defaultAlarmOffset = "calarm.defaultAlarmOffset"
         static let defaultSnoozeMinutes = "calarm.defaultSnoozeMinutes"

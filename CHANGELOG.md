@@ -25,8 +25,11 @@ this file exists so an agent can see the shape of the project's history without 
   - **Alarms:** flap tiles replace ~15 list rows, with a plain-English summary sentence.
   - **Calendars:** one line per calendar with the lit square and its upcoming event count.
   - **Look:** a live row and Island preview, accent squares, and appearance tiles.
-  - **Status:** a verdict ("ALL GOOD" / "1 PROBLEM") with a fix button per problem, and the
-    raw checks folded into one line.
+  - **Status:** an activity log, newest first: `RESCHED`, `SYNC`, `RANG`, `SNOOZED`,
+    `DISMISSED`, `FOCUS`, `TEST`, `FAIL`. Current problems are pinned on top as `NOW` lines
+    with their fix, and the raw checks are one dim line at the bottom. The log is new
+    (`ActivityLog`, on-device only, 7 days, repeats within 10 minutes collapse). The owner
+    picked it over the verdict layout.
   The 8-second test alarm sits on the root and Status. Chosen from options mocked in the
   owner's `notes/ui-redesign/settings.html` (2026-09-24).
 
