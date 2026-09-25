@@ -97,6 +97,10 @@ struct FlapTimer: View {
 
     private var tileHeight: CGFloat { ceil(fontSize * 1.4) }
 
+    private var boardWidth: CGFloat {
+        FlapLayout.cells(for: groups).reduce(0) { $0 + ($1 == .digit ? digitWidth : colonWidth) }
+    }
+
     var body: some View {
         VStack(alignment: .trailing, spacing: 3) {
             ZStack(alignment: .trailing) {
@@ -117,9 +121,12 @@ struct FlapTimer: View {
                     .foregroundStyle(tint)
                     .lineLimit(1)
                     .multilineTextAlignment(.trailing)
-                    .fixedSize()
+                    // Never `.fixedSize()`: timer text reserves the width of the longest
+                    // value it could show, and the compact Island stretches to fit it.
+                    .frame(width: boardWidth, alignment: .trailing)
                     .offset(x: -tracking / 2)
             }
+            .frame(width: boardWidth, height: tileHeight, alignment: .trailing)
 
             if showsUnits {
                 HStack(spacing: 0) {

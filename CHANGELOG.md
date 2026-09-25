@@ -32,6 +32,9 @@ this file exists so an agent can see the shape of the project's history without 
   an empty black box and the compact Island showed no time while counting down or paused;
   only the ringing state drew. `FlapTimer` set its font with `Font(UIFont)`, which the
   widget renderer does not draw; it now uses `.custom`, as every view that rendered does.
+- **The compact Island stretched into a long pill.** `FlapTimer` gave the timer text
+  `.fixedSize()`, and timer text asks for the width of the longest value it could show. It is
+  now framed to its tiles' exact width, as the pre-2129 countdown was. Regression from 241078d.
 
 ## Build 20260924.2129 — 2026-09-24
 
