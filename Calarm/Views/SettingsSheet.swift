@@ -179,7 +179,7 @@ struct TestAlarmButton: View {
 
     var body: some View {
         BoardButton(
-            title: isScheduling ? "Scheduling…" : "Test alarm · 8s",
+            title: isScheduling ? "Scheduling…" : "Test alarm · \(Int(AlarmScheduler.testAlarmExpectedRing(lead: store.liveActivityLead)))s",
             systemImage: "play.fill",
             isProminent: isProminent,
             isDisabled: isScheduling,

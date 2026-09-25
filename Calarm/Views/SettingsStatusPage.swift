@@ -21,7 +21,12 @@ extension ScheduleStore {
                 case .countdownStartsAtFireDate(let seconds), .other(let seconds): seconds
                 default: nil
                 }
-            }()
+            }(),
+            timingEarlySeconds: {
+                if case .early(let seconds) = AlarmJournalStore.testProbeVerdict() { return seconds }
+                return nil
+            }(),
+            timingExpectedSeconds: Int(AlarmJournalStore.testProbeExpectedRing() ?? 8)
         ))
     }
 }
@@ -162,7 +167,7 @@ struct SettingsStatusPage: View {
 
     private var isTimingLate: Bool {
         switch AlarmJournalStore.testProbeVerdict() {
-        case .countdownStartsAtFireDate, .other: true
+        case .countdownStartsAtFireDate, .other, .early: true
         default: false
         }
     }
@@ -172,6 +177,7 @@ struct SettingsStatusPage: View {
         case nil: "Not measured"
         case .pending: "Waiting for ring"
         case .onTime(let seconds): "On time · \(seconds)s"
+        case .early(let seconds): "Early · \(seconds)s"
         case .countdownStartsAtFireDate(let seconds): "Late · \(seconds)s"
         case .other(let seconds): "Unexpected · \(seconds)s"
         }

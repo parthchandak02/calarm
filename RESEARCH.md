@@ -179,6 +179,13 @@ Measured glyph widths for `.system(size: 11, weight: .semibold, design: .rounded
   **Re-measured and CONFIRMED 2026-09-24** (build 20260924.1447, iOS 27): the 8-second
   `.fixed` + `preAlert: 8` test alarm rang at ~16s — *Late · 16s* in Settings → Status → Alarm
   timing. The test alarm now uses countdown mode too; the probe is retired.
+- **Compensated reading (2026-09-25): `.fixed(F − L)` + `preAlert: L` shows the countdown from
+  F − L and rings at F.** This follows from the two device observations above; it has **not**
+  itself been observed for L in minutes. **INFERRED.** CALarm's Live Activity windows depend on
+  it. If a device follows the docs instead, the same alarm rings at F − L: early, never late.
+  With a lead set, the test alarm (`.fixed(+8s)` + 8s) re-measures it: ~16s = compensated
+  reading holds, ~8s = *Early*, the docs apply. Unverified too: whether a `.scheduled` alarm
+  whose fixed date passes while the phone is locked starts its countdown on time.
 - **A snoozed alarm's Live Activity counts to press time + `postAlert`**, not to the event, and
   keeps the event title. `SnoozeAlarmIntent` also calls `AlarmManager.countdown(id:)` on top of
   the system's `.countdown` secondary behaviour. **INFERRED.**
@@ -211,6 +218,30 @@ when it does. Anything drawn per digit behind it must be anchored to the trailin
 (`CalarmShared/FlapTimer.swift`). SwiftUI `.tracking` adds no space after the last glyph, so
 trailing-aligned tracked text needs a `-tracking/2` nudge to centre each glyph in its cell.
 **VERIFIED** (rendered, one SDK).
+
+### Compact Island width (measured 2026-09-25)
+
+iOS 26.5 Simulator, iPhone 17 Pro, DEBUG harness (`ISLAND_COUNTDOWN=<s>`, `ISLAND_VARIANT=`)
+rendering the production compact views on an ActivityKit activity.
+
+- **The Simulator shows no Live Activity for an AlarmKit countdown alarm**, even authorized
+  and scheduled without error. An ActivityKit activity does show. **VERIFIED.**
+- **`simctl io screenshot` omits the Dynamic Island**; only the iOS Simulator panel's
+  screenshot shows it. Lock Screen cards are captured normally. **VERIFIED.**
+- **GeistPixel-Square has proportional digits and no tabular feature**: at 13pt `1` = 6.42pt,
+  `0`/`5`/`7` = 7.41, `4` = 8.89. `.monospacedDigit()` does nothing. FlapTimer sizes cells from
+  `0`, so values with wide digits overflow the frame and truncate: the compact Island
+  showed `44:5…`. **VERIFIED.** Fixed 2026-09-25 by drawing Live Activity digits in SF Mono.
+- **Pill width vs trailing width**: iOS widens the leading region to roughly balance the
+  trailing one, so each 1pt of trailing width costs ~1.75pt of pill. Pill widths measured:
+  trailing 17pt → 158pt, 36 → 188, 54 → 219, 64 → 237, 82 → 267, 91 → 285. Current build:
+  1 min 219pt, 45 min 237pt, 2 h 267pt, 14 h 285pt. **VERIFIED** (Simulator).
+- HIG gives the iPhone 17 Pro Island compact width as 230pt and asks for leading and
+  trailing views of similar size, snug against the camera with no padding between.
+  [HIG Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities)
+  **CONFIRMED.**
+- `SystemFormatStyle.Timer` with `maxPrecision: .seconds(60)` renders words (`1 hou…`), and
+  `.offset` renders `-44 min`; neither is a compact clock format. **VERIFIED.**
 
 ---
 
@@ -721,18 +752,12 @@ and **nobody has ever seen the diagnostic**. Pure helpers and DTOs need explicit
 - **A Focus change while CALarm is not running does not reschedule.**
   `ScheduleStore.applyFocusVibrate` persists `Key.focusVibrate` but reschedules only if
   `ScheduleStore.active` exists. Armed alarms keep their old sound until the next launch or
-  foreground. Turning vibrate *off* that way leaves alarms silent-with-fallback for a while.
-- **A snoozed vibrating alarm has no fallback.** `SnoozeAlarmIntent` cancels the fallback,
-  and the snooze re-alert still uses `calarm-silence.caf`, so a missed snooze vibration never
-  rings.
-- **A fallback can ring after the vibration was dismissed** if iOS dismisses the alert without
-  running `stopIntent`. Accepted: it fails open.
-- **The test alarm vibrates in vibrate mode but has no fallback.** It tests vibration only.
+  foreground. Turning vibrate *off* that way leaves alarms silent for a while.
+- **A missed vibration is missed.** The ringing fallback was removed on 2026-09-25 by the
+  owner's rule of exactly one ring per chosen offset. It had also rung after dismissed
+  vibrations.
 - **`Key.alarmTitles` stores a signature, not a title** (`title|ring` / `title|vibrate`). The
   name is historical; renaming needs a migration and buys nothing.
-- **Fallbacks landing on another alarm's minute are dropped.** In a run of minute-by-minute
-  alarms only the last carries a fallback, so a missed vibration can wait several minutes
-  for a ring.
 
 - **An occurrence-ID change leaves an orphan alarm behind.** AlarmKit's `Alarm` carries no
   metadata, so an orphan cannot be tied back to its meeting; only its fire date is known.

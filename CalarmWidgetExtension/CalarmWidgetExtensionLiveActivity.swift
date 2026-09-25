@@ -34,7 +34,10 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
             } minimal: {
                 LitSquare(tint: tintColor(for: context))
             }
-            .contentMargins(.horizontal, 8, for: .compactTrailing)
+            .contentMargins(.trailing, 8, for: .compactTrailing)
+            // HIG: compact views sit snug against the camera. Every point of trailing width
+            // costs ~1.75pt of pill, because iOS balances the leading side to match.
+            .contentMargins(.leading, 2, for: .compactTrailing)
             .contentMargins(.horizontal, 12, for: .expanded)
             .keylineTint(tintColor(for: context))
             .widgetURL(deepLinkURL(for: context))
@@ -219,7 +222,8 @@ private struct BoardCountdown: View {
                     fireDate: countdown.fireDate,
                     fontSize: style.fontSize,
                     tint: tint,
-                    showsUnits: style == .lockScreen
+                    showsUnits: style == .lockScreen,
+                    showsTiles: style != .compact
                 )
             }
         case .paused(let paused):
@@ -229,7 +233,8 @@ private struct BoardCountdown: View {
                 remaining: left,
                 fontSize: style.fontSize,
                 tint: tint.opacity(0.6),
-                showsUnits: style == .lockScreen
+                showsUnits: style == .lockScreen,
+                showsTiles: style != .compact
             )
         case .alert:
             label(style == .compact ? "NOW" : "RINGING")

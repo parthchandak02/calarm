@@ -88,7 +88,7 @@ nonisolated enum AlarmJournalStore {
         let results = outcomes(now: now)
         log.info("reconcile \(AlarmJournalReconciler.summary(of: results), privacy: .public)")
 
-        for outcome in results where outcome.status == .late || outcome.status == .unobserved {
+        for outcome in results where [.late, .early, .unobserved].contains(outcome.status) {
             let lateness = outcome.latenessSeconds.map { String(Int($0)) } ?? "n/a"
             log.warning(
                 """
@@ -106,10 +106,12 @@ nonisolated enum AlarmJournalStore {
         let alarmID: String
         let scheduledAt: Date
         let preAlert: TimeInterval
+        /// Absent in probes recorded before window scheduling; those expected `preAlert`.
+        let expectedRing: TimeInterval?
     }
 
-    static func recordTestProbe(alarmID: String, scheduledAt: Date, preAlert: TimeInterval) {
-        let probe = TestProbe(alarmID: alarmID, scheduledAt: scheduledAt, preAlert: preAlert)
+    static func recordTestProbe(alarmID: String, scheduledAt: Date, preAlert: TimeInterval, expectedRing: TimeInterval) {
+        let probe = TestProbe(alarmID: alarmID, scheduledAt: scheduledAt, preAlert: preAlert, expectedRing: expectedRing)
         guard let data = try? JSONEncoder().encode(probe) else { return }
         UserDefaults.standard.set(data, forKey: testProbeKey)
     }
@@ -125,8 +127,16 @@ nonisolated enum AlarmJournalStore {
         return AlarmTimingProbe.verdict(
             scheduledAt: probe.scheduledAt,
             preAlert: probe.preAlert,
+            expectedRing: probe.expectedRing,
             observedAt: observed?.wallClock
         )
+    }
+
+    /// Seconds from tap to the expected ring of the last test alarm.
+    static func testProbeExpectedRing() -> TimeInterval? {
+        guard let data = UserDefaults.standard.data(forKey: testProbeKey),
+              let probe = try? JSONDecoder().decode(TestProbe.self, from: data) else { return nil }
+        return probe.expectedRing ?? probe.preAlert
     }
 
     static func reset() {

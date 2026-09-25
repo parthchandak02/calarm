@@ -62,6 +62,9 @@ nonisolated enum AlarmFireStatus: String, Codable, Equatable, Sendable {
     case pending
     case onTime
     case late
+    /// Rang well before its intended time: a window alarm on a device that follows Apple's
+    /// documented `.fixed` + pre-alert timing.
+    case early
     case unobserved
 }
 
@@ -84,6 +87,11 @@ nonisolated enum AlarmJournalReconciler {
     /// Observations this far before the intended fire belong to an earlier arming of the
     /// same alarm ID, not to this one.
     static let observationLookback: TimeInterval = 120
+
+    /// How early a ring can still be this arming's: the longest Live Activity lead plus a
+    /// minute. Only an `.alerting` observation after the arming counts, since a stop or
+    /// snooze that far ahead is more likely an earlier arming's.
+    static let earlyLookback: TimeInterval = 11 * 60
 
     static func reconcile(
         entries: [AlarmJournalEntry],
@@ -111,8 +119,17 @@ nonisolated enum AlarmJournalReconciler {
                 return entry.wallClock >= intendedFire.addingTimeInterval(-observationLookback)
             }
 
+            let earlyObservation = observation == nil ? sorted.first { entry in
+                entry.event == .alerting
+                    && entry.wallClock > armed.wallClock
+                    && entry.wallClock >= intendedFire.addingTimeInterval(-earlyLookback)
+                    && entry.wallClock < intendedFire.addingTimeInterval(-observationLookback)
+            } : nil
+
             let status: AlarmFireStatus
-            if let observation {
+            if earlyObservation != nil {
+                status = .early
+            } else if let observation {
                 let lateness = observation.wallClock.timeIntervalSince(intendedFire)
                 status = lateness > tolerance ? .late : .onTime
             } else if now < intendedFire.addingTimeInterval(tolerance) {
@@ -125,9 +142,9 @@ nonisolated enum AlarmJournalReconciler {
                 alarmID: alarmID,
                 occurrenceID: armed.occurrenceID,
                 intendedFire: intendedFire,
-                observedAt: observation?.wallClock,
+                observedAt: (observation ?? earlyObservation)?.wallClock,
                 status: status,
-                processChanged: observation.map { $0.processID != armed.processID } ?? false
+                processChanged: (observation ?? earlyObservation).map { $0.processID != armed.processID } ?? false
             )
         }
         .sorted { $0.intendedFire < $1.intendedFire }
@@ -138,11 +155,12 @@ nonisolated enum AlarmJournalReconciler {
         guard !settled.isEmpty else { return "no settled alarms yet" }
 
         let late = settled.filter { $0.status == .late }
+        let early = settled.filter { $0.status == .early }
         let unobserved = settled.filter { $0.status == .unobserved }
         let worst = late.compactMap(\.latenessSeconds).max() ?? 0
 
-        return "settled=\(settled.count) onTime=\(settled.count - late.count - unobserved.count)"
-            + " late=\(late.count) unobserved=\(unobserved.count)"
+        return "settled=\(settled.count) onTime=\(settled.count - late.count - early.count - unobserved.count)"
+            + " late=\(late.count) early=\(early.count) unobserved=\(unobserved.count)"
             + " worstLatenessSec=\(Int(worst))"
     }
 }

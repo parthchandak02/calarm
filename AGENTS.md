@@ -136,9 +136,12 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
   its types `public`.
 - **AlarmKit owns the Live Activity.** Never call `Activity.request` for an alarm, or you
   get two.
-- **The Live Activity alarm is countdown-mode (`schedule: nil`), not `.fixed` + `preAlert`.**
-  The latter rang late on device by exactly its pre-alert. AlarmKit keeps no fire date for a
-  countdown alarm; `AlarmScheduler` stores it. See the `calarm-alarmkit-reschedule` skill.
+- **On device `.fixed(D)` + `preAlert: P` counts down *from* D and rings at D + P** — the
+  opposite of Apple's docs. Live Activity windows rely on it: `.fixed(ring − L)` + `preAlert: L`
+  (`LiveActivityWindow`). The ALL setting and a window already due use countdown mode
+  (`schedule: nil`). Every Live Activity alarm stores its ring time as a countdown target, and
+  `intendedFireDate(for:)` **must** prefer it over the fixed date, which is only when the card
+  appears. See the `calarm-alarmkit-reschedule` skill.
 - **Never `Font(UIFont)` / `Font(CTFont)` in the widget extension.** It blanked the whole
   Live Activity on device while `Font.custom` rendered. Measure with UIFont if needed, but
   set the font with `.custom`.

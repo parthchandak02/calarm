@@ -28,19 +28,28 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
 
 ## Live Activity assignment
 
-- Compute `nextLiveActivityKey` from **all** instances sorted by `fireDate`.
-- Only the earliest upcoming instance gets `withLiveActivity: true`.
-- All others get alert-only presentation.
-- **The Live Activity alarm has no schedule** — `schedule: nil`, `preAlert` = seconds until
-  fire — so it counts down from now and rings on time. `.fixed` plus a big `preAlert` put a
-  9:00 event's countdown on screen at 9:50 heading for 10:14:54 (fixed date + pre-alert).
-  AlarmKit stores no fire date for such an alarm, so `AlarmScheduler` keeps one per UUID
-  under `CalarmPersistence.Key.countdownTargets`; `intendedFireDate(for:)` reads either.
-  `needsReschedule` keys Live Activity on schedule type (`nil` = countdown), not `preAlert`.
-- Every other alarm stays `.fixed` with `preAlert: 1` (landscape workaround).
-- Settings → Status → **Alarm timing** reports the 8-second test alarm's actual ring time.
-  The test alarm is countdown-mode too, so anything but ~8s is a regression. The `.fixed` +
-  `preAlert` probe is retired (device measured *Late · 16s*, 2026-09-24; see RESEARCH.md).
+- `LiveActivityWindow.plans(fireDates:lead:now:)` gives every upcoming primary a
+  `LiveActivityPlan`; `DesiredInstance.plan` carries it. Lead L comes from Settings → Alarms →
+  Island (`LiveActivityLead`, `CalarmPersistence.Key.liveActivityLeadMinutes`, default 5).
+- **`.fixedWindow(start:preAlert:)`** — `.fixed(ring − L)` + `preAlert: L`. On device the
+  countdown starts *at* the fixed date (9:00 event counting at 9:50 toward 10:14:54; test alarm
+  *Late · 16s*, 2026-09-24), so the card shows at ring − L and rings on time. Under Apple's
+  documented reading it would ring L early — fail-open, never late.
+- Effective lead is `min(L, ring − previous ring)`, so windows never overlap. The first alarm
+  already inside its window (+10s margin) gets **`.countdownNow`** (`schedule: nil`, pre-alert
+  = time left); a later one gets `.alertOnly`. Lead ALL = old behaviour: next alarm
+  `.countdownNow`, rest `.alertOnly`.
+- **`.alertOnly`** — `.fixed(ring)` with `preAlert: 1` (landscape workaround). Fallbacks too.
+- Every Live Activity plan stores the ring time under `CalarmPersistence.Key.countdownTargets`;
+  `intendedFireDate(for:)` prefers it over the fixed date (`LiveActivityWindow.resolvedFireDate`).
+  Without a target it reads fixed date + pre-alert. Stored state is pruned only after a successful
+  `AlarmManager.shared.alarms` read.
+- `needsReschedule` asks `LiveActivityWindow.existingSatisfies`: a started window satisfies
+  `.countdownNow` to the same ring, so the hand-over is not churn; windows match within 0.5s.
+- The fingerprint includes `lead:N`; changing the lead forces a full reschedule.
+- Settings → Status → **Alarm timing**: with a lead set the test alarm is a window
+  (`.fixed(+8s)` + 8s, expected ~16s; ~8s = *Early*, the device follows the docs). With ALL it
+  is countdown mode, expected ~8s.
 
 ## Guard behavior
 
@@ -64,11 +73,25 @@ by `cancelUndesiredAlarms`. AlarmKit exposes no attributes, so each alarm's sign
 
 ## Vibrate mode
 
-`AlarmSoundPolicy.vibratesNow` (manual setting or `CalarmFocusFilter`) makes every primary
-alarm use the silent `calarm-silence.caf` and adds a ringing fallback one minute later, ID
-`AlarmSchedulingHelpers.fallbackAlarmID(for:)`, cancelled by the stop and snooze intents.
-Fallback IDs are in `alarmEventLookup`, so they are cancelled like any undesired alarm when
-vibrate mode turns off. The stored per-alarm signature is title plus sound.
+`AlarmSoundPolicy.vibratesNow` (manual setting or `CalarmFocusFilter`) makes every alarm use
+the silent `calarm-silence.caf`. **Nothing else: one ring per chosen offset** (owner's rule,
+2026-09-25). The ringing fallback earlier builds armed a minute later is gone;
+`AlarmSchedulingHelpers.fallbackAlarmID(for:)` survives only so `cancelLegacyFallbacks()`
+(every reconcile), `cancelUndesiredAlarms` (fallback IDs stay in `alarmEventLookup`), the stop
+and snooze intents, and `cancel(occurrenceID:offset:)` can remove leftovers. Drop those after a
+release. The stored per-alarm signature is title plus sound.
+
+## Snooze holds
+
+A snoozed alarm (`.countdown`/`.paused`, ring time passed) is not in the desired set, which
+holds upcoming alarms only. `SnoozeAlarmIntent` records `Key.snoozedUntil` (now + snooze)
+**before** `countdown(id:)`; `holdUntil(for:)` keeps the alarm until snoozedUntil + 60s
+(`snoozeHoldDeadline`), or a ringing one until 5 min past the ring or snooze end
+(`alertingDeadline`). Without a record, the old rule keyed to the ring time applies. Event end
+never cuts a hold short (`shouldEndWithEvent`). Stop, cancel and terminate clear the record.
+
+`Key.rangFireDates` remembers the fire date each alarm ID rang for (alarm updates, stop and
+snooze intents); `desiredInstances` skips an ID that already rang for its fire date.
 
 ## Stable IDs
 
@@ -83,6 +106,7 @@ vibrate mode turns off. The stored per-alarm signature is title plus sound.
 - `Calarm/Models/AlarmSoundPolicy.swift`
 - `Calarm/Intents/CalarmFocusFilter.swift`
 - `CalarmShared/AlarmSchedulingHelpers.swift`
+- `CalarmShared/LiveActivityWindow.swift`
 
 ## Anti-patterns
 
@@ -107,8 +131,8 @@ vibrate mode turns off. The stored per-alarm signature is title plus sound.
 
 **Fix (AlarmScheduler):**
 
-1. `shouldTerminateStale` — cancel `.countdown`/`.paused` after `fireDate + snoozeAwareCountdownGrace` (snooze + 60s), not `event.endDate`. A flat 60s killed real snoozes.
-2. `cancelUndesiredAlarms` — only preserve `.alerting` within `alertingCleanupGrace` (5 min snooze window).
+1. `shouldTerminateStale` — cancel `.countdown`/`.paused`/`.alerting` once `holdUntil(for:)` passes (see Snooze holds), not at `event.endDate`. A flat 60s killed real snoozes.
+2. `cancelUndesiredAlarms` — keep an undesired alarm only while `holdUntil(for:)` holds it; legacy fallbacks always go.
 3. `reconcileOrphanAlarms` — for alarms not in the current lookup: terminate once stale, and
    terminate a *future* orphan only when `AlarmSchedulingHelpers.isDuplicateFire` finds a
    managed alarm within 30s (the same meeting under a changed ID). Other future orphans are

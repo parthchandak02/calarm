@@ -56,39 +56,45 @@ struct FlapTimer: View {
     let fontSize: CGFloat
     let tint: Color
     var showsUnits = false
+    var showsTiles = true
 
     /// Ticks to `fireDate`.
-    init(fireDate: Date, fontSize: CGFloat, tint: Color, showsUnits: Bool = false) {
+    init(fireDate: Date, fontSize: CGFloat, tint: Color, showsUnits: Bool = false, showsTiles: Bool = true) {
         self.fireDate = fireDate
         staticText = nil
         remaining = fireDate.timeIntervalSinceNow
         self.fontSize = fontSize
         self.tint = tint
         self.showsUnits = showsUnits
+        self.showsTiles = showsTiles
     }
 
     /// A frozen value, for a paused countdown.
-    init(text: String, remaining: TimeInterval, fontSize: CGFloat, tint: Color, showsUnits: Bool = false) {
+    init(text: String, remaining: TimeInterval, fontSize: CGFloat, tint: Color, showsUnits: Bool = false, showsTiles: Bool = true) {
         fireDate = nil
         staticText = text
         self.remaining = remaining
         self.fontSize = fontSize
         self.tint = tint
         self.showsUnits = showsUnits
+        self.showsTiles = showsTiles
     }
 
     private var groups: [FlapLayout.Group] { FlapLayout.groups(remaining: remaining) }
 
-    private var uiFont: UIFont {
-        UIFont(name: Self.fontName, size: fontSize) ?? .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
-    }
+    /// Digits are SF Mono, not Geist Pixel: Pixel's digits are proportional (a `4` is 40%
+    /// wider than a `1`) with no tabular figures, and the system draws the timer as one
+    /// string, so pixel digits drifted off their tiles or truncated (`44:5…`). Owner's call,
+    /// 2026-09-25. Labels stay pixel.
+    private static let digitWeight: Font.Weight = .semibold
+
+    private var uiFont: UIFont { .monospacedSystemFont(ofSize: fontSize, weight: .semibold) }
 
     /// Space after every glyph, so a tile is wider than the digit it holds.
-    private var tracking: CGFloat { round(fontSize * 0.22) }
+    private var tracking: CGFloat { showsTiles ? round(fontSize * 0.22) : 0 }
 
-    /// Cell widths match the text's own advances exactly, or the tiles drift under it.
     private var digitWidth: CGFloat {
-        ("0" as NSString).size(withAttributes: [.font: uiFont, .kern: tracking]).width
+        "0123456789".map { (String($0) as NSString).size(withAttributes: [.font: uiFont, .kern: tracking]).width }.max() ?? 0
     }
 
     private var colonWidth: CGFloat {
@@ -97,25 +103,29 @@ struct FlapTimer: View {
 
     private var tileHeight: CGFloat { ceil(fontSize * 1.4) }
 
+    /// Rounded up with a point of slack: a fractional frame a hair narrower than the text's
+    /// own width truncates it.
     private var boardWidth: CGFloat {
-        FlapLayout.cells(for: groups).reduce(0) { $0 + ($1 == .digit ? digitWidth : colonWidth) }
+        (FlapLayout.cells(for: groups).reduce(0) { $0 + ($1 == .digit ? digitWidth : colonWidth) }).rounded(.up) + 1
     }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 3) {
             ZStack(alignment: .trailing) {
-                HStack(spacing: 0) {
-                    ForEach(Array(FlapLayout.cells(for: groups).enumerated()), id: \.offset) { _, cell in
-                        switch cell {
-                        case .digit: tile
-                        case .colon: Color.clear.frame(width: colonWidth, height: tileHeight)
+                if showsTiles {
+                    HStack(spacing: 0) {
+                        ForEach(Array(FlapLayout.cells(for: groups).enumerated()), id: \.offset) { _, cell in
+                            switch cell {
+                            case .digit: tile
+                            case .colon: Color.clear.frame(width: colonWidth, height: tileHeight)
+                            }
                         }
                     }
                 }
                 timerText
                     // Not `Font(uiFont)`: a UIFont-backed Font blanked the whole Live
-                    // Activity on device (build 2129) while `.custom` renders.
-                    .font(.custom(Self.fontName, fixedSize: fontSize))
+                    // Activity on device (build 2129).
+                    .font(.system(size: fontSize, weight: Self.digitWeight, design: .monospaced))
                     .tracking(tracking)
                     .monospacedDigit()
                     .foregroundStyle(tint)
@@ -126,7 +136,7 @@ struct FlapTimer: View {
                     .frame(width: boardWidth, alignment: .trailing)
                     .offset(x: -tracking / 2)
             }
-            .frame(width: boardWidth, height: tileHeight, alignment: .trailing)
+            .frame(width: boardWidth, height: showsTiles ? tileHeight : nil, alignment: .trailing)
 
             if showsUnits {
                 HStack(spacing: 0) {

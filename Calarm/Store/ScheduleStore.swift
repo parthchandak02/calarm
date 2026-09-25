@@ -27,6 +27,7 @@ final class ScheduleStore: ObservableObject {
     @Published private(set) var eventsIdentityToken: String = ""
     @Published private(set) var vibrateInsteadOfRinging = CalarmPersistence.bool(forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
     @Published private(set) var focusVibrate = CalarmPersistence.bool(forKey: CalarmPersistence.Key.focusVibrate)
+    @Published private(set) var liveActivityLead = LiveActivityLead.persisted
 
     /// The live store, for intents that run in this process without a view to reach it.
     private(set) static weak var active: ScheduleStore?
@@ -111,6 +112,7 @@ final class ScheduleStore: ObservableObject {
 
         alarmUpdatesObserver.onAlarmsChanged = { [weak self] alarms in
             for alarm in alarms where alarm.state == .alerting {
+                AlarmScheduler.recordRang(alarm)
                 if AlarmJournalStore.recordAlertingOnce(alarmID: alarm.id.uuidString) {
                     ActivityLog.record(.rang, AlarmScheduler.displayTitle(for: alarm.id))
                 }
@@ -459,8 +461,9 @@ final class ScheduleStore: ObservableObject {
         guard alarmAuthorization == .authorized else {
             return "Enable alarm permission for CALarm in Settings first."
         }
-        let error = await alarmScheduler.scheduleTestAlarm(snoozeSeconds: defaultSnooze.seconds)
-        ActivityLog.record(error == nil ? .test : .fail, error ?? "scheduled · rings in 8s")
+        let error = await alarmScheduler.scheduleTestAlarm(snoozeSeconds: defaultSnooze.seconds, lead: liveActivityLead)
+        let ringsIn = Int(AlarmScheduler.testAlarmExpectedRing(lead: liveActivityLead))
+        ActivityLog.record(error == nil ? .test : .fail, error ?? "scheduled · rings in \(ringsIn)s")
         return error
     }
 
@@ -475,6 +478,13 @@ final class ScheduleStore: ObservableObject {
     func setVibrateInsteadOfRinging(_ enabled: Bool) {
         CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
         vibrateInsteadOfRinging = enabled
+        lastScheduledFingerprint = nil
+        requestReschedule(force: true)
+    }
+
+    func setLiveActivityLead(_ lead: LiveActivityLead) {
+        CalarmPersistence.setInteger(lead.rawValue, forKey: CalarmPersistence.Key.liveActivityLeadMinutes)
+        liveActivityLead = lead
         lastScheduledFingerprint = nil
         requestReschedule(force: true)
     }

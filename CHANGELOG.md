@@ -15,6 +15,58 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-25
+
+### Added
+
+- **The Live Activity now appears only shortly before each alarm** (Settings → Alarms →
+  *Island · min before ring*: ALL / 10 / 5 / 2, default 5). Every upcoming alarm gets its own
+  window instead of the next one counting down for hours: it is scheduled `.fixed(ring − L)`
+  with a pre-alert of L, which on device starts the card at ring − L and rings at the ring
+  time (`CalarmShared/LiveActivityWindow.swift`). Windows are clipped to the previous ring so
+  cards never overlap. ALL keeps the old behaviour exactly. On a device that follows Apple's
+  documented timing instead, alarms would ring L early, never late; the test alarm measures
+  which (it now rings at ~16s with a lead set, *Early · 8s* if the device follows the docs).
+
+### Changed
+
+- **Vibrate means vibrate only: the ringing fallback is gone.** Owner's rule: exactly one ring
+  per chosen offset (an event at 12:45 with −1m rings at 12:44 only). The fallback a minute
+  after an undismissed vibration was a second ring, and it could ring after a dismiss: while
+  vibrating, a just-fired alarm still anchored it, and a reschedule in that minute re-created it
+  after the stop intent had cancelled it. Every reconcile now cancels fallbacks left by earlier
+  builds, including those of events no longer listed; the stop and snooze intents still cancel
+  them for one release.
+
+### Fixed
+
+- **Snoozing could silently cancel the snooze**, in ring mode too. A snoozed alarm is no longer
+  in the upcoming schedule, so the app's AlarmKit observer cancelled it as undesired. The snooze
+  intent now records when the snooze ends (`Key.snoozedUntil`), and cleanup holds the alarm
+  until 60s after that, so a second snooze survives too (keyed to the first ring it was
+  cancelled at 9:06 after a 9:00 ring). A ringing alarm is held five minutes past the ring or
+  the snooze it follows, and a short event no longer ends its own snooze or ring
+  (`AlarmSchedulingHelpers.shouldEndWithEvent`).
+- **A missing stored ring time made cleanup read a window's card time as its ring time** and
+  cancel it early. The fallback reading is now fixed date + pre-alert, and stored ring times are
+  no longer pruned when reading AlarmKit's alarms throws.
+- **A forced reschedule under a second before an alarm cancelled it** without replacing it; the
+  too-soon check now comes first.
+- **An alarm that already rang is not re-armed for the same fire date** (`Key.rangFireDates`),
+  so if a device follows Apple's documented timing a window alarm rings early once, not twice.
+- **Live Activity digits drifted off their tiles and truncated (`44:5…`).** Geist Pixel's
+  digits are proportional (a `4` is 40% wider than a `1`) with no tabular figures, and the
+  system draws the timer as one string. The Lock Screen and expanded Island digits are now SF
+  Mono (owner's pick); labels stay pixel. Cells size from the widest digit, rounded up.
+- **The compact Island was wider than Apple's 230pt compact width at 10 min or more left.** The
+  compact timer drops its tiles and tracking and sits 2pt from the camera. iOS widens the
+  leading side to match the trailing, so each point saved there saves ~1.75pt of pill.
+  Simulator harness: dropping tiles measured 237 → 225pt at 45 min; the margin change is unmeasured.
+- **A failed read of AlarmKit's alarms made the reschedule cancel and recreate everything**,
+  ringing alarms included. It now leaves them armed and reports a failure so it retries.
+- **A snooze recorded the setting's length, not the alarm's**, so changing the snooze while an
+  alarm rang made cleanup cancel the snooze before it re-rang.
+
 ## Build 20260924.2243 — 2026-09-24
 
 ### Changed

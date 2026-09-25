@@ -40,6 +40,23 @@ struct SettingsAlarmsPage: View {
                     onSelect: store.updateDefaultSnooze
                 )
 
+                BoardSectionLabel(title: "Island · min before ring")
+                FlapPicker(
+                    options: LiveActivityLead.allCases,
+                    selection: store.liveActivityLead,
+                    columns: 4,
+                    tileLabel: SettingsSummary.leadTile,
+                    accessibilityLabel: { $0 == .always ? "Live Activity always" : "Live Activity \($0.title)" },
+                    onSelect: store.setLiveActivityLead
+                )
+                .accessibilityIdentifier("settings.alarms.liveActivityLead")
+
+                Text("The Live Activity appears this long before the alarm rings.")
+                    .font(CalarmFont.boardDetail)
+                    .foregroundStyle(theme.textSecondary)
+                    .padding(.top, 10)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 BoardSectionLabel(title: "Sound")
                 FlapPicker(
                     options: [false, true],
@@ -58,7 +75,7 @@ struct SettingsAlarmsPage: View {
                         .padding(.top, 10)
                 }
 
-                Text("iOS doesn’t let apps see the silent switch. A Focus can turn vibrate on: iOS Settings → Focus → Focus Filters → CALarm. A vibrating alarm you don’t dismiss rings normally after a minute.")
+                Text("iOS doesn’t let apps see the silent switch. A Focus can turn vibrate on: iOS Settings → Focus → Focus Filters → CALarm.")
                     .font(CalarmFont.boardDetail)
                     .foregroundStyle(theme.textSecondary)
                     .padding(.top, 10)

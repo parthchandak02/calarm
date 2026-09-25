@@ -14,7 +14,8 @@ private enum AlarmIntentSupport {
         UUID(uuidString: alarmID)
     }
 
-    /// The user noticed the vibration, so the ringing fallback behind it is not needed.
+    /// Earlier builds armed a ringing fallback behind each vibrating alarm. Kept for one release
+    /// so a fallback armed before the update cannot ring after a dismiss or snooze.
     nonisolated static func cancelFallback(for id: UUID) {
         try? AlarmManager.shared.cancel(id: AlarmSchedulingHelpers.fallbackAlarmID(for: id))
     }
@@ -65,9 +66,16 @@ public struct SnoozeAlarmIntent: LiveActivityIntent {
         // AlarmKit handles .countdown secondary behavior; intent satisfies configuration contract.
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
         AlarmJournalStore.record(.snoozed, alarmID: id.uuidString)
+        AlarmIntentSupport.cancelFallback(for: id)
+        // Before `countdown(id:)`: the state change wakes the app's reconciler, which must
+        // already see how long this snooze runs.
+        let title = await MainActor.run {
+            AlarmScheduler.recordRang(id: id)
+            AlarmScheduler.recordSnooze(id: id)
+            return AlarmScheduler.displayTitle(for: id)
+        }
         try? AlarmManager.shared.countdown(id: id)
-        await MainActor.run { ActivityLog.record(.snoozed, AlarmScheduler.displayTitle(for: id)) }
-        await AlarmScheduler().moveFallbackAfterSnooze(primaryID: id)
+        await MainActor.run { ActivityLog.record(.snoozed, title) }
         return .result()
     }
 }
@@ -94,8 +102,13 @@ public struct StopAlarmIntent: LiveActivityIntent {
         guard let id = AlarmIntentSupport.uuid(from: alarmID) else { return .result() }
         AlarmJournalStore.record(.stopped, alarmID: id.uuidString)
         AlarmIntentSupport.cancelFallback(for: id)
+        let title = await MainActor.run {
+            AlarmScheduler.recordRang(id: id)
+            AlarmScheduler.clearSnooze(id: id)
+            return AlarmScheduler.displayTitle(for: id)
+        }
         try? AlarmManager.shared.stop(id: id)
-        await MainActor.run { ActivityLog.record(.dismissed, AlarmScheduler.displayTitle(for: id)) }
+        await MainActor.run { ActivityLog.record(.dismissed, title) }
         return .result()
     }
 }

@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-24** — update this date whenever you change this file.
+**Last updated: 2026-09-25** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Latest build** | `20260924.2243` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
-| **Tests** | 125 passing (`CalarmTests`, 2026-09-24) |
+| **Tests** | 153 passing (`CalarmTests`, 2026-09-25) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -28,6 +28,18 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
+**Check the Live Activity lead and the vibrate/snooze fixes (next build, unreleased).** With
+Settings → Alarms → Island at **5**:
+- Run the test alarm: the card should appear ~8s after the tap, *not* at the tap, and ring at
+  ~16s. Settings → Status → Alarm timing should read *On time · 16s*. *Early · 8s* means the
+  device follows Apple's docs and every alarm would ring 5 min early — set Island to ALL.
+- Arm a real event 15 min out, force-quit CALarm: no card until start − 5 min, then a
+  countdown that rings on time.
+- Snooze a ringing alarm with the app open, then snooze the re-ring too: each should re-ring
+  after its snooze.
+- Vibrate on: a real event's alarm should only vibrate — no ring a minute later, dismissed or
+  not (the fallback is removed; one ring per chosen offset).
+
 **Check the Live Activity countdown on device (next build).** Build 2129 drew the Lock Screen
 card and the compact Island's countdown blank in countdown and paused states; the ringing
 state rendered. Cause (inferred, not provable off device): `FlapTimer` set its text with a
@@ -36,10 +48,8 @@ shows the title row and tiles; digits sit on their tiles; after 10:00 or 1:00:00
 goes blank and the rest stay aligned; the compact Island is a short pill (lit square + tiles). Also check the
 in-app countdown's new flip looks right on device.
 
-**Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
-(2026-09-24: the silent sound vibrates). Leave a **real event's** vibrating alarm undismissed:
-a normal ring should follow a minute later. Snooze one and ignore the re-alert: a ring should
-follow a minute after the snooze ends. The test alarm has no fallback.
+*The vibrate-fallback check is retired*: the fallback was removed (2026-09-25, owner's
+one-ring rule). Vibration itself is confirmed (2026-09-24).
 
 **Confirm one ring per minute (build 20260924.1342+).** After installing, open CALarm once. A minute with
 several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, titled

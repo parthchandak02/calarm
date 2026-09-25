@@ -25,6 +25,10 @@ nonisolated enum SettingsSummary {
         "\(snooze.rawValue)"
     }
 
+    static func leadTile(_ lead: LiveActivityLead) -> String {
+        lead == .always ? "ALL" : "\(lead.rawValue)"
+    }
+
     static func alarmsLine(offset: AlarmOffsetOption, snooze: SnoozeDurationOption, vibrates: Bool) -> String {
         let ring = offset == .noAlarm ? "off" : DepartureBoard.shortOffset(offset)
         return "\(ring) · \(snooze.rawValue)m · \(vibrates ? "vibrate" : "ring")"
@@ -39,7 +43,7 @@ nonisolated enum SettingsSummary {
         }
         parts.append("Snooze waits \(snooze.title).")
         if vibrates {
-            parts.append("Alarms vibrate, then ring if not dismissed within a minute.")
+            parts.append("Alarms vibrate instead of ringing.")
         }
         return parts.joined(separator: " ")
     }
@@ -74,6 +78,8 @@ nonisolated enum StatusVerdict {
         var scheduleFailureCount: Int
         var firstScheduleFailure: String?
         var timingLateSeconds: Int?
+        var timingEarlySeconds: Int? = nil
+        var timingExpectedSeconds: Int = 8
     }
 
     static func problems(for input: Input) -> [Problem] {
@@ -106,7 +112,15 @@ nonisolated enum StatusVerdict {
         if let late = input.timingLateSeconds {
             problems.append(Problem(
                 title: "Test alarm rang late",
-                detail: "Rang at \(late)s instead of 8s",
+                detail: "Rang at \(late)s instead of \(input.timingExpectedSeconds)s",
+                fix: .runTestAlarm,
+                blocksAlarms: false
+            ))
+        }
+        if let early = input.timingEarlySeconds {
+            problems.append(Problem(
+                title: "Test alarm rang early",
+                detail: "Rang at \(early)s instead of \(input.timingExpectedSeconds)s · set Island to ALL",
                 fix: .runTestAlarm,
                 blocksAlarms: false
             ))

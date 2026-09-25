@@ -164,3 +164,4 @@ reference-photos/
 
 # Local-only notes (employer details and anything else that must stay out of this public repo)
 notes/
+.claude/worktrees/

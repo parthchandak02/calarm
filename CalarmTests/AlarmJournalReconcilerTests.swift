@@ -172,4 +172,29 @@ final class AlarmJournalReconcilerTests: XCTestCase {
         XCTAssertTrue(summary.contains("unobserved=1"), summary)
         XCTAssertTrue(summary.contains("worstLatenessSec=900"), summary)
     }
+
+    func testRingMinutesBeforeAWindowAlarmIsEarly() {
+        let fire = base
+        let entries = [
+            armed("a", fire: fire),
+            observed("a", event: .alerting, at: fire.addingTimeInterval(-300))
+        ]
+
+        let outcomes = AlarmJournalReconciler.reconcile(entries: entries, now: fire.addingTimeInterval(3600))
+
+        XCTAssertEqual(outcomes[0].status, .early)
+        XCTAssertEqual(outcomes[0].latenessSeconds, -300)
+    }
+
+    func testRingBeforeTheArmingIsNotEarly() {
+        let fire = base
+        let entries = [
+            armed("a", fire: fire, at: fire.addingTimeInterval(-200)),
+            observed("a", event: .alerting, at: fire.addingTimeInterval(-300))
+        ]
+
+        let outcomes = AlarmJournalReconciler.reconcile(entries: entries, now: fire.addingTimeInterval(3600))
+
+        XCTAssertEqual(outcomes[0].status, .unobserved)
+    }
 }

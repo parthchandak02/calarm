@@ -38,6 +38,15 @@ enum CalarmPersistence {
         static let vibrateInsteadOfRinging = "calarm.alarm.vibrateInsteadOfRinging"
         /// Set by `CalarmFocusFilter` while a Focus asks for vibration.
         static let focusVibrate = "calarm.alarm.focusVibrate"
+        /// Settings → Alarms → Island. Minutes before the ring the Live Activity appears; 0 is
+        /// Always. Absent means `LiveActivityLead.defaultLead`.
+        static let liveActivityLeadMinutes = "calarm.liveActivity.leadMinutes"
+        /// When each snoozed alarm re-rings, keyed by alarm UUID. Set by `SnoozeAlarmIntent`;
+        /// AlarmKit does not say when a snoozed countdown ends.
+        static let snoozedUntil = "calarm.alarm.snoozedUntil"
+        /// The fire date each alarm UUID last rang for, so a ring that came early is not
+        /// re-armed to ring again at the same fire date.
+        static let rangFireDates = "calarm.alarm.rangFireDates"
     }
 
     /// Standard app preferences — persisted across updates for the same bundle ID.
@@ -110,5 +119,12 @@ enum CalarmPersistence {
         let minutes = defaults.integer(forKey: Key.legacyDefaultOffsetMinutes)
         let migrated = AlarmOffsetOption.nearest(toMinutes: minutes).rawValue
         defaults.set(migrated, forKey: Key.defaultAlarmOffset)
+    }
+}
+
+extension LiveActivityLead {
+    static var persisted: LiveActivityLead {
+        guard CalarmPersistence.objectExists(forKey: CalarmPersistence.Key.liveActivityLeadMinutes) else { return defaultLead }
+        return LiveActivityLead(rawValue: CalarmPersistence.integer(forKey: CalarmPersistence.Key.liveActivityLeadMinutes)) ?? defaultLead
     }
 }

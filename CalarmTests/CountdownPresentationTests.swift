@@ -49,4 +49,22 @@ final class CountdownPresentationTests: XCTestCase {
         let verdict = AlarmTimingProbe.verdict(scheduledAt: scheduled, preAlert: 8, observedAt: scheduled.addingTimeInterval(40))
         XCTAssertEqual(verdict, .other(seconds: 40))
     }
+
+    func testProbeWindowAlarmOnTimeAtSixteenSeconds() {
+        let scheduled = Date(timeIntervalSince1970: 1_800_000_000)
+        let verdict = AlarmTimingProbe.verdict(scheduledAt: scheduled, preAlert: 8, expectedRing: 16, observedAt: scheduled.addingTimeInterval(16.2))
+        XCTAssertEqual(verdict, .onTime(seconds: 16))
+    }
+
+    func testProbeWindowAlarmEarlyWhenDeviceFollowsDocs() {
+        let scheduled = Date(timeIntervalSince1970: 1_800_000_000)
+        let verdict = AlarmTimingProbe.verdict(scheduledAt: scheduled, preAlert: 8, expectedRing: 16, observedAt: scheduled.addingTimeInterval(8.3))
+        XCTAssertEqual(verdict, .early(seconds: 8))
+    }
+
+    func testProbeCountdownModeNeverReportsEarly() {
+        let scheduled = Date(timeIntervalSince1970: 1_800_000_000)
+        let verdict = AlarmTimingProbe.verdict(scheduledAt: scheduled, preAlert: 8, expectedRing: 8, observedAt: scheduled.addingTimeInterval(1))
+        XCTAssertEqual(verdict, .other(seconds: 1))
+    }
 }

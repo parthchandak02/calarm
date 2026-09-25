@@ -19,6 +19,21 @@ final class SettingsSummaryTests: XCTestCase {
         )
     }
 
+    func testLeadTiles() {
+        XCTAssertEqual(SettingsSummary.leadTile(.always), "ALL")
+        XCTAssertEqual(SettingsSummary.leadTile(.ten), "10")
+        XCTAssertEqual(SettingsSummary.leadTile(.two), "2")
+    }
+
+    func testEarlyTestAlarmIsAProblem() {
+        var early = input()
+        early.timingEarlySeconds = 8
+        early.timingExpectedSeconds = 16
+        let problem = StatusVerdict.problems(for: early).first
+        XCTAssertEqual(problem?.title, "Test alarm rang early")
+        XCTAssertEqual(problem?.detail, "Rang at 8s instead of 16s · set Island to ALL")
+    }
+
     func testAlarmsLine() {
         XCTAssertEqual(SettingsSummary.alarmsLine(offset: .tenMinutes, snooze: .fiveMinutes, vibrates: false), "−10m · 5m · ring")
         XCTAssertEqual(SettingsSummary.alarmsLine(offset: .noAlarm, snooze: .oneMinute, vibrates: true), "off · 1m · vibrate")
@@ -28,7 +43,7 @@ final class SettingsSummaryTests: XCTestCase {
         let ringing = SettingsSummary.alarmsSentence(offset: .tenMinutes, snooze: .fiveMinutes, vibrates: false)
         XCTAssertEqual(ringing, "New events ring 10 minutes before. Snooze waits 5 minutes.")
         XCTAssertTrue(SettingsSummary.alarmsSentence(offset: .noAlarm, snooze: .fiveMinutes, vibrates: true)
-            .hasSuffix("then ring if not dismissed within a minute."))
+            .hasSuffix("Alarms vibrate instead of ringing."))
     }
 
     func testCalendarsLine() {

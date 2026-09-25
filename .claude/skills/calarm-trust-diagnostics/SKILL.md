@@ -19,8 +19,8 @@ description: >-
 ## Test alarm
 
 Settings → Status → **Test alarm (8 seconds)**. Device only; Simulator shows explanation.
-Uses the current sound mode (silent + vibrate in vibrate mode) but has **no ringing
-fallback**, so it tests vibration, not the fallback.
+Uses the current sound mode (silent + vibrate in vibrate mode) and the current Live Activity
+lead: with a lead set it rings at ~16s (a `.fixed(+8s)` + 8s window), with ALL at ~8s.
 
 ## Logging
 
