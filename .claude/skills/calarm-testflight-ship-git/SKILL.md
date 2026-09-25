@@ -55,21 +55,22 @@ Do **not** run `xcodebuild test` or boot simulators on this Mac unless the user 
 
 ## Ship to TestFlight
 
-Shipping happens on **`macmini-remote`**, which holds the signing identity and the App
-Store Connect key. The keychain must be unlocked **in the same SSH session as the build** —
+Shipping happens on the Mac that holds the distribution signing identity and the App
+Store Connect key (the owner's is in AGENTS.md § Owner's setup). The keychain must be unlocked **in the same SSH session as the build** —
 each `ssh` gets its own security session, so unlocking in a separate invocation does
 nothing. The owner types the password; do not handle it.
 
 ```bash
-ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
+./scripts/ship-testflight.sh        # at the signing Mac
+ssh -t <signing-mac> '<repo>/scripts/ship-testflight.sh'   # over SSH; owner's exact command is in AGENTS.md § Owner's setup
 ```
 
 One command, the owner types only the keychain password. In one SSH session on the mini:
-`scripts/ship-on-mini.sh` discards uncommitted changes → `git pull --ff-only` → re-runs its
+`scripts/ship-testflight.sh` discards uncommitted changes → `git pull --ff-only` → re-runs its
 updated self → keychain prompt → `ship.sh beta` (doctor → tests → `./release.sh` → Internal Testing group) → poll ASC until
 `IN_BETA_TESTING` → `scripts/record-build.sh N` (STATUS *Latest build*, top `## Unreleased`
 CHANGELOG heading → `## Build N`) → commit `Ship build N to TestFlight` → rebase → push.
-Then `git pull` here. Timed log in the mini's `build/logs/ship-*.log`. Never hand the owner an inline
+Then `git pull` here. Timed log in the signing Mac's `build/logs/ship-*.log`. Never hand the owner an inline
 `ssh` one-liner.
 
 **Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the

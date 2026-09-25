@@ -41,7 +41,7 @@ Apply minimal, accurate fixes:
 
 - **Info.plist**: User-facing permission strings must match actual behavior (calendar read for schedule + per-event alarms; AlarmKit for countdown alarms + Live Activities). Remove `UIBackgroundModes` and `BGTaskSchedulerPermittedIdentifiers` if no BGTask code exists.
 - **PrivacyInfo.xcprivacy**: Declare `NSPrivacyAccessedAPICategoryUserDefaults` with `CA92.1`. Declare calendar data collection if EventKit is used. Set `NSPrivacyTracking` false unless tracking exists.
-- **Release tooling**: Ensure `release.sh` archives with **Release** config and uploads straight to ASC (`destination: upload`, no local IPA). TestFlight ships go through `scripts/ship-on-mini.sh` on macmini-remote.
+- **Release tooling**: Ensure `release.sh` archives with **Release** config and uploads straight to ASC (`destination: upload`, no local IPA). TestFlight ships go through `scripts/ship-testflight.sh` on the signing Mac.
 - **fastlane**: Maintain lanes for `build_release`, `upload_metadata`, `precheck`. `upload_beta` is broken for binaries (see `calarm-testflight-fastlane`). Use App Store Connect API key env vars — never commit `.p8` keys.
 - **Metadata drafts**: Keep `fastlane/metadata/en-US/*.txt` accurate and conservative; no unverifiable claims.
 - **Docs**: Update `APP_STORE_CHECKLIST.md` — separate **Agent-done** vs **Human-only**.
@@ -80,7 +80,7 @@ Always end with:
 ```bash
 bundle install
 bundle exec fastlane ios build_release   # archive + export IPA
-# TestFlight: ship-on-mini.sh on macmini-remote — upload_beta is broken for binaries
+# TestFlight: scripts/ship-testflight.sh on the signing Mac — upload_beta is broken for binaries
 bundle exec fastlane ios upload_metadata # descriptions, keywords (no binary)
 bundle exec fastlane ios precheck        # catch common review issues
 ```

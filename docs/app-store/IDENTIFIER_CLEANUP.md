@@ -5,7 +5,7 @@ Apple has **no official CLI** to delete App IDs. This repo uses **fastlane space
 ## Safe workflow
 
 ```bash
-cd /Users/<name>/calarm
+cd path/to/calarm
 bundle install
 
 # 1. List everything (Apple ID + 2FA prompt)

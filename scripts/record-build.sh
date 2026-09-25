@@ -15,7 +15,7 @@ today = datetime.date.today().isoformat()
 status = open("STATUS.md").read()
 status = re.sub(r"\*\*Last updated: [0-9-]+\*\*", f"**Last updated: {today}**", status, count=1)
 status = re.sub(r"^\| \*\*Latest build\*\* \|.*$",
-                f"| **Latest build** | `{build}` — `VALID`, `IN_BETA_TESTING` (verified by `ship-on-mini.sh`) |",
+                f"| **Latest build** | `{build}` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |",
                 status, count=1, flags=re.M)
 open("STATUS.md", "w").write(status)
 

@@ -15,6 +15,21 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Changed
+
+- **The ship script is generic.** `scripts/ship-on-mini.sh` is now `scripts/ship-testflight.sh`:
+  it runs on any Mac holding the signing identity, at the Mac or over SSH, and unlocks the
+  keychain only when needed (always over SSH). The owner's machine and exact command live in
+  one place, AGENTS.md § Owner's setup.
+- **No personal values in scripts.** The ASC key ID default in `configure-credentials.sh`
+  (now discovered from `~/Keys/AuthKey_*.p8`), the tester-group ID default in
+  `add-testflight-internal-group.sh` (now required from `fastlane/.env`), the team ID in
+  `.env.example`, and `/Users/...` paths in the icon scripts and two docs are gone.
+
+---
+
 ## Build 20260924.1518 — 2026-09-24
 
 A three-way audit (docs, code review, build/config) after the day's builds.

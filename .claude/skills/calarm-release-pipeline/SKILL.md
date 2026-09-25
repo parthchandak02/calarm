@@ -11,7 +11,7 @@ description: >-
 
 | Command | Purpose |
 |---------|---------|
-| `ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'` | **The one ship command.** `ship-on-mini.sh` updates itself from `main`, prompts for the keychain, ships, verifies `IN_BETA_TESTING`, records the build (`record-build.sh`), pushes |
+| `./scripts/ship-testflight.sh` | **The one ship command**, run on the signing Mac (or over `ssh -t`). Updates itself from `main`, prompts for the keychain, ships, verifies `IN_BETA_TESTING`, records the build (`record-build.sh`), pushes |
 | `./deploy.sh 1` | Simulator debug build |
 | `./deploy.sh 2` | Physical device (stamp + install + verify) |
 | `./release.sh` | Release archive + upload straight to App Store Connect (`ExportOptions` sets `destination: upload`, so no local IPA is written) |

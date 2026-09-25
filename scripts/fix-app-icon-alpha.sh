@@ -3,5 +3,6 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-python3 "$ROOT/scripts/process-app-icon.py" --source "${1:-/Users/<name>/Downloads/calarm-final.jpeg}"
+source="${1:?usage: fix-app-icon-alpha.sh <source logo image>}"
+python3 "$ROOT/scripts/process-app-icon.py" --source "$source"
 sips -g hasAlpha "$ROOT/Calarm/Assets.xcassets/AppIcon.appiconset/calarm.png"

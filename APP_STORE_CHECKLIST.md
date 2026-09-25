@@ -19,7 +19,7 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [x] **Publish playbook** — `docs/app-store/PUBLISH_PLAYBOOK.md`
 - [x] **Ship pipeline** — `scripts/ship.sh`, `scripts/ios-doctor.sh`, `ios-app.config.sh`
 - [x] **Multi-app bootstrap** — `pipeline/install-into-repo.sh`, `pipeline/BOOTSTRAP_NEW_APP.md`
-- [x] **API key on disk** — `~/Keys/AuthKey_<ASC_KEY_ID>.p8`, `fastlane/.env` (partial)
+- [x] **API key on disk** — `~/Keys/AuthKey_<KEY_ID>.p8`, `fastlane/.env` (partial)
 - [x] **asc + apple-docs CLIs** — installed (`brew install asc`, Printing Press)
 - [x] **App icon** — 1024×1024 in `AppIcon.appiconset`
 
@@ -30,7 +30,7 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [ ] **Issuer ID in `fastlane/.env`** — run `./scripts/configure-credentials.sh <ISSUER_ID>` ([YOUR_ACTIONS.md](docs/app-store/YOUR_ACTIONS.md))
 - [ ] **Siri capability** on `com.calarmapp.calarm` — portal or `./scripts/bootstrap-portal.sh`
 - [ ] **Apple Developer Program** — active paid membership
-- [x] **API key `.p8`** — `~/Keys/AuthKey_<ASC_KEY_ID>.p8`
+- [x] **API key `.p8`** — `~/Keys/AuthKey_<KEY_ID>.p8`
 - [ ] **Set `ASC_APP_APPLE_ID`** — auto-filled by `configure-credentials.sh` or ASC URL
 - [ ] **Verify GitHub Pages URLs** — https://parthchandak02.github.io/calarm/privacy.html (after deploy)
 - [ ] **App Privacy questionnaire** — ASC (match `PrivacyInfo.xcprivacy`)

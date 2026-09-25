@@ -161,7 +161,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--source",
-        default="/Users/<name>/Downloads/calarm-final.jpeg",
+        required=True,
         help="Source logo image",
     )
     parser.add_argument(

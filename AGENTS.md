@@ -62,36 +62,44 @@ xcrun simctl delete "$UDID"
 ./deploy.sh 1               # simulator      ./deploy.sh 2   # device
 ```
 
-**Shipping happens on `macmini-remote`**, which holds the signing identity and ASC key.
-The keychain must be unlocked **in the same SSH session as the build** — each `ssh` gets
-its own security session. The owner types the password; do not handle it.
+**Shipping** runs `scripts/ship-testflight.sh` on whichever Mac holds the distribution
+signing identity and the App Store Connect API key (configured in its gitignored
+`fastlane/.env`; see `fastlane/.env.example`). It updates itself from `main`, unlocks the
+login keychain (always over SSH, where each session has its own security session; locally
+only if locked), runs `ship.sh beta` (doctor, tests, archive, upload, tester group), waits
+for `IN_BETA_TESTING` in ASC, runs `record-build.sh` (STATUS *Latest build*; the top
+`## Unreleased` CHANGELOG heading becomes `## Build N`), commits and pushes. Timed log in
+that Mac's `build/logs/`. Work happens on `main`; no side branches. Before shipping, title
+pending CHANGELOG work `## Unreleased — YYYY-MM-DD` so it gets the build number.
 
-```bash
-ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
-```
-
-**This is the whole ship, and the exact command to hand the owner** — nothing longer, and no
-wrapper script on this Mac. `scripts/ship-on-mini.sh` lives in the repo and runs on the mini:
-it updates itself from `main`, prompts for the keychain password (the owner types it), runs
-`ship.sh beta` (doctor, tests, archive, upload, tester group), waits for `IN_BETA_TESTING` in
-ASC, runs `record-build.sh` (STATUS *Latest build*; the top `## Unreleased` CHANGELOG heading
-becomes `## Build N`), commits and pushes. Timed log in the mini's `build/logs/`. Afterwards
-`git pull` here. Work happens on `main`; no side branches. Before shipping,
-title pending CHANGELOG work `## Unreleased — YYYY-MM-DD` so it gets the build number.
-
-**`macmini-remote` runs Xcode 26 (Swift 6.3); this Mac runs Xcode 27 (Swift 6.4).** An iOS 27
-SDK API compiles here and breaks the release build there. Wrap such code in
-`#if compiler(>=6.4)` as well as `#available(iOS 27.0, *)`, and compile on the mini before
-shipping — no keychain needed for a simulator build:
-
-```bash
-ssh macmini-remote 'cd ~/projects/calarm && git checkout -- Calarm.xcodeproj/project.pbxproj && git pull --ff-only origin main && xcodebuild build -project Calarm.xcodeproj -scheme Calarm -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO -quiet'
-```
+**Release Mac vs dev Mac toolchains can differ.** An iOS 27 SDK API compiles under Xcode 27
+and breaks an Xcode 26 release build. Wrap such code in `#if compiler(>=6.4)` as well as
+`#available(iOS 27.0, *)`, and compile on the release Mac before shipping (see Owner's setup).
 
 **Verify a ship against App Store Connect, not the script's output.** This pipeline has
 printed success with a build that reached nobody, three times in one day. The signal is
 `internalBuildState == IN_BETA_TESTING` on the build's `buildBetaDetail`; the API key's
 role gets 403 on `/builds/{id}/betaGroups`.
+
+## Owner's setup
+
+The one place this repo names the owner's machines. Nothing here is secret: `macmini-remote`
+is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
+
+- **Release Mac:** `macmini-remote`, repo at `~/projects/calarm`, Xcode 26 (Swift 6.3).
+  **Dev Mac:** Xcode 27 (Swift 6.4).
+- **Ship command — hand the owner exactly this**, nothing longer, no local wrapper scripts:
+
+  ```bash
+  ssh -t macmini-remote '~/projects/calarm/scripts/ship-testflight.sh'
+  ```
+
+  The owner types the keychain password; never handle it. Afterwards `git pull` here.
+- **Compile check on the release Mac** (no keychain needed):
+
+  ```bash
+  ssh macmini-remote 'cd ~/projects/calarm && git reset -q --hard HEAD && git pull -q --ff-only origin main && xcodebuild build -project Calarm.xcodeproj -scheme Calarm -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO -quiet'
+  ```
 
 ## Hard constraints
 

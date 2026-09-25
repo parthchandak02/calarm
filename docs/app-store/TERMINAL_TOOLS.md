@@ -20,7 +20,7 @@ Three layers: **ship to App Store** (asc + fastlane), **Developer Portal cleanup
 ## One-time setup (after `fastlane/.env` has Issuer ID)
 
 ```bash
-cd /Users/<name>/calarm
+cd path/to/calarm
 
 # 1. asc CLI auth (reads fastlane/.env)
 ./scripts/setup-asc-cli.sh

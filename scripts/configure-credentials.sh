@@ -37,11 +37,13 @@ else
   echo "ASC_ISSUER_ID=${ISSUER_ID}" >> fastlane/.env
 fi
 
-# Ensure key path/id if missing
+# Fill key ID and path from the only AuthKey_*.p8 in ~/Keys, when the .env has none.
 if ! grep -q '^ASC_KEY_ID=' fastlane/.env || [[ -z "$(grep '^ASC_KEY_ID=' fastlane/.env | cut -d= -f2)" ]]; then
-  if [[ -f "$HOME/Keys/AuthKey_<ASC_KEY_ID>.p8" ]]; then
-    sed -i '' 's|^ASC_KEY_ID=.*|ASC_KEY_ID=<ASC_KEY_ID>|' fastlane/.env 2>/dev/null || echo "ASC_KEY_ID=<ASC_KEY_ID>" >> fastlane/.env
-    sed -i '' "s|^ASC_KEY_PATH=.*|ASC_KEY_PATH=$HOME/Keys/AuthKey_<ASC_KEY_ID>.p8|" fastlane/.env 2>/dev/null || echo "ASC_KEY_PATH=$HOME/Keys/AuthKey_<ASC_KEY_ID>.p8" >> fastlane/.env
+  keys=("$HOME"/Keys/AuthKey_*.p8)
+  if [[ ${#keys[@]} -eq 1 && -f "${keys[0]}" ]]; then
+    key_id="$(basename "${keys[0]}" .p8)"; key_id="${key_id#AuthKey_}"
+    sed -i '' "s|^ASC_KEY_ID=.*|ASC_KEY_ID=${key_id}|" fastlane/.env 2>/dev/null || echo "ASC_KEY_ID=${key_id}" >> fastlane/.env
+    sed -i '' "s|^ASC_KEY_PATH=.*|ASC_KEY_PATH=${keys[0]}|" fastlane/.env 2>/dev/null || echo "ASC_KEY_PATH=${keys[0]}" >> fastlane/.env
   fi
 fi
 

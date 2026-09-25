@@ -35,7 +35,8 @@ Without Google Calendar connected, the app reads only on-device EventKit calenda
 - `Config/Google.local.xcconfig` (generated from that plist by `scripts/setup-google-oauth.sh`)
 - `build/`, `build-device/`, `build-sim/`, `DerivedData/`
 - Device UDIDs or named device identifiers in docs/scripts
-- Personal machine paths (`/Users/...`) in shared docs
+- Personal machine paths (`/Users/...`) in shared docs or scripts; machine names outside
+  AGENTS.md § Owner's setup
 
 All of the above are covered by `.gitignore` or project conventions.
 

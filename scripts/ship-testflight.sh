@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# The whole TestFlight ship, run on macmini-remote (the only Mac with the signing identity
-# and ASC key). From anywhere:
+# The whole TestFlight ship. Run it on the Mac that holds your distribution signing identity
+# and App Store Connect API key, either at that Mac or over SSH:
 #
-#   ssh -t macmini-remote '~/projects/calarm/scripts/ship-on-mini.sh'
+#   ./scripts/ship-testflight.sh
+#   ssh -t <signing-mac> '<path-to-repo>/scripts/ship-testflight.sh'
 #
-# The one manual step is the keychain password prompt; it has to be typed in the same SSH
-# session as the build. The script updates itself from main first, then ships, waits for
-# IN_BETA_TESTING, records the build in STATUS and CHANGELOG, and pushes.
+# Needs fastlane/.env (see fastlane/.env.example) on that Mac. The script updates itself from
+# main, unlocks the login keychain if needed, ships, waits for IN_BETA_TESTING, records the
+# build in STATUS and CHANGELOG, and pushes.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -28,8 +29,15 @@ step() { printf '\n==> [%s +%ss] %s\n' "$(date +%H:%M:%S)" "$(( $(date +%s) - st
 
 echo "Shipping $(git log -1 --format='%h %s') — full log: ~/projects/calarm/$log"
 
-step "0/4 Unlock the login keychain (type the Mac mini password)"
-security unlock-keychain ~/Library/Keychains/login.keychain-db
+# codesign over SSH needs the keychain unlocked inside this SSH session, whatever its state
+# in the GUI session, so over SSH it is always unlocked. At the Mac itself, only if locked.
+keychain=~/Library/Keychains/login.keychain-db
+if [[ -n "${SSH_CONNECTION:-}" ]] || ! security show-keychain-info "$keychain" >/dev/null 2>&1; then
+  step "0/4 Unlock the login keychain (type this Mac's login password)"
+  security unlock-keychain "$keychain"
+else
+  step "0/4 Login keychain already unlocked"
+fi
 
 step "1/4 Ship: doctor, unit tests, archive, upload, Internal Testing group"
 ./scripts/ship.sh beta

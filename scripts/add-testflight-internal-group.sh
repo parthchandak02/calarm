@@ -12,7 +12,12 @@ if [[ -f fastlane/.env ]]; then
 fi
 
 APP_ID="${ASC_APP_APPLE_ID:-}"
-GROUP_ID="${ASC_INTERNAL_TESTING_GROUP_ID:-<ASC_INTERNAL_TESTING_GROUP_ID>}"
+GROUP_ID="${ASC_INTERNAL_TESTING_GROUP_ID:-}"
+
+if [[ -z "$GROUP_ID" ]]; then
+  echo "ERROR: ASC_INTERNAL_TESTING_GROUP_ID not set in fastlane/.env (App Store Connect → TestFlight → Internal Testing → group URL)"
+  exit 1
+fi
 
 if [[ -z "$APP_ID" ]]; then
   echo "WARN: ASC_APP_APPLE_ID not set — skip Internal Testing group assignment"
