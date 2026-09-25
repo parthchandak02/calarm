@@ -28,11 +28,12 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Check the flight-board Live Activity on device (next build).** It can only be seen on a
-phone (the Simulator cannot run an AlarmKit countdown). Arm an event, lock the phone, and
-check: digits sit on their tiles; after crossing 10:00 or 1:00:00 the left tile goes blank
-and the rest stay aligned; the compact Island fits `TITLE` + tiles; paused/snoozed labels.
-The countdown, day headers and Settings tint shipped in build 2104.
+**Check the Live Activity countdown on device (next build).** Build 2129 drew the Lock Screen
+card and the compact Island's countdown blank in countdown and paused states; the ringing
+state rendered. Cause (inferred, not provable off device): `FlapTimer` set its text with a
+UIFont-backed `Font(uiFont)`; now `.custom`. Arm an event, lock the phone, and check: the card
+shows the title row and tiles; digits sit on their tiles; after 10:00 or 1:00:00 the left tile
+goes blank and the rest stay aligned; the compact Island fits `TITLE` + tiles.
 
 **Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
 (2026-09-24: the silent sound vibrates). Leave a **real event's** vibrating alarm undismissed:

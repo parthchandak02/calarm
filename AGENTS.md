@@ -139,6 +139,9 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **The Live Activity alarm is countdown-mode (`schedule: nil`), not `.fixed` + `preAlert`.**
   The latter rang late on device by exactly its pre-alert. AlarmKit keeps no fire date for a
   countdown alarm; `AlarmScheduler` stores it. See the `calarm-alarmkit-reschedule` skill.
+- **Never `Font(UIFont)` / `Font(CTFont)` in the widget extension.** It blanked the whole
+  Live Activity on device while `Font.custom` rendered. Measure with UIFont if needed, but
+  set the font with `.custom`.
 - **System timer text is not zero-padded** (`45:07`, `9:59`, `2:05:00`) and shortens as it
   ticks. `FlapTimer` lays its tiles from the trailing edge for that reason; do not lay them
   out left to right. See RESEARCH.md § Timer text format.

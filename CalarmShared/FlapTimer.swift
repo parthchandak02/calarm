@@ -109,7 +109,9 @@ struct FlapTimer: View {
                     }
                 }
                 timerText
-                    .font(Font(uiFont))
+                    // Not `Font(uiFont)`: a UIFont-backed Font blanked the whole Live
+                    // Activity on device (build 2129) while `.custom` renders.
+                    .font(.custom(Self.fontName, fixedSize: fontSize))
                     .tracking(tracking)
                     .monospacedDigit()
                     .foregroundStyle(tint)

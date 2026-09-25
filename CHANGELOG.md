@@ -15,6 +15,15 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Fixed
+
+- **The Live Activity countdown was blank on device.** In build 2129 the Lock Screen card was
+  an empty black box and the compact Island showed no time while counting down or paused;
+  only the ringing state drew. `FlapTimer` set its font with `Font(UIFont)`, which the
+  widget renderer does not draw; it now uses `.custom`, as every view that rendered does.
+
 ## Build 20260924.2129 — 2026-09-24
 
 ### Changed
