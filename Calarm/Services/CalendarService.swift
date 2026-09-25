@@ -62,7 +62,7 @@ final class CalendarService: ObservableObject {
                 CalendarSummary(
                     id: calendar.calendarIdentifier,
                     title: calendar.title,
-                    colorHex: calendar.cgColor?.components?.description ?? "",
+                    colorHex: CalendarColor.hexString(from: calendar.cgColor) ?? "",
                     isEnabled: CalendarFilterPreferences.isEnabled(calendarID: calendar.calendarIdentifier)
                 )
             }

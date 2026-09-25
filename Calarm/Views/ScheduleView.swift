@@ -73,12 +73,7 @@ struct ScheduleView: View {
             .background(theme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingSettings) {
-                SettingsSheet(
-                    defaultAlarmOffset: store.defaultAlarmOffset,
-                    defaultSnooze: store.defaultSnooze,
-                    onDefaultAlarmOffsetChange: { store.updateDefaultAlarmOffset($0) },
-                    onDefaultSnoozeChange: { store.updateDefaultSnooze($0) }
-                )
+                SettingsSheet()
                 .environmentObject(store)
                 .environmentObject(themeStore)
             }
@@ -250,7 +245,7 @@ struct ScheduleView: View {
                         .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
                     }
                 } header: {
-                    BoardDayHeader(title: DepartureBoard.dayTitle(for: day.date, now: .now))
+                    BoardSectionLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
                 }
             }
         }
@@ -336,28 +331,6 @@ struct ScheduleView: View {
     }
 }
 
-private struct BoardDayHeader: View {
-    @Environment(\.calarmTheme) private var theme
-
-    let title: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(CalarmFont.boardLabel)
-                .tracking(2)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize()
-            Rectangle()
-                .fill(theme.surfaceStroke)
-                .frame(height: 1)
-        }
-        .padding(.top, 14)
-        .padding(.bottom, 4)
-        .accessibilityAddTraits(.isHeader)
-    }
-}
-
 private struct EventRow: View {
     @Environment(\.calarmTheme) private var theme
 
@@ -411,32 +384,9 @@ private struct EventRow: View {
             }
             .buttonStyle(.plain)
 
-            Button(action: onToggle) {
-                ArmSquare(isOn: event.alarmEnabled)
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.selection, trigger: event.alarmEnabled)
-            .accessibilityLabel(event.alarmEnabled ? "Turn alarm off" : "Turn alarm on")
+            ArmSquareToggle(isOn: event.alarmEnabled, label: "Alarm for \(event.title)", onToggle: onToggle)
         }
         .opacity(event.isEventUpcoming ? 1 : 0.4)
         .listRowBackground(Color.clear)
-    }
-}
-
-/// The board's lit square: filled and glowing when the event will ring.
-private struct ArmSquare: View {
-    @Environment(\.calarmTheme) private var theme
-
-    let isOn: Bool
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .fill(isOn ? theme.accent : Color.clear)
-            .strokeBorder(isOn ? theme.accent : theme.textSecondary, lineWidth: 1.5)
-            .frame(width: 18, height: 18)
-            .shadow(color: isOn ? theme.accent.opacity(0.6) : .clear, radius: 6)
-            .animation(.snappy, value: isOn)
-            .frame(width: CalarmTheme.bellTapSize, height: CalarmTheme.bellTapSize)
-            .contentShape(Rectangle())
     }
 }

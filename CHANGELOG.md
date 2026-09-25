@@ -15,6 +15,28 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Changed
+
+- **Settings is a departure board.** The custom four-tab bar is gone. Settings opens at half
+  height on four lines that show their current state: *Alarms −10m · 5m · ring*, *Calendars
+  3 of 5 · Google*, *Look*, and *Status all good / N issues*. Each pushes to its own page:
+  - **Alarms:** flap tiles replace ~15 list rows, with a plain-English summary sentence.
+  - **Calendars:** one line per calendar with the lit square and its upcoming event count.
+  - **Look:** a live row and Island preview, accent squares, and appearance tiles.
+  - **Status:** a verdict ("ALL GOOD" / "1 PROBLEM") with a fix button per problem, and the
+    raw checks folded into one line.
+  The 8-second test alarm sits on the root and Status. Chosen from options mocked in the
+  owner's `notes/ui-redesign/settings.html` (2026-09-24).
+
+### Fixed
+
+- **iOS calendar colours were never read.** `CalendarSummary.colorHex` held a description of
+  the colour components rather than a hex string; it now uses `CalendarColor.hexString`.
+
+---
+
 ## Build 20260924.1948 — 2026-09-24
 
 ### Changed

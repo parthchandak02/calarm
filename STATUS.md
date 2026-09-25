@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Latest build** | `20260924.1948` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
-| **Tests** | 109 passing (`CalarmTests`, 2026-09-24) |
+| **Tests** | 116 passing (`CalarmTests`, 2026-09-24) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -28,9 +28,9 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Look at the new schedule (next build).** The schedule is now a departure board: one
-split-flap countdown, one line per event, a lit square to arm. Say what to change. Settings,
-event detail and the Live Activity are next, in the same style.
+**Look at the new Settings (next build).** The schedule (build 1948, owner: "much better")
+and now Settings are departure boards. Say what to change. Event detail, the add-alarm
+sheet and the Live Activity are the screens left in the old style.
 
 **Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
 (2026-09-24: the silent sound vibrates). Leave a **real event's** vibrating alarm undismissed:

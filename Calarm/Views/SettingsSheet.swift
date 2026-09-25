@@ -3,616 +3,206 @@
 //  Calarm
 //
 
-import AlarmKit
-import EventKit
 import SwiftUI
 import UIKit
 
-private enum SettingsTab: String, SettingsTabItem {
-    case calendars
+enum SettingsPage: Hashable {
     case alarms
+    case calendars
     case look
     case status
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .calendars: "Calendar"
-        case .alarms: "Alarms"
-        case .look: "Look"
-        case .status: "Status"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .calendars: "calendar"
-        case .alarms: "bell"
-        case .look: "paintbrush"
-        case .status: "waveform.path.ecg"
-        }
-    }
-
-    var accessibilityIdentifier: String {
-        "settings.tab.\(rawValue)"
-    }
 }
 
+/// Settings as a departure board: the root shows each area's current state on one line
+/// and pushes into it, so most visits end without a tap.
 struct SettingsSheet: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var store: ScheduleStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var defaultAlarmOffset: AlarmOffsetOption
-    @State private var defaultSnooze: SnoozeDurationOption
-    @State private var testAlarmMessage: String?
-    @State private var isSchedulingTestAlarm = false
-    @State private var googleConnectError: String?
-    @State private var isConnectingGoogle = false
-    @State private var selectedTab: SettingsTab = .calendars
-
-    private let onDefaultAlarmOffsetChange: (AlarmOffsetOption) -> Void
-    private let onDefaultSnoozeChange: (SnoozeDurationOption) -> Void
-
-    init(
-        defaultAlarmOffset: AlarmOffsetOption,
-        defaultSnooze: SnoozeDurationOption,
-        onDefaultAlarmOffsetChange: @escaping (AlarmOffsetOption) -> Void,
-        onDefaultSnoozeChange: @escaping (SnoozeDurationOption) -> Void
-    ) {
-        _defaultAlarmOffset = State(initialValue: defaultAlarmOffset)
-        _defaultSnooze = State(initialValue: defaultSnooze)
-        self.onDefaultAlarmOffsetChange = onDefaultAlarmOffsetChange
-        self.onDefaultSnoozeChange = onDefaultSnoozeChange
-    }
-
     private var theme: CalarmTheme {
         themeStore.theme(colorScheme: colorScheme)
     }
 
-    private var isSimulator: Bool {
-        #if targetEnvironment(simulator)
-        true
-        #else
-        false
-        #endif
-    }
-
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                SettingsTabBar(selection: $selectedTab, theme: theme)
-                    .padding(.horizontal, CalarmTheme.screenPaddingH)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    BoardSectionLabel(title: "System")
+                    link(.alarms, title: "Alarms") {
+                        BoardValue(
+                            text: SettingsSummary.alarmsLine(
+                                offset: store.defaultAlarmOffset,
+                                snooze: store.defaultSnooze,
+                                vibrates: store.vibrateInsteadOfRinging || store.focusVibrate
+                            ),
+                            color: theme.accent,
+                            showsChevron: true
+                        )
+                    }
+                    link(.calendars, title: "Calendars") {
+                        BoardValue(text: calendarsValue, showsChevron: true)
+                    }
+                    link(.look, title: "Look") {
+                        BoardValue(
+                            text: "\(themeStore.accent.title.lowercased()) · \(themeStore.appearance.title.lowercased())",
+                            showsChevron: true
+                        )
+                    }
+                    link(.status, title: "Status") {
+                        let problems = store.statusProblems
+                        HStack(spacing: 8) {
+                            StatusLight(isProblem: !problems.isEmpty)
+                            BoardValue(
+                                text: problems.isEmpty ? "all good" : "\(problems.count) issue\(problems.count == 1 ? "" : "s")",
+                                color: problems.isEmpty ? nil : theme.destructive,
+                                showsChevron: true
+                            )
+                        }
+                    }
 
-                ScrollView {
-                    tabContent
-                        .padding(.horizontal, CalarmTheme.screenPaddingH)
-                        .padding(.bottom, 8)
+                    NextRingBlock()
+                    TestAlarmButton()
+                        .padding(.top, 16)
+
+                    buildInfo
+                        .padding(.top, 32)
                 }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                developerInfoBar
+                .padding(.horizontal, CalarmTheme.rowPaddingH)
+                .padding(.bottom, 24)
             }
             .background(theme.background.ignoresSafeArea())
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .boardNavigationTitle("Settings")
             .calarmToolbarChrome(theme: theme)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(CalarmFont.bodyMedium)
-                        .foregroundStyle(theme.accent)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .sharedBackgroundVisibility(.hidden)
+            }
+            .navigationDestination(for: SettingsPage.self) { page in
+                Group {
+                    switch page {
+                    case .alarms: SettingsAlarmsPage()
+                    case .calendars: SettingsCalendarsPage()
+                    case .look: SettingsLookPage()
+                    case .status: SettingsStatusPage()
+                    }
+                }
+                .background(theme.background.ignoresSafeArea())
+                .calarmToolbarChrome(theme: theme)
             }
         }
-        .font(CalarmFont.body)
+        .environment(\.calarmTheme, theme)
+        .tint(theme.accent)
         .calarmNavigationStyle(theme: theme)
-        .presentationDetents([.large])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(theme.background)
         .accessibilityIdentifier("settings.sheet")
-        .alert("Test alarm", isPresented: Binding(
-            get: { testAlarmMessage != nil },
-            set: { if !$0 { testAlarmMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { testAlarmMessage = nil }
-        } message: {
-            Text(testAlarmMessage ?? "")
+    }
+
+    private func link<Value: View>(_ page: SettingsPage, title: String, @ViewBuilder value: @escaping () -> Value) -> some View {
+        NavigationLink(value: page) {
+            BoardLine(title: title, trailing: value)
         }
-        .alert("Google Calendar", isPresented: Binding(
-            get: { googleConnectError != nil },
-            set: { if !$0 { googleConnectError = nil } }
-        )) {
-            Button("OK", role: .cancel) { googleConnectError = nil }
-        } message: {
-            Text(googleConnectError ?? "")
-        }
+        .buttonStyle(.plain)
     }
 
-    @ViewBuilder
-    private var tabContent: some View {
-        switch selectedTab {
-        case .calendars:
-            VStack(alignment: .leading, spacing: 28) {
-                googleCalendarSection
-                calendarsSection
-            }
-            .accessibilityIdentifier("settings.panel.calendars")
-        case .alarms:
-            VStack(alignment: .leading, spacing: 28) {
-                defaultAlarmSection
-                alarmSoundSection
-                snoozeSection
-            }
-            .accessibilityIdentifier("settings.panel.alarms")
-        case .look:
-            VStack(alignment: .leading, spacing: 28) {
-                liveActivityCalendarColorSection
-                appearanceSection
-                accentSection
-            }
-            .accessibilityIdentifier("settings.panel.look")
-        case .status:
-            diagnosticsSection
-                .accessibilityIdentifier("settings.panel.status")
-        }
+    private var calendarsValue: String {
+        let eventKit = store.calendarService.availableCalendars
+        let google = store.googleCalendarService.isConnected ? store.googleCalendarService.availableCalendars : []
+        let enabled = eventKit.filter(\.isEnabled).count
+            + google.filter { store.googleCalendarService.isCalendarEnabled($0.id) }.count
+        return SettingsSummary.calendarsLine(
+            enabled: enabled,
+            total: eventKit.count + google.count,
+            googleConnected: store.googleCalendarService.isConnected
+        )
     }
 
-    private var googleCalendarSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Google Calendar", theme: theme)
-
-            Text("Connect Google for faster updates than iOS Calendar sync. iCloud and other calendars still use EventKit.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            SettingsOptionList(theme: theme) {
-                if store.googleCalendarService.isConnected {
-                    SettingsInfoRow(
-                        title: "Account",
-                        value: store.googleCalendarService.connectedEmail ?? "Connected",
-                        theme: theme
-                    )
-
-                    Divider().overlay(theme.surfaceStroke)
-
-                    if store.googleCalendarService.availableCalendars.isEmpty {
-                        Text("Loading Google calendars…")
-                            .font(CalarmFont.caption)
-                            .foregroundStyle(theme.textSecondary)
-                            .padding(.horizontal, CalarmTheme.rowPaddingH)
-                            .frame(height: CalarmTheme.settingsRowHeight)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(theme.surface)
-                    } else {
-                        ForEach(Array(store.googleCalendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
-                            SettingsToggleRow(
-                                isOn: Binding(
-                                    get: { store.googleCalendarService.isCalendarEnabled(calendar.id) },
-                                    set: { enabled in
-                                        store.googleCalendarService.setCalendarEnabled(calendar.id, enabled: enabled)
-                                        Task { await store.reload() }
-                                    }
-                                ),
-                                theme: theme
-                            ) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(calendar.title)
-                                        .font(CalarmFont.bodyMedium)
-                                        .foregroundStyle(theme.textPrimary)
-                                    if calendar.isBusyOnly {
-                                        Text("Busy blocks only")
-                                            .font(CalarmFont.caption)
-                                            .foregroundStyle(theme.textSecondary)
-                                    }
-                                }
-                            }
-
-                            if index < store.googleCalendarService.availableCalendars.count - 1 {
-                                Divider().overlay(theme.surfaceStroke)
-                            }
-                        }
-                    }
-
-                    Divider().overlay(theme.surfaceStroke)
-
-                    SettingsActionRow(
-                        title: "Disconnect Google",
-                        theme: theme,
-                        titleColor: theme.destructive
-                    ) {
-                        store.disconnectGoogleCalendar()
-                    }
-                } else if GoogleOAuthConfig.isConfigured {
-                    SettingsActionRow(
-                        title: isConnectingGoogle ? "Connecting…" : "Connect Google Calendar",
-                        theme: theme,
-                        systemImage: "person.crop.circle.badge.plus",
-                        isDisabled: isConnectingGoogle
-                    ) {
-                        guard let presenter = UIApplication.shared.calarmTopViewController else {
-                            googleConnectError = "Could not present Google sign-in."
-                            return
-                        }
-                        isConnectingGoogle = true
-                        Task {
-                            do {
-                                try await store.connectGoogleCalendar(from: presenter)
-                            } catch {
-                                googleConnectError = error.localizedDescription
-                            }
-                            isConnectingGoogle = false
-                        }
-                    }
-                } else {
-                    Text("Add GoogleService-Info.plist to enable Google Calendar. See scripts/setup-google-oauth.sh.")
-                        .font(CalarmFont.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .padding(.horizontal, CalarmTheme.rowPaddingH)
-                        .frame(minHeight: CalarmTheme.settingsRowHeight, alignment: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(theme.surface)
-                }
-            }
-
-            if store.googleCalendarService.isConnected {
-                Text("Google events refresh whenever you open CALarm. iOS may still delay EventKit copies of the same calendars.")
-                    .font(CalarmFont.caption)
-                    .foregroundStyle(theme.textSecondary)
-            } else {
-                Text("Without Google connect, calendars added in iOS Settings sync on Apple's schedule — often minutes behind. Open the Calendar app to force a refresh.")
-                    .font(CalarmFont.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-        }
-    }
-
-    private var calendarsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Calendars", theme: theme)
-
-            Text("Choose which calendars CALarm reads for upcoming events. All-day events are always skipped.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-
-            if hiddenCalendarCount > 0 {
-                Text("\(hiddenCalendarCount) calendar\(hiddenCalendarCount == 1 ? " is" : "s are") switched off, so their events never appear on the schedule.")
-                    .font(CalarmFont.caption)
-                    .foregroundStyle(theme.accent)
-            }
-
-            if store.calendarService.availableCalendars.isEmpty {
-                Text(store.authorizationStatus == .fullAccess ? "No calendars found." : "Grant calendar access to choose calendars.")
-                    .font(CalarmFont.caption)
-                    .foregroundStyle(theme.textSecondary)
-            } else {
-                SettingsOptionList(theme: theme) {
-                    ForEach(Array(store.calendarService.availableCalendars.enumerated()), id: \.element.id) { index, calendar in
-                        SettingsToggleRow(
-                            isOn: Binding(
-                                get: { calendar.isEnabled },
-                                set: { enabled in
-                                    store.calendarService.setCalendarEnabled(calendar.id, enabled: enabled)
-                                    Task { await store.reload() }
-                                }
-                            ),
-                            theme: theme
-                        ) {
-                            Text(calendar.title)
-                                .font(CalarmFont.bodyMedium)
-                                .foregroundStyle(theme.textPrimary)
-                        }
-
-                        if index < store.calendarService.availableCalendars.count - 1 {
-                            Divider().overlay(theme.surfaceStroke)
-                        }
-                    }
-                }
-
-                if hiddenCalendarCount > 0 {
-                    SettingsActionRow(
-                        title: "Turn all calendars back on",
-                        theme: theme,
-                        systemImage: "checklist.checked"
-                    ) {
-                        store.calendarService.enableAllCalendars()
-                        Task { await store.reload() }
-                    }
-                }
-            }
-        }
-    }
-
-    private var hiddenCalendarCount: Int {
-        store.calendarService.availableCalendars.filter { !$0.isEnabled }.count
-    }
-
-    private var diagnosticsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Diagnostics", theme: theme)
-
-            SettingsOptionList(theme: theme) {
-                SettingsInfoRow(title: "Calendar", value: calendarStatusLabel, theme: theme)
-                Divider().overlay(theme.surfaceStroke)
-                SettingsInfoRow(title: "Alarms", value: alarmStatusLabel, theme: theme)
-                Divider().overlay(theme.surfaceStroke)
-                SettingsInfoRow(title: "Next ring", value: nextRingLabel, theme: theme)
-                Divider().overlay(theme.surfaceStroke)
-                SettingsInfoRow(title: "Last reschedule", value: lastRescheduleLabel, theme: theme)
-                Divider().overlay(theme.surfaceStroke)
-                SettingsInfoRow(title: "Events loaded", value: eventSourceLabel, theme: theme)
-                Divider().overlay(theme.surfaceStroke)
-                SettingsInfoRow(title: "Alarm timing", value: alarmTimingLabel, theme: theme)
-
-                Divider().overlay(theme.surfaceStroke)
-
-                SettingsActionRow(
-                    title: isSchedulingTestAlarm ? "Scheduling…" : "Test alarm (8 seconds)",
-                    theme: theme,
-                    systemImage: "bell.badge",
-                    isDisabled: isSchedulingTestAlarm
-                ) {
-                    guard !isSimulator else {
-                        testAlarmMessage = "Test alarms must be run on a physical iPhone — the Simulator cannot ring."
-                        return
-                    }
-                    isSchedulingTestAlarm = true
-                    Task {
-                        testAlarmMessage = await store.scheduleTestAlarm()
-                            ?? "Test alarm scheduled — it should ring in about 8 seconds. Keep CALarm open so Alarm timing can measure it."
-                        isSchedulingTestAlarm = false
-                    }
-                }
-                .accessibilityIdentifier("settings.testAlarm")
-            }
-
-            if isSimulator {
-                Text("Alarm sound and AlarmKit behavior require a physical device.")
-                    .font(CalarmFont.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-        }
-    }
-
-    private var alarmTimingLabel: String {
-        switch AlarmJournalStore.testProbeVerdict() {
-        case nil: "Run the test alarm"
-        case .pending: "Waiting for test ring"
-        case .onTime(let seconds): "On time · \(seconds)s"
-        case .countdownStartsAtFireDate(let seconds): "Late · \(seconds)s (iOS countdown bug)"
-        case .other(let seconds): "Unexpected · \(seconds)s"
-        }
-    }
-
-    private var calendarStatusLabel: String {
-        switch store.authorizationStatus {
-        case .fullAccess: "Allowed"
-        case .denied: "Denied"
-        case .restricted: "Restricted"
-        case .writeOnly: "Write only"
-        case .notDetermined: "Not asked yet"
-        @unknown default: "Unknown"
-        }
-    }
-
-    private var alarmStatusLabel: String {
-        switch store.alarmAuthorization {
-        case .authorized: "Allowed"
-        case .denied: "Denied"
-        case .notDetermined: "Not asked"
-        @unknown default: "Unknown"
-        }
-    }
-
-    private var nextRingLabel: String {
-        guard let next = store.nextUpcomingAlarm, let fire = next.nextAlarmDate else {
-            return "None scheduled"
-        }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return "\(next.title) · \(formatter.string(from: fire))"
-    }
-
-    private var lastRescheduleLabel: String {
-        guard let summary = store.lastRescheduleSummary else { return "—" }
-        let formatter = DateFormatter()
-        formatter.timeStyle = .medium
-        return "\(formatter.string(from: summary.finishedAt)) · \(summary.scheduledCount) ok"
-    }
-
-    /// Answers "why is the list empty" without a rebuild: which source produced events,
-    /// and whether the per-calendar filter is narrowing things.
-    private var eventSourceLabel: String {
-        let eventKit = store.events.filter { $0.source == .eventKit }.count
-        let google = store.events.filter { $0.source == .google }.count
-        let all = store.calendarService.availableCalendars
-        let off = all.filter { !$0.isEnabled }.count
-        let filter = off == 0 ? "all \(all.count) cals" : "\(all.count - off)/\(all.count) cals"
-        let googlePart = store.googleCalendarService.isConnected ? "google \(google)" : "google off"
-        return "ek \(eventKit) · \(googlePart) · \(filter)"
-    }
-
-    private var liveActivityCalendarColorSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Live Activity", theme: theme)
-
-            Text("When enabled, the Dynamic Island and Lock Screen countdown use each event’s Apple Calendar color instead of your accent.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            SettingsOptionList(theme: theme) {
-                Toggle(isOn: $themeStore.useCalendarColorInLiveActivity) {
-                    Text("Use calendar color")
-                        .font(CalarmFont.bodyMedium)
-                        .foregroundStyle(theme.textPrimary)
-                }
-                .tint(theme.accent)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .accessibilityIdentifier("settings.liveActivity.useCalendarColor")
-            }
-        }
-    }
-
-    private var appearanceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Appearance", theme: theme)
-
-            SettingsOptionList(theme: theme) {
-                ForEach(Array(CalarmAppearance.allCases.enumerated()), id: \.element.id) { index, mode in
-                    SettingsOptionRow(
-                        title: mode.title,
-                        isSelected: themeStore.appearance == mode,
-                        theme: theme
-                    ) {
-                        themeStore.appearance = mode
-                    }
-
-                    if index < CalarmAppearance.allCases.count - 1 {
-                        Divider().overlay(theme.surfaceStroke)
-                    }
-                }
-            }
-        }
-    }
-
-    private var accentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Accent color", theme: theme)
-
-            SettingsOptionList(theme: theme) {
-                ForEach(Array(CalarmAccent.allCases.enumerated()), id: \.element.id) { index, choice in
-                    SettingsOptionRow(
-                        title: choice.title,
-                        isSelected: themeStore.accent == choice,
-                        theme: theme,
-                        leading: {
-                            AnyView(AccentColorDot(accent: choice, theme: theme))
-                        }
-                    ) {
-                        themeStore.accent = choice
-                    }
-
-                    if index < CalarmAccent.allCases.count - 1 {
-                        Divider().overlay(theme.surfaceStroke)
-                    }
-                }
-            }
-        }
-    }
-
-    private var defaultAlarmSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Default alarm", theme: theme)
-
-            Text("New calendar events use this setting automatically. Choose “No alarm” to leave them off until you turn an alarm on.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            AlarmOffsetListPicker(
-                options: AlarmOffsetOption.defaultPreferenceOptions,
-                selected: defaultAlarmOffset,
-                theme: theme
-            ) { offset in
-                defaultAlarmOffset = offset
-                onDefaultAlarmOffsetChange(offset)
-            }
-        }
-    }
-
-    private var developerInfoBar: some View {
+    private var buildInfo: some View {
         VStack(spacing: 4) {
-            Divider().overlay(theme.surfaceStroke)
-
-            Text(AppBuildInfo.appName)
-                .font(CalarmFont.captionSemibold)
-                .foregroundStyle(theme.textSecondary)
-
-            Text("Version \(AppBuildInfo.marketingVersion) · Build \(AppBuildInfo.formattedBuildStamp)")
-                .font(CalarmFont.caption)
-                .foregroundStyle(theme.textSecondary.opacity(0.9))
-                .monospacedDigit()
-
+            Text("\(AppBuildInfo.appName) \(AppBuildInfo.marketingVersion) · Build \(AppBuildInfo.formattedBuildStamp)")
             Text("\(AppBuildInfo.developerName) · © \(AppBuildInfo.copyrightYear)")
-                .font(CalarmFont.caption)
-                .foregroundStyle(theme.textSecondary.opacity(0.65))
         }
+        .font(CalarmFont.boardDetail)
+        .foregroundStyle(theme.textSecondary.opacity(0.7))
         .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
-        .padding(.horizontal, CalarmTheme.screenPaddingH)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
-        .background(theme.background)
         .accessibilityIdentifier("settings.developerInfo")
     }
+}
 
-    private var alarmSoundSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Alarm sound", theme: theme)
+/// "NEXT RING 10:59 · Product sync", shared by the Settings root and Status.
+struct NextRingBlock: View {
+    @EnvironmentObject private var store: ScheduleStore
+    @Environment(\.calarmTheme) private var theme
 
-            Text("iOS doesn’t let apps see the silent switch, so vibrating is set here or by a Focus: Settings → Focus → pick a Focus → Focus Filters → CALarm. If you don’t dismiss a vibrating alarm within a minute, it rings normally.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            SettingsOptionList(theme: theme) {
-                Toggle(isOn: Binding(
-                    get: { store.vibrateInsteadOfRinging },
-                    set: { store.setVibrateInsteadOfRinging($0) }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Vibrate instead of ringing")
-                            .font(CalarmFont.bodyMedium)
-                            .foregroundStyle(theme.textPrimary)
-                        if store.focusVibrate {
-                            Text("On now because of a Focus")
-                                .font(CalarmFont.caption)
-                                .foregroundStyle(theme.accentMuted)
-                        }
-                    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            BoardSectionLabel(title: "Next ring")
+            if let next = store.nextUpcomingAlarm, let fire = next.nextAlarmDate {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(CalarmTheme.eventTimeString(fire))
+                        .font(CalarmFont.title)
+                        .foregroundStyle(theme.accent)
+                        .monospacedDigit()
+                    Text(next.title)
+                        .font(CalarmFont.boardDetail)
+                        .foregroundStyle(theme.textSecondary)
+                        .lineLimit(1)
                 }
-                .tint(theme.accent)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .accessibilityIdentifier("settings.alarms.vibrateInsteadOfRinging")
+                .accessibilityElement(children: .combine)
+            } else {
+                Text("Nothing is set to ring.")
+                    .font(CalarmFont.boardDetail)
+                    .foregroundStyle(theme.textSecondary)
             }
         }
     }
+}
 
-    private var snoozeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsSectionHeader(title: "Snooze duration", theme: theme)
+struct TestAlarmButton: View {
+    @EnvironmentObject private var store: ScheduleStore
 
-            Text("How long to wait when you snooze an alarm from the lock screen.")
-                .font(CalarmFont.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+    var isProminent = false
 
-            SettingsOptionList(theme: theme) {
-                ForEach(Array(SnoozeDurationOption.allCases.enumerated()), id: \.element.id) { index, option in
-                    SettingsOptionRow(
-                        title: option.title,
-                        isSelected: defaultSnooze == option,
-                        theme: theme
-                    ) {
-                        defaultSnooze = option
-                        onDefaultSnoozeChange(option)
-                    }
+    @State private var isScheduling = false
+    @State private var message: String?
 
-                    if index < SnoozeDurationOption.allCases.count - 1 {
-                        Divider().overlay(theme.surfaceStroke)
-                    }
-                }
-            }
+    var body: some View {
+        BoardButton(
+            title: isScheduling ? "Scheduling…" : "Test alarm · 8s",
+            systemImage: "play.fill",
+            isProminent: isProminent,
+            isDisabled: isScheduling,
+            action: run
+        )
+        .accessibilityIdentifier("settings.testAlarm")
+        .alert("Test alarm", isPresented: Binding(
+            get: { message != nil },
+            set: { if !$0 { message = nil } }
+        )) {
+            Button("OK", role: .cancel) { message = nil }
+        } message: {
+            Text(message ?? "")
         }
+    }
+
+    private func run() {
+        #if targetEnvironment(simulator)
+        message = "Test alarms must be run on a physical iPhone — the Simulator cannot ring."
+        #else
+        isScheduling = true
+        Task {
+            message = await store.scheduleTestAlarm()
+                ?? "Test alarm scheduled — it should ring in about 8 seconds. Keep CALarm open so Alarm timing can measure it."
+            isScheduling = false
+        }
+        #endif
     }
 }

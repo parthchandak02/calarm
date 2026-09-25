@@ -12,8 +12,9 @@ description: >-
 
 CALarm has a **pixel-branded alarm app** look. The schedule is a **departure board**
 (2026-09-24): Geist Pixel only for what ticks (times, countdown, board labels), SF Mono for
-event titles, glass toolbar buttons, one amber accent that means "armed". Settings and event
-detail still use Geist Pixel body text. Semantic
+event titles, glass toolbar buttons, one amber accent that means "armed". Settings uses the
+same board (index root → pushed pages, 2026-09-24). Event detail and the add-alarm sheet still
+use the older Geist Pixel body text and `SettingsOptionList` cards. Semantic
 `CalarmTheme` colors, grouped bordered cards, and custom schedule chrome. New UI must
 **extend existing tokens and components** — do not introduce one-off spacing, fonts, or
 button styles.
@@ -95,13 +96,17 @@ via `themeStore.theme(colorScheme:)` in child rows.
 |-----------|---------|
 | `NextAlarmBoard` | Split-flap countdown hero on the schedule |
 | `CalarmGlassIcon` | 44pt Liquid Glass circle icon (toolbar, menu labels) |
+| `BoardSectionLabel` | Pixel label + hairline rule (day headers, Settings sections) |
+| `BoardLine` / `BoardValue` | One board row: title, optional detail and dot, trailing value |
+| `ArmSquare` / `ArmSquareToggle` | The lit square; the toggle adds haptic + a11y toggle trait |
+| `FlapPicker` | Single choice as split-flap tiles (offset, snooze, sound, appearance) |
+| `StatusLight`, `BoardButton` | Amber/red light; full-width filled or outlined action |
+| `.boardNavigationTitle(_:)` | Uppercase tracked pixel title for pushed board screens |
 | `ScheduleHeaderBar` | Schedule top chrome |
 | `CalarmToolbarIconButton` | 44×44 toolbar actions (fix size if still 34) |
 | `SettingsOptionList` | Bordered grouped card |
-| `SettingsOptionRow` | Single-select option with checkmark |
+| `SettingsOptionRow` | Single-select option with checkmark (add-alarm sheet only) |
 | `SettingsSectionHeader` | Uppercase section label |
-| `SettingsTabBar` | Settings tab navigation |
-| `AccentColorDot` | Accent picker swatch |
 | `AlarmOffsetListPicker` | Offset selection sheet |
 
 **Extend these** for toggles, diagnostics rows, and event alarm rows — don't fork a
