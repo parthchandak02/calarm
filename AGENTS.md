@@ -107,6 +107,7 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
   Watch with `ssh macmini-remote 'herdr pane read w2:p1 --source recent --lines 40'`. If the
   keychain has locked, the script prompts inside that pane; fall back to the command above.
   If the pane is gone, `herdr workspace list` / `herdr pane list` on the Mac mini.
+  Full playbook: the `herdr-remote-build` skill.
 - **Compile check on the release Mac** (no keychain needed):
 
   ```bash
@@ -233,7 +234,7 @@ One copy of every instruction, read by every harness. Do not add more config fil
 - **Author skills in `.claude/skills/`, never through `.agents/skills`.** Claude Code
   refuses to write into a symlinked directory. The symlink points this way round on
   purpose: it degrades on a Windows clone, and confining that to Codex leaves AGENTS.md
-  and all twelve skills intact for everything else.
+  and every skill intact for everything else.
 
 Skipped deliberately: `.github/copilot-instructions.md` (Copilot would load it *and*
 AGENTS.md, duplicating context), `.cursor/rules/`, `.windsurfrules`, `GEMINI.md`.
