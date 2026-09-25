@@ -19,23 +19,17 @@ final class DepartureBoardTests: XCTestCase {
         )
     }
 
-    func testCountdownUnderAnHourShowsMinutesAndSeconds() {
-        let countdown = DepartureBoard.countdown(until: now.addingTimeInterval(42 * 60 + 10), now: now)
-        XCTAssertEqual(countdown, .init(digits: "42:10", unit: "MIN"))
+    func testCountdownIsDaysHoursMinutesSeconds() {
+        let fire = now.addingTimeInterval(2 * 86_400 + 3 * 3_600 + 7 * 60 + 9)
+        XCTAssertEqual(DepartureBoard.countdownGroups(until: fire, now: now), ["02", "03", "07", "09"])
     }
 
     func testCountdownPastFireDateClampsToZero() {
-        XCTAssertEqual(DepartureBoard.countdown(until: now.addingTimeInterval(-5), now: now).digits, "00:00")
+        XCTAssertEqual(DepartureBoard.countdownGroups(until: now.addingTimeInterval(-5), now: now), ["00", "00", "00", "00"])
     }
 
-    func testCountdownInHoursShowsHoursAndMinutes() {
-        let countdown = DepartureBoard.countdown(until: now.addingTimeInterval(3 * 3_600 + 7 * 60 + 59), now: now)
-        XCTAssertEqual(countdown, .init(digits: "3:07", unit: "HRS"))
-    }
-
-    func testCountdownPastNinetyNineHoursShowsDays() {
-        let countdown = DepartureBoard.countdown(until: now.addingTimeInterval(5 * 86_400), now: now)
-        XCTAssertEqual(countdown, .init(digits: "5", unit: "DAYS"))
+    func testCountdownDaysCapAtNinetyNine() {
+        XCTAssertEqual(DepartureBoard.countdownGroups(until: now.addingTimeInterval(200 * 86_400), now: now).first, "99")
     }
 
     func testRowLabelListsUpcomingOffsetsSoonestFirst() {

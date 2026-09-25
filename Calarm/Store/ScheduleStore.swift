@@ -91,7 +91,10 @@ final class ScheduleStore: ObservableObject {
         defaultSnooze = preferences.defaultSnooze
         authorizationStatus = calendarService.authorizationStatus
 
+        // Screenshot mode fakes full access in bootstrap; the real status arriving a beat
+        // later would put the demo schedule behind the access prompt.
         calendarService.$authorizationStatus
+            .filter { _ in !ScreenshotMode.isEnabled }
             .receive(on: DispatchQueue.main)
             .assign(to: &$authorizationStatus)
 
@@ -156,6 +159,7 @@ final class ScheduleStore: ObservableObject {
     }
 
     func refreshOnForeground() async {
+        guard !ScreenshotMode.isEnabled else { return }
         calendarService.checkAuthorizationStatus()
         calendarService.refreshRemoteSourcesIfNeeded()
         alarmAuthorization = AlarmManager.shared.authorizationState

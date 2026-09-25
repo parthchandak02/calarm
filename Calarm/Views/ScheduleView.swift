@@ -245,7 +245,7 @@ struct ScheduleView: View {
                         .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
                     }
                 } header: {
-                    BoardSectionLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
+                    BoardDayLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
                 }
             }
         }

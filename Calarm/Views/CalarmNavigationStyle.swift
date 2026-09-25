@@ -11,13 +11,15 @@ import UIKit
 struct CalarmNavigationStyle: ViewModifier {
     let theme: CalarmTheme
     var prefersLargeTitles: Bool = false
+    var isTransparent: Bool = false
 
     func body(content: Content) -> some View {
         content
             .background {
                 NavigationBarThemeBridge(
                     theme: theme,
-                    prefersLargeTitles: prefersLargeTitles
+                    prefersLargeTitles: prefersLargeTitles,
+                    isTransparent: isTransparent
                 )
                 .frame(width: 0, height: 0)
                 .accessibilityHidden(true)
@@ -28,23 +30,26 @@ struct CalarmNavigationStyle: ViewModifier {
 private struct NavigationBarThemeBridge: UIViewControllerRepresentable {
     let theme: CalarmTheme
     let prefersLargeTitles: Bool
+    let isTransparent: Bool
 
     func makeUIViewController(context: Context) -> BridgeViewController {
         BridgeViewController()
     }
 
     func updateUIViewController(_ viewController: BridgeViewController, context: Context) {
-        viewController.apply(theme: theme, prefersLargeTitles: prefersLargeTitles)
+        viewController.apply(theme: theme, prefersLargeTitles: prefersLargeTitles, isTransparent: isTransparent)
     }
 
     final class BridgeViewController: UIViewController {
         private var theme: CalarmTheme?
         private var prefersLargeTitles = false
+        private var isTransparent = false
         private var appliedSignature: String?
 
-        func apply(theme: CalarmTheme, prefersLargeTitles: Bool) {
+        func apply(theme: CalarmTheme, prefersLargeTitles: Bool, isTransparent: Bool) {
             self.theme = theme
             self.prefersLargeTitles = prefersLargeTitles
+            self.isTransparent = isTransparent
             refreshNavigationBar()
         }
 
@@ -62,13 +67,17 @@ private struct NavigationBarThemeBridge: UIViewControllerRepresentable {
             guard let theme else { return }
             guard let navigationBar = navigationController?.navigationBar else { return }
 
-            let signature = "\(theme.isDark)-\(theme.accent.description)-\(prefersLargeTitles)"
+            let signature = "\(theme.isDark)-\(theme.accent.description)-\(prefersLargeTitles)-\(isTransparent)"
             guard appliedSignature != signature else { return }
             appliedSignature = signature
 
             let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(theme.background)
+            if isTransparent {
+                appearance.configureWithTransparentBackground()
+            } else {
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = UIColor(theme.background)
+            }
             appearance.shadowColor = .clear
 
             let largeFont = UIFont(name: "GeistPixel-Square", size: 34) ?? .boldSystemFont(ofSize: 34)
@@ -96,14 +105,21 @@ private struct NavigationBarThemeBridge: UIViewControllerRepresentable {
 extension View {
     func calarmNavigationStyle(
         theme: CalarmTheme,
-        prefersLargeTitles: Bool = false
+        prefersLargeTitles: Bool = false,
+        isTransparent: Bool = false
     ) -> some View {
-        modifier(CalarmNavigationStyle(theme: theme, prefersLargeTitles: prefersLargeTitles))
+        modifier(CalarmNavigationStyle(theme: theme, prefersLargeTitles: prefersLargeTitles, isTransparent: isTransparent))
     }
 
     func calarmToolbarChrome(theme: CalarmTheme) -> some View {
         toolbarColorScheme(theme.toolbarColorScheme, for: .navigationBar)
             .toolbarBackground(theme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+    }
+
+    /// For screens with their own backdrop (Settings): the bar lets it show through.
+    func calarmTransparentToolbarChrome(theme: CalarmTheme) -> some View {
+        toolbarColorScheme(theme.toolbarColorScheme, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
     }
 }

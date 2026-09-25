@@ -33,8 +33,16 @@ this file exists so an agent can see the shape of the project's history without 
   The 8-second test alarm sits on the root and Status. Chosen from options mocked in the
   owner's `notes/ui-redesign/settings.html` (2026-09-24).
 
+- **The next-alarm countdown is a full flight board**, `DD:HH:MM:SS` with DAYS / HRS / MIN /
+  SEC under each pair, flipping every second (was `MM:SS` or `H:MM` with a unit).
+- **Day headers pop:** white pixel text on a flap tile, a size below the countdown.
+- **Settings is tinted** with a wash of the accent from the top, so it reads as a different
+  place from the schedule. The nav bar is transparent there so the wash runs under it.
+
 ### Fixed
 
+- **Screenshot mode lost its demo schedule** a beat after launch: the real calendar status
+  arrived and replaced the faked full access, and foregrounding reloaded real (empty) data.
 - **iOS calendar colours were never read.** `CalendarSummary.colorHex` held a description of
   the colour components rather than a hex string; it now uses `CalendarColor.hexString`.
 

@@ -8,21 +8,14 @@ import Foundation
 /// Text for the schedule's departure-board layout: the next-alarm countdown, each row's
 /// short alarm label, and day headers.
 nonisolated enum DepartureBoard {
-    struct Countdown: Equatable {
-        let digits: String
-        let unit: String
-    }
+    static let countdownUnits = ["DAYS", "HRS", "MIN", "SEC"]
 
-    static func countdown(until fireDate: Date, now: Date) -> Countdown {
+    /// Flight-board countdown groups, `DD HH MM SS`, each two digits. Days cap at 99.
+    static func countdownGroups(until fireDate: Date, now: Date) -> [String] {
         let seconds = max(0, Int(fireDate.timeIntervalSince(now)))
-        if seconds < 3_600 {
-            return Countdown(digits: String(format: "%02d:%02d", seconds / 60, seconds % 60), unit: "MIN")
-        }
-        if seconds < 100 * 3_600 {
-            return Countdown(digits: String(format: "%d:%02d", seconds / 3_600, seconds % 3_600 / 60), unit: "HRS")
-        }
-        let days = seconds / 86_400
-        return Countdown(digits: "\(days)", unit: days == 1 ? "DAY" : "DAYS")
+        let days = min(99, seconds / 86_400)
+        return [days, seconds % 86_400 / 3_600, seconds % 3_600 / 60, seconds % 60]
+            .map { String(format: "%02d", $0) }
     }
 
     static func shortOffset(_ offset: AlarmOffsetOption) -> String {

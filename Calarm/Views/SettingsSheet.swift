@@ -72,9 +72,9 @@ struct SettingsSheet: View {
                 .padding(.horizontal, CalarmTheme.rowPaddingH)
                 .padding(.bottom, 24)
             }
-            .background(theme.background.ignoresSafeArea())
+            .background(SettingsBackdrop())
             .boardNavigationTitle("Settings")
-            .calarmToolbarChrome(theme: theme)
+            .calarmTransparentToolbarChrome(theme: theme)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { dismiss() } label: {
@@ -92,16 +92,19 @@ struct SettingsSheet: View {
                     case .status: SettingsStatusPage()
                     }
                 }
-                .background(theme.background.ignoresSafeArea())
-                .calarmToolbarChrome(theme: theme)
+                .background(SettingsBackdrop())
+                .calarmTransparentToolbarChrome(theme: theme)
             }
         }
         .environment(\.calarmTheme, theme)
         .tint(theme.accent)
-        .calarmNavigationStyle(theme: theme)
+        .calarmNavigationStyle(theme: theme, isTransparent: true)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationBackground(theme.background)
+        .presentationBackground {
+            SettingsBackdrop()
+                .environment(\.calarmTheme, theme)
+        }
         .accessibilityIdentifier("settings.sheet")
     }
 

@@ -23,14 +23,10 @@ struct NextAlarmBoard: View {
 
                 if let event, let fireDate {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
-                        let countdown = DepartureBoard.countdown(until: fireDate, now: context.date)
-                        HStack(alignment: .lastTextBaseline, spacing: 10) {
-                            FlapDigits(text: countdown.digits, isLit: true)
-                            Text(countdown.unit)
-                                .font(CalarmFont.boardLabel)
-                                .tracking(2)
-                                .foregroundStyle(theme.textSecondary)
-                        }
+                        FlapCountdown(
+                            groups: DepartureBoard.countdownGroups(until: fireDate, now: context.date),
+                            isLit: true
+                        )
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
@@ -44,7 +40,7 @@ struct NextAlarmBoard: View {
                             .lineLimit(1)
                     }
                 } else {
-                    FlapDigits(text: "--:--", isLit: false)
+                    FlapCountdown(groups: ["--", "--", "--", "--"], isLit: false)
                     Text("Tap a square to arm an event.")
                         .font(CalarmFont.boardDetail)
                         .foregroundStyle(theme.textSecondary)
@@ -58,7 +54,7 @@ struct NextAlarmBoard: View {
         }
         .buttonStyle(.plain)
         .disabled(event == nil)
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(theme.surfaceStroke)
@@ -75,23 +71,34 @@ struct NextAlarmBoard: View {
     }
 }
 
-private struct FlapDigits: View {
+/// `DD : HH : MM : SS` as split-flap tiles, with the unit under each pair.
+private struct FlapCountdown: View {
     @Environment(\.calarmTheme) private var theme
-    @ScaledMetric(relativeTo: .largeTitle) private var tileWidth: CGFloat = 36
-    @ScaledMetric(relativeTo: .largeTitle) private var tileHeight: CGFloat = 54
+    @ScaledMetric(relativeTo: .largeTitle) private var tileWidth: CGFloat = 34
+    @ScaledMetric(relativeTo: .largeTitle) private var tileHeight: CGFloat = 52
 
-    let text: String
+    let groups: [String]
     let isLit: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(Array(text.enumerated()), id: \.offset) { _, character in
-                if character == ":" {
+        HStack(alignment: .top, spacing: 4) {
+            ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
+                if index > 0 {
                     Text(":")
                         .font(CalarmFont.countdownSeparator)
                         .foregroundStyle(theme.textSecondary)
-                } else {
-                    tile(String(character))
+                        .frame(height: tileHeight)
+                }
+                VStack(spacing: 6) {
+                    HStack(spacing: 3) {
+                        ForEach(Array(group.enumerated()), id: \.offset) { _, character in
+                            tile(String(character))
+                        }
+                    }
+                    Text(DepartureBoard.countdownUnits[index])
+                        .font(CalarmFont.boardLabel)
+                        .tracking(1.5)
+                        .foregroundStyle(theme.textSecondary)
                 }
             }
         }

@@ -36,6 +36,7 @@ enum CalarmFont {
     static let boardLabel = Font.custom(pixel, size: 11, relativeTo: .caption2)
     static let boardTitle = Font.system(.subheadline, design: .monospaced, weight: .medium)
     static let boardDetail = Font.system(.caption, design: .monospaced)
+    static let dayHeader = Font.custom(pixel, size: 17, relativeTo: .headline)
     static let boardTitleBar = Font.custom(pixel, size: 13, relativeTo: .headline)
     static let flapTile = Font.custom(pixel, size: 15, relativeTo: .body).monospacedDigit()
 }

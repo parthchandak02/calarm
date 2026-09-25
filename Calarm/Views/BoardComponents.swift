@@ -30,6 +30,57 @@ struct BoardSectionLabel: View {
     }
 }
 
+/// Schedule day header: white pixel text on a flap tile, then a rule. Louder than
+/// `BoardSectionLabel` because it separates days, not sections.
+struct BoardDayLabel: View {
+    @Environment(\.calarmTheme) private var theme
+
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title.uppercased())
+                .font(CalarmFont.dayHeader)
+                .tracking(1.5)
+                .foregroundStyle(theme.textPrimary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(theme.surface, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .overlay {
+                    Rectangle()
+                        .fill(theme.background.opacity(0.6))
+                        .frame(height: 1)
+                }
+            Rectangle()
+                .fill(theme.textSecondary.opacity(0.35))
+                .frame(height: 1)
+        }
+        .padding(.top, 18)
+        .padding(.bottom, 6)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Settings' backdrop: the theme background with a wash of the accent from the top, so the
+/// sheet reads as a different place from the schedule in both dark and light.
+struct SettingsBackdrop: View {
+    @Environment(\.calarmTheme) private var theme
+
+    var body: some View {
+        ZStack {
+            theme.background
+            LinearGradient(
+                colors: [theme.accent.opacity(theme.isDark ? 0.22 : 0.16), theme.accent.opacity(0.04)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
 /// One departure-board line: a title on the left, anything on the right.
 struct BoardLine<Trailing: View>: View {
     @Environment(\.calarmTheme) private var theme
