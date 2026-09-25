@@ -221,8 +221,10 @@ trailing-aligned tracked text needs a `-tracking/2` nudge to centre each glyph i
 
 ### Compact Island width (measured 2026-09-25)
 
-iOS 26.5 Simulator, iPhone 17 Pro, DEBUG harness (`ISLAND_COUNTDOWN=<s>`, `ISLAND_VARIANT=`)
-rendering the production compact views on an ActivityKit activity.
+iOS 26.5 Simulator, iPhone 17 Pro, a throwaway DEBUG harness that started an ActivityKit
+activity rendering the production compact views. The harness was never committed and has been
+deleted; to re-measure, rebuild one (a second `ActivityConfiguration` for a DEBUG-only
+attributes type, started from a launch argument) and keep it out of release builds.
 
 - **The Simulator shows no Live Activity for an AlarmKit countdown alarm**, even authorized
   and scheduled without error. An ActivityKit activity does show. **VERIFIED.**
