@@ -45,11 +45,16 @@ struct ScheduleView: View {
                     onSettings: { showingSettings = true }
                 )
 
-                if let next = store.nextUpcomingAlarm, let fire = next.nextAlarmDate {
-                    nextAlarmBanner(event: next, fireDate: fire)
-                }
-
                 statusBanners
+
+                if !showsCalendarAccessPrompt {
+                    let next = store.nextUpcomingAlarm
+                    NextAlarmBoard(event: next, fireDate: next?.nextAlarmDate) {
+                        if let next {
+                            navigationPath.append(EventRoute(id: next.id))
+                        }
+                    }
+                }
 
                 ZStack {
                     theme.background.ignoresSafeArea()
@@ -134,38 +139,6 @@ struct ScheduleView: View {
                 store.resolveDeepLinkIfNeeded()
             }
         }
-    }
-
-    private func nextAlarmBanner(event: ScheduleEvent, fireDate: Date) -> some View {
-        Button {
-            navigationPath.append(EventRoute(id: event.id))
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "alarm.fill")
-                    .font(.caption)
-                    .foregroundStyle(theme.accent)
-                Text("Next: \(event.title)")
-                    .font(CalarmFont.captionSemibold)
-                    .lineLimit(1)
-                Text("·")
-                    .foregroundStyle(theme.textSecondary)
-                if fireDate.timeIntervalSinceNow > 0 {
-                    Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: fireDate.timeIntervalSinceNow >= 3_600)
-                        .font(CalarmFont.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .monospacedDigit()
-                } else {
-                    Text("passed")
-                        .font(CalarmFont.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, CalarmTheme.rowPaddingH)
-            .padding(.vertical, 8)
-            .background(theme.accent.opacity(0.08))
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -270,15 +243,14 @@ struct ScheduleView: View {
                             event: event,
                             isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
                             hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
+                            onOpen: { navigationPath.append(EventRoute(id: event.id)) },
                             onToggle: { store.toggleAlarm(for: event.id) }
                         )
                         .listRowInsets(rowInsets)
-                        .listRowSeparatorTint(theme.surfaceStroke)
+                        .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
                     }
                 } header: {
-                    SettingsSectionHeader(title: day.title, theme: theme)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
+                    BoardDayHeader(title: DepartureBoard.dayTitle(for: day.date, now: .now))
                 }
             }
         }
@@ -292,7 +264,7 @@ struct ScheduleView: View {
     }
 
     private var rowInsets: EdgeInsets {
-        EdgeInsets(top: 10, leading: CalarmTheme.rowPaddingH, bottom: 10, trailing: CalarmTheme.rowPaddingH)
+        EdgeInsets(top: 0, leading: CalarmTheme.rowPaddingH, bottom: 0, trailing: CalarmTheme.rowPaddingH - 12)
     }
 
     private var accessPrompt: some View {
@@ -364,90 +336,107 @@ struct ScheduleView: View {
     }
 }
 
+private struct BoardDayHeader: View {
+    @Environment(\.calarmTheme) private var theme
+
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title)
+                .font(CalarmFont.boardLabel)
+                .tracking(2)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize()
+            Rectangle()
+                .fill(theme.surfaceStroke)
+                .frame(height: 1)
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 4)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
 private struct EventRow: View {
     @Environment(\.calarmTheme) private var theme
 
     let event: ScheduleEvent
     let isNextAlarm: Bool
     let hasTooSoonWarning: Bool
+    let onOpen: () -> Void
     let onToggle: () -> Void
 
+    private var label: String {
+        DepartureBoard.rowLabel(for: event, tooSoon: hasTooSoonWarning)
+    }
+
+    private var labelColor: Color {
+        if hasTooSoonWarning || event.isReminderPassed { return theme.warning }
+        if event.canScheduleAlarm { return theme.accent }
+        return theme.textSecondary
+    }
+
+    private var rowColor: Color {
+        isNextAlarm ? theme.accent : theme.textPrimary
+    }
+
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(CalarmTheme.eventTimeString(event.startDate))
-                    .font(CalarmFont.time)
-                    .foregroundStyle(theme.accent)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+        HStack(spacing: 12) {
+            Button(action: onOpen) {
+                HStack(spacing: 12) {
+                    Text(CalarmTheme.eventTimeString(event.startDate))
+                        .font(CalarmFont.time)
+                        .foregroundStyle(rowColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(width: CalarmTheme.timeColumnWidth, alignment: .leading)
 
-                if isNextAlarm {
-                    Text("NEXT")
-                        .font(CalarmFont.captionSemibold)
-                        .foregroundStyle(theme.onAccent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(theme.accent, in: Capsule())
-                }
-            }
-            .frame(width: CalarmTheme.timeColumnWidth, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-
-            NavigationLink(value: EventRoute(id: event.id)) {
-                VStack(alignment: .leading, spacing: 4) {
                     Text(event.title)
-                        .font(CalarmFont.bodyMedium)
-                        .foregroundStyle(theme.textPrimary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                        .font(CalarmFont.boardTitle)
+                        .foregroundStyle(rowColor)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    HStack(spacing: 8) {
-                        if !event.alarmEnabled {
-                            Text("Alarm off")
-                                .font(CalarmFont.caption)
-                                .foregroundStyle(theme.textSecondary)
-                        } else if !event.isReminderPassed {
-                            Text(event.alarmSummary)
-                                .font(CalarmFont.caption)
-                                .foregroundStyle(theme.accentMuted)
-                        }
-
-                        if event.isReminderPassed {
-                            Text("Reminder passed")
-                                .font(CalarmFont.captionSemibold)
-                                .foregroundStyle(.orange.opacity(0.85))
-                        } else if event.isAlarmInPast {
-                            Text("Past")
-                                .font(CalarmFont.captionSemibold)
-                                .foregroundStyle(.red.opacity(0.75))
-                        }
-
-                        if hasTooSoonWarning {
-                            Text("Too soon to schedule")
-                                .font(CalarmFont.captionSemibold)
-                                .foregroundStyle(.orange)
-                        }
-                    }
+                    Text(label)
+                        .font(CalarmFont.boardDetail)
+                        .foregroundStyle(labelColor)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
                 .contentShape(Rectangle())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(event.title), \(CalarmTheme.eventTimeString(event.startDate)), \(event.alarmSummary)")
             }
             .buttonStyle(.plain)
 
             Button(action: onToggle) {
-                Image(systemName: event.alarmEnabled ? "bell.fill" : "bell.slash")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(event.alarmEnabled ? theme.accent : theme.textSecondary)
-                    .frame(width: CalarmTheme.bellTapSize, height: CalarmTheme.bellTapSize)
-                    .contentShape(Rectangle())
+                ArmSquare(isOn: event.alarmEnabled)
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: event.alarmEnabled)
             .accessibilityLabel(event.alarmEnabled ? "Turn alarm off" : "Turn alarm on")
         }
-        .listRowBackground(
-            isNextAlarm
-                ? theme.accent.opacity(0.08)
-                : Color.clear
-        )
+        .opacity(event.isEventUpcoming ? 1 : 0.4)
+        .listRowBackground(Color.clear)
+    }
+}
+
+/// The board's lit square: filled and glowing when the event will ring.
+private struct ArmSquare: View {
+    @Environment(\.calarmTheme) private var theme
+
+    let isOn: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(isOn ? theme.accent : Color.clear)
+            .strokeBorder(isOn ? theme.accent : theme.textSecondary, lineWidth: 1.5)
+            .frame(width: 18, height: 18)
+            .shadow(color: isOn ? theme.accent.opacity(0.6) : .clear, radius: 6)
+            .animation(.snappy, value: isOn)
+            .frame(width: CalarmTheme.bellTapSize, height: CalarmTheme.bellTapSize)
+            .contentShape(Rectangle())
     }
 }

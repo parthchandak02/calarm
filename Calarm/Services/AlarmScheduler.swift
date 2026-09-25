@@ -360,7 +360,7 @@ final class AlarmScheduler {
         let rows = desired.map {
             ("\($0.occurrenceID)|\($0.title)", $0.offset.rawValue, $0.fireDate)
         }
-        let accentRaw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent) ?? CalarmAccent.orange.rawValue
+        let accentRaw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAccent) ?? CalarmAccent.amber.rawValue
         let liveActivityEvent = desired.first(where: \.withLiveActivity)?.event
         return AlarmSchedulingHelpers.schedulingFingerprint(
             instances: rows,

@@ -111,7 +111,7 @@ struct CalarmTheme: Equatable {
 }
 
 private struct CalarmThemeKey: EnvironmentKey {
-    static let defaultValue = CalarmTheme(accent: .orange, isDark: true)
+    static let defaultValue = CalarmTheme(accent: .amber, isDark: true)
 }
 
 extension EnvironmentValues {

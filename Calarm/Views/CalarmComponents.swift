@@ -5,20 +5,6 @@
 
 import SwiftUI
 
-struct CALarmWordmark: View {
-    let theme: CalarmTheme
-
-    var body: some View {
-        Text(CalarmBrand.appName)
-            .font(CalarmFont.navBarWordmark)
-            .foregroundStyle(theme.textPrimary)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .layoutPriority(1)
-            .accessibilityAddTraits(.isHeader)
-    }
-}
-
 struct ScheduleHeaderBar: View {
     let theme: CalarmTheme
     let canManageAlarms: Bool
@@ -33,60 +19,77 @@ struct ScheduleHeaderBar: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            CALarmWordmark(theme: theme)
+            Text(CalarmBrand.appName)
+                .font(CalarmFont.headline)
+                .tracking(1)
+                .foregroundStyle(theme.textSecondary)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 10) {
-                Menu {
-                    Button(action: onTurnAllOn) {
-                        Label("Turn All Alarms On", systemImage: "bell.fill")
-                    }
-                    .disabled(!canManageAlarms || allAlarmsEnabled)
-
-                    Button(action: onTurnAllOff) {
-                        Label("Turn All Alarms Off", systemImage: "bell.slash")
-                    }
-                    .disabled(!canManageAlarms || !hasEnabledAlarms)
-                } label: {
-                    Image(systemName: "bell.badge")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(canManageAlarms ? theme.toolbarIcon : theme.textSecondary)
-                        .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
-                        .background(theme.toolbarIconBackground, in: Circle())
-                        .overlay {
-                            Circle()
-                                .strokeBorder(theme.surfaceStroke, lineWidth: 1)
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    Menu {
+                        Button(action: onTurnAllOn) {
+                            Label("Turn All Alarms On", systemImage: "bell.fill")
                         }
-                        .contentShape(Circle())
-                }
-                .disabled(!canManageAlarms)
-                .accessibilityLabel("Alarm bulk actions")
+                        .disabled(!canManageAlarms || allAlarmsEnabled)
 
-                if isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(theme.accent)
-                        .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
-                } else {
-                    CalarmToolbarIconButton(
-                        systemName: "arrow.clockwise",
-                        theme: theme,
-                        isDisabled: !canRefresh,
-                        action: onRefresh
-                    )
-                    .accessibilityLabel("Refresh calendar")
-                }
+                        Button(action: onTurnAllOff) {
+                            Label("Turn All Alarms Off", systemImage: "bell.slash")
+                        }
+                        .disabled(!canManageAlarms || !hasEnabledAlarms)
+                    } label: {
+                        CalarmGlassIcon(
+                            systemName: "bell.badge",
+                            theme: theme,
+                            isDisabled: !canManageAlarms
+                        )
+                    }
+                    .disabled(!canManageAlarms)
+                    .accessibilityLabel("Alarm bulk actions")
 
-                CalarmToolbarIconButton(systemName: "gearshape", theme: theme, action: onSettings)
-                    .accessibilityLabel("Settings")
+                    if isRefreshing {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(theme.accent)
+                            .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
+                            .glassEffect(.regular, in: .circle)
+                    } else {
+                        CalarmToolbarIconButton(
+                            systemName: "arrow.clockwise",
+                            theme: theme,
+                            isDisabled: !canRefresh,
+                            action: onRefresh
+                        )
+                        .accessibilityLabel("Refresh calendar")
+                    }
+
+                    CalarmToolbarIconButton(systemName: "gearshape", theme: theme, action: onSettings)
+                        .accessibilityLabel("Settings")
+                }
             }
             .fixedSize()
         }
         .padding(.horizontal, CalarmTheme.rowPaddingH)
         .padding(.top, 6)
-        .padding(.bottom, 10)
+        .padding(.bottom, 4)
         .background(theme.background)
+    }
+}
+
+struct CalarmGlassIcon: View {
+    let systemName: String
+    let theme: CalarmTheme
+    var isDisabled: Bool = false
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(isDisabled ? theme.textSecondary : theme.toolbarIcon)
+            .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .contentShape(Circle())
     }
 }
 
@@ -110,16 +113,7 @@ struct CalarmToolbarIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isDisabled ? theme.textSecondary : theme.toolbarIcon)
-                .frame(width: CalarmTheme.minimumTouchTarget, height: CalarmTheme.minimumTouchTarget)
-                .background(theme.toolbarIconBackground, in: Circle())
-                .overlay {
-                    Circle()
-                        .strokeBorder(theme.surfaceStroke, lineWidth: 1)
-                }
-                .contentShape(Circle())
+            CalarmGlassIcon(systemName: systemName, theme: theme, isDisabled: isDisabled)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)

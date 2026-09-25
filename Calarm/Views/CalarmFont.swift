@@ -28,4 +28,12 @@ enum CalarmFont {
     static let captionSemibold = Font.custom(pixel, size: 12, relativeTo: .caption)
     static let sectionHeader = Font.custom(pixel, size: 14, relativeTo: .footnote)
     static let time = Font.custom(pixel, size: 15, relativeTo: .subheadline).monospacedDigit()
+
+    /// Departure-board schedule: pixel type only for what ticks, mono for titles so long
+    /// event names stay readable.
+    static let countdown = Font.custom(pixel, size: 40, relativeTo: .largeTitle).monospacedDigit()
+    static let countdownSeparator = Font.custom(pixel, size: 32, relativeTo: .largeTitle)
+    static let boardLabel = Font.custom(pixel, size: 11, relativeTo: .caption2)
+    static let boardTitle = Font.system(.subheadline, design: .monospaced, weight: .medium)
+    static let boardDetail = Font.system(.caption, design: .monospaced)
 }

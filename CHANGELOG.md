@@ -17,6 +17,16 @@ this file exists so an agent can see the shape of the project's history without 
 
 ## Unreleased — 2026-09-24
 
+### Changed
+
+- **The schedule is a departure board.** One split-flap countdown to the next ring replaces
+  the banner, NEXT capsule and tinted row that all said the same thing. Each event is one line
+  (time, title in SF Mono, short offset like `−10m`, a lit square that glows when armed, with a
+  haptic). Day headers read `TODAY · WED 24`; started events dim. Toolbar buttons are Liquid
+  Glass. Chosen from five directions (owner, 2026-09-24).
+- **The default accent is amber `#FFB000`** (was orange); Amber moved first in the picker.
+  A chosen accent is kept.
+
 ### Fixed
 
 - **Switching every iOS calendar off read all of them.** `filteredCalendars()` fell back to

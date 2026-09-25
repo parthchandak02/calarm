@@ -10,7 +10,10 @@ description: >-
 
 ## Read this first
 
-CALarm has a **pixel-branded alarm app** look: Geist Pixel wordmark + body, semantic
+CALarm has a **pixel-branded alarm app** look. The schedule is a **departure board**
+(2026-09-24): Geist Pixel only for what ticks (times, countdown, board labels), SF Mono for
+event titles, glass toolbar buttons, one amber accent that means "armed". Settings and event
+detail still use Geist Pixel body text. Semantic
 `CalarmTheme` colors, grouped bordered cards, and custom schedule chrome. New UI must
 **extend existing tokens and components** — do not introduce one-off spacing, fonts, or
 button styles.
@@ -30,8 +33,10 @@ Full prioritized backlog: [BACKLOG.md](BACKLOG.md)
 **Do not** add fake weight tokens (`bodyMedium` == `body` today). Prefer real
 `.weight(.semibold)` when hierarchy needs emphasis.
 
-**Preserve:** custom schedule header, 78pt time column, 44pt bell toggle, NEXT capsule,
-next-alarm banner — tune them to the grid, don't remove them.
+**Preserve:** custom schedule header, 78pt time column, 44pt arm-square tap target, and
+`NextAlarmBoard` as the **only** next-alarm signal (the old banner, NEXT capsule and row tint
+were removed for it). The design exploration with the five directions considered is in the
+owner's gitignored `notes/ui-redesign/index.html`, when present.
 
 ---
 
@@ -88,7 +93,8 @@ via `themeStore.theme(colorScheme:)` in child rows.
 
 | Component | Use for |
 |-----------|---------|
-| `CALarmWordmark` | Schedule header title |
+| `NextAlarmBoard` | Split-flap countdown hero on the schedule |
+| `CalarmGlassIcon` | 44pt Liquid Glass circle icon (toolbar, menu labels) |
 | `ScheduleHeaderBar` | Schedule top chrome |
 | `CalarmToolbarIconButton` | 44×44 toolbar actions (fix size if still 34) |
 | `SettingsOptionList` | Bordered grouped card |

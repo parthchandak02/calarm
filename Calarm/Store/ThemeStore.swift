@@ -26,7 +26,7 @@ final class ThemeStore: ObservableObject {
            let value = CalarmAccent(rawValue: raw) {
             accent = value
         } else {
-            accent = .orange
+            accent = .amber
         }
         if let raw = CalarmPersistence.string(forKey: CalarmPersistence.Key.themeAppearance),
            let value = CalarmAppearance(rawValue: raw) {

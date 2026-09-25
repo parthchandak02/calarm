@@ -6,8 +6,8 @@
 import SwiftUI
 
 enum CalarmAccent: String, CaseIterable, Identifiable, Codable, Sendable {
-    case orange
     case amber
+    case orange
     case coral
     case rose
     case violet
@@ -33,7 +33,7 @@ enum CalarmAccent: String, CaseIterable, Identifiable, Codable, Sendable {
     var color: Color {
         switch self {
         case .orange: Color(red: 1.0, green: 0.58, blue: 0.0)
-        case .amber: Color(red: 1.0, green: 0.75, blue: 0.2)
+        case .amber: Color(red: 1.0, green: 0.69, blue: 0.0)
         case .coral: Color(red: 1.0, green: 0.45, blue: 0.42)
         case .rose: Color(red: 1.0, green: 0.38, blue: 0.55)
         case .violet: Color(red: 0.62, green: 0.45, blue: 1.0)
@@ -45,7 +45,7 @@ enum CalarmAccent: String, CaseIterable, Identifiable, Codable, Sendable {
 
     static func resolved(from rawValue: String?) -> CalarmAccent {
         guard let rawValue, let accent = CalarmAccent(rawValue: rawValue) else {
-            return .orange
+            return .amber
         }
         return accent
     }
