@@ -18,7 +18,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | **Latest build** | `20260924.1518` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
 | **Tests** | 102 passing (`CalarmTests`, 2026-09-24) |
 | **Doctor** | 0 warnings |
-| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including `work account` busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
+| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
 
 The app is installable from TestFlight and works off EventKit alone. Everything in
@@ -45,7 +45,7 @@ at the same time.
 turn the Focus on, and fire the next alarm. If it rings instead of vibrating, the Focus change
 did not reach a terminated app (RESEARCH.md § Known problems) — expected, but confirm.
 
-[redacted]
+**Confirm the work free/busy share is allowed.** Work-calendar busy blocks reach the app
 through the personal Google account. The owner chose to keep it on and check policy
 themselves (2026-09-24). Do not file anything for them.
 

@@ -103,7 +103,7 @@ A three-way audit (docs, code review, build/config) after the day's builds.
 ### Changed
 
 - **Alarms in the same minute ring once.** The same meeting reaches the app through several
-  calendars under different titles — "Busy" from the `work account` free/busy share next
+  calendars under different titles — "Busy" from the work calendar's free/busy share next
   to the titled invite, a flight from both Flighty and Gmail — so title-and-minute dedup never
   paired them, and each rang 2s after the last. `AlarmGrouping` now merges every alarm firing
   in the same minute into one AlarmKit alarm titled "First + N more"; titled events lead busy

@@ -161,3 +161,6 @@ graphify-out/
 
 # Owner's reference screenshots and recordings — personal, large, never committed
 reference-photos/
+
+# Local-only notes (employer details and anything else that must stay out of this public repo)
+notes/

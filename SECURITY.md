@@ -54,6 +54,20 @@ These identify the app / Apple Developer account but are **not secrets** (they a
 - Privacy/support pages in `docs/` are public by design once GitHub Pages is enabled.
 - Contact email on support/privacy pages is intentional for App Store Connect URL validation.
 
+## Git history purge (2026-09-24)
+
+Rewritten with `git filter-repo` and force-pushed to `origin/main` (the only branch):
+
+- App Store Connect API key ID and TestFlight tester-group ID → placeholders
+- Personal machine paths (`/Users/<name>/…`)
+- Employer details: work email, internal policy quotes, internal tool and channel names —
+  lines redacted to `[redacted]` in old revisions
+- Every author and committer set to the owner's personal address
+
+**Every commit hash changed.** Hashes quoted in CHANGELOG.md before this date refer to the old
+history. To update a clone: `git fetch origin && git reset --hard origin/main` (keeps
+gitignored files such as `fastlane/.env`).
+
 ## Git history purge (2026-06-30)
 
 The following were removed from **all commits** via `git filter-repo` and force-pushed to `origin/main`:

@@ -106,9 +106,10 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **Never commit a credential.** This repo has already had a history purge for personal
   data. See [SECURITY.md](SECURITY.md).
 - **Never handle the owner's passwords.** Keychain unlocks and logins are theirs to type.
-[redacted]
-[redacted]
-[redacted]
+- **Do not add a work (employer) calendar as a source, and keep employer details out of
+  this public repo** — names, emails, internal policy or tools. Local notes go in the
+  gitignored `notes/`. See
+  [RESEARCH.md § The work-calendar constraint](RESEARCH.md#the-work-calendar-constraint).
 - **Do not send repo content to third-party services.** No paste sites or file hosts.
 - **A missed meeting is this app's worst outcome.** When a design choice is ambiguous,
   fail *open* — show the event, ring the alarm. Every filter here that could hide an event

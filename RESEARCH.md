@@ -31,199 +31,25 @@ reconciliation — is done and done well, surrounded by a complete release pipel
 privacy manifests and a coherent design system. Rewriting means re-earning several bug-fix
 cycles documented in the commits, the code comments and the twelve skills in `.claude/skills/`.
 
-**calarm is the iPhone app. `predecessor iOS target` is retired.** A separate AlarmKit + Live Activity +
-EventKit target was built in the predecessor app repo and abandoned; the two were substantially the
+**calarm is the iPhone app. The predecessor iOS target is retired.** A separate AlarmKit +
+Live Activity + EventKit target was built in the owner's predecessor project and abandoned; the two were substantially the
 same app and calarm was far ahead. Do not resurrect it. The parts worth stealing are named
-under [Worth stealing from predecessor iOS target](#worth-stealing-from-zpingios).
+under [Worth stealing from the predecessor iOS target](#worth-stealing-from-the-predecessor-ios-target).
 
-[redacted]
-[redacted]
-
----
-
-[redacted]
-
-**Read this before proposing anything that touches the work calendar.** Verified against
-[redacted]
-
-[redacted]
-
-[redacted]
-> applications, in properly enrolled devices."
-
-And the Apple setup guide is explicit:
-
-> "You will need to install Gmail and Google Calendar to access email and calendar. You
-> will not be able to manage it with Apple Mail/Calendar app."
-
-Two consequences:
-
-[redacted]
-[redacted]
-[redacted]
-[redacted]
-   added to iOS Settings → Calendar. The Google Calendar iOS app keeps its own private
-   store and does not write to the iOS calendar database.
-
-**Do not propose reading the work calendar from the phone without the owner clearing it
-[redacted]
-
-**Open question (2026-09-24):** the owner's `work account` calendar is shared into the
-personal Google account as free/busy, and CALarm reads those busy blocks through Google sign-in
-[redacted]
-[redacted]
-set it and do not re-raise it.
-
-What *is* sanctioned: the Mac. predecessor app on macOS reads the work calendar through `gws`,
-[redacted]
-may use. `gws` is a Node.js CLI and **cannot run on iOS** under any configuration.
+**calarm targets a personal Google calendar.** Work (employer) calendars are out of scope by
+policy — see [The work-calendar constraint](#the-work-calendar-constraint).
 
 ---
 
-## AlarmKit
+## The work-calendar constraint
 
-### What the SDK actually provides
+Do not add a work calendar as a source, and do not propose one. The owner's employer policy
+does not allow a self-written app to read it. Details stay out of this public repo; the owner
+may keep them in the gitignored `notes/`.
 
-Read from the iOS 27.0 SDK `AlarmKit.swiftinterface`. **CONFIRMED.**
-
-- **There is no pre-fire hook. Nothing wakes the app when an alarm fires.** The complete
-  observation surface is `alarms` (synchronous snapshot), `alarmUpdates` (an **in-process**
-  `AsyncSequence` — it needs your process already alive and iterating),
-  `authorizationUpdates`, and tap-driven `stopIntent` / `secondaryIntent`.
-- iOS 27 added exactly one thing: `appEntityIdentifier: AppIntents.EntityIdentifier?` on
-  `AlarmConfiguration.init/timer/alarm`. Siri/Spotlight entity linkage, not a callback.
-- `Alarm.State` is `{scheduled, countdown, paused, alerting}`.
-- `AlarmPresentation.Alert.title` is a `LocalizedStringResource`, so a runtime-generated
-  title needs `LocalizedStringResource(stringLiteral:)` and loses localisation.
-- **There is no `com.apple.developer.alarmkit` entitlement.** The gate is
-  `NSAlarmKitUsageDescription` plus `requestAuthorization()`. Most public write-ups claim
-  otherwise; an Apple engineer has publicly noted that language models keep inventing it.
-- `AlarmPresentationState.Mode.Countdown` carries `totalCountdownDuration`,
-  `previouslyElapsedDuration`, `startDate` and `fireDate`. Prefer `totalCountdownDuration`
-  over "time remaining now" for any layout decision — widget bodies render once and the
-  system animates from there.
-- **`preAlert` is the countdown duration itself**, not a lead-in offset. Apple's docs:
-  *"this would be the duration of a timer."* Any non-nil `countdownDuration` puts the alarm
-  into `.countdown` mode. Set `preAlert: nil` (not `0`) for a plain scheduled alarm.
-
-### Alarm sound and vibration (researched 2026-09-24)
-
-- **No public API reads the Ring/Silent switch**, and none notifies on change. Workarounds
-  time a played sound or use private API. **CONFIRMED**
-  ([forums 718945](https://developer.apple.com/forums/thread/718945)). It would not help anyway:
-  the app is not running when an AlarmKit alarm fires.
-- **AlarmKit rings through silent mode by design**, like Clock alarms
-  ([Apple Support](https://support.apple.com/en-us/118444)). **CONFIRMED**
-- **The only sound choices are `AlertConfiguration.AlertSound.default` and `.named(_:)`**, a
-  `sound:` parameter on `AlarmConfiguration`. No vibrate-only or haptics option. **CONFIRMED**
-  from the iOS 27 SDK `.swiftinterface`.
-- **Custom AlarmKit sounds were broken in iOS 26.0**, playing an error tone or the default
-  sound; bundle `.caf` files work in later builds, `Library/Sounds` did not
-  ([802620](https://developer.apple.com/forums/thread/802620),
-  [798140](https://developer.apple.com/forums/thread/798140)). **REPORTED**
-- **Whether a silent `.named` sound still vibrates is unverified.** Clock's "None" sound
-  vibrates only in silent mode. calarm's vibrate mode depends on this; verify with the test
-  alarm on device.
-- **A `SetFocusFilterIntent` runs in the background only if it also conforms to
-  `LiveActivityIntent`**; a plain one runs only while the app is in the foreground.
-  **REPORTED** ([home-assistant/iOS#5656](https://github.com/home-assistant/iOS/pull/5656),
-  [Apple docs](https://developer.apple.com/documentation/appintents/setfocusfilterintent)).
-  iOS calls `perform` with the default values when the Focus turns off — **REPORTED**,
-  unverified on device.
-
-### AlarmKit owns the Live Activity — do not create your own
-
-**CONFIRMED.** The app supplies only the *views*, via a widget extension declaring
-`ActivityConfiguration(for: AlarmAttributes<T>.self)`. You never call `Activity.request`.
-`AlarmPresentationState` is documented as "the system managed content state of an alarm
-Live Activity". If an app schedules an AlarmKit alarm **and** separately calls
-`Activity.request` for the same countdown, it gets two. calarm calls `Activity.request`
-nowhere — verified 2026-09-22.
-
-> "AlarmKit expects a widget extension if an app supports a countdown presentation.
-> Otherwise, the system may unexpectedly dismiss alarms and fail to alert."
-> — [Scheduling an alarm with AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit)
-
-### Apple's reliability promise
-
-From the [AlarmKit FAQ](https://developer.apple.com/forums/thread/797158), **CONFIRMED**:
-
-- *"all alarms are expected to persist regardless of app or device state changes, once they
-  are successfully scheduled"* — covers reboot, force-quit, crash.
-- *"AlarmKit alarms can break through all focus modes."*
-- *"There is no set number as a limit… the device may impose a limit"* →
-  `maximumLimitReached`.
-- *"Hidden or passcode required apps do not work with AlarmKit. Currently, any scheduled
-  alarms by such apps will silently fail."*
-
-### Four open threads contradict that promise. No Apple staff reply on any.
-
-| Bug | Evidence | Label |
-|---|---|---|
-| Alarms fire **at exactly 00:00** instead of the scheduled time. *Bird Rise* dev, production data: across **~13,000 firings in 30 days**, 84% of alarms are scheduled 06:00–09:59 yet **10–15% of actual rings land in 21:00–01:00**. Persists 26.1–26.4 | [thread/820388](https://developer.apple.com/forums/thread/820388) | **CONFIRMED** |
-| Alarms **stopped ringing entirely** on 26.2 beta 3/RC after upgrading from 26.1. Reproducible **with Apple's own sample code**. FB21273655 | [thread/809398](https://developer.apple.com/forums/thread/809398) | CONFIRMED |
-| Alarms fire **5–45 min late or not until the phone is woken**. sysdiagnose: `mobiletimerd` registers the XPC wake-up, `launchd` drops it, nothing reschedules. FB22887867 (26), FB24483266 (27.0 RC) | [thread/798619](https://developer.apple.com/forums/thread/798619) | REPORTED |
-| Alarms don't fire when a foregrounded app is in **landscape**. Affected Apple's own Reminders. Workaround: 1-second `preAlert` | [thread/806681](https://developer.apple.com/forums/thread/806681) | CONFIRMED |
-
-That 13,000-firing dataset is **the only hard reliability number in the entire research
-corpus**, and it comes from a developer whose own App Store copy says *"powered by the new
-AlarmKit for incredibly reliable alarms."* Marketing is not evidence of mechanism.
-
-iOS 27.0 shipped 2026-09-14; its release notes mention alarms only for independent
-Alarm/Timer volume and a China-specific Clock behaviour. **No AlarmKit delivery fix.**
-
-The late-firing *rate* is one developer's impression. The *mechanism* — launchd dropping a
-registered XPC wake-up — carries technical substance. Treat the mechanism as credible and
-the rate as unmeasured.
-
-### Known Dynamic Island / Live Activity bugs
-
-- **Zombie empty Live Activity.** Swiping the Island away instead of using Stop leaves a
-  blank activity that reappears on long-press. FB22295664.
-  [thread/812006](https://developer.apple.com/forums/thread/812006)
-- **Timer values update unpredictably in the Island** versus reliably in-app.
-  [thread/757140](https://developer.apple.com/forums/thread/757140)
-- **`Text(date, style: .timer)` over-expands** — unresolved since iOS 16. The compact region
-  has no intrinsic size; the Island grows to whatever the content asks for, and timer text
-  asks for room to hold every digit combination it could show.
-  [thread/723316](https://developer.apple.com/forums/thread/723316)
-- **Simulator is unreliable** for AlarmKit Dynamic Island and alert sounds. Test on device.
-  calarm's own Settings deliberately blocks the test alarm on Simulator.
-
-Measured glyph widths for `.system(size: 11, weight: .semibold, design: .rounded)`:
-`59:59` = 33pt, `23:59:59` = 51pt. calarm reserves 38pt and 58pt respectively.
-
-### Countdown timing and Island width (researched 2026-09-23)
-
-- **On device, `.fixed` plus `preAlert` counts down *from* the fixed date, not to it —
-  contradicting the docs.** `Alarm.countdownDuration` doc: *"The UI will appear at a time
-  equal to the next scheduled alert date minus the duration."* But on 2026-09-23 (iOS 27,
-  build 20260922.1613) an alarm `.fixed(8:59)` with `preAlert` ≈ 1h16m **did not ring at
-  8:59**, and at 9:50 its Live Activity was counting toward 10:14:54 = 8:59 + pre-alert. No
-  snooze was pressed (snooze was 5 min). **CONFIRMED by device observation**, one instance.
-  The Live Activity alarm now uses `schedule: nil` instead. The 8-second test alarm
-  (Settings → Status → Alarm timing) re-measures it: ~8s docs, ~16s this behaviour.
-- **A snoozed alarm's Live Activity counts to press time + `postAlert`**, not to the event, and
-  keeps the event title. `SnoozeAlarmIntent` also calls `AlarmManager.countdown(id:)` on top of
-  the system's `.countdown` secondary behaviour. **INFERRED.**
-- **The compact Island cannot shrink during an uninterrupted countdown.** Every timer text API
-  (`Text(timerInterval:)`, `.timer` style, iOS 18 `SystemFormatStyle.Timer`) drops the hour field
-  in its *text* but reserves maximum *width* at render, and AlarmKit re-renders only on
-  countdown/paused/alert changes. Apple's WWDC26/223 sample caps width with
-  `.frame(maxWidth:)` too. Best available: key width to time remaining *at render*.
-  **CONFIRMED** (SDK doc comments, [723316](https://developer.apple.com/forums/thread/723316),
-  [WWDC26/223](https://developer.apple.com/videos/play/wwdc2026/223/)).
-- **`isDynamicIslandLimitedInWidth`** (WidgetKit, iOS 27) reports a width-limited Island
-  (landscape); Apple's sample shows an icon instead of a timer then. **CONFIRMED.**
-- **Widget-side `isActivityExpired` cannot work**: it reads `Date()` at render and Live
-  Activities have no timeline, so it never re-evaluates. **INFERRED, high confidence.**
-- New forum threads: late firing reproduced by Apple DTS with sample code, *"I do not know a
-  workaround"* ([846063](https://developer.apple.com/forums/thread/846063)); zombie Live
-  Activity unremovable by the app, still in 27 beta 8, FB22791285
-  ([819556](https://developer.apple.com/forums/thread/819556)); lock-screen touch dismisses an
-  alarm without running either intent, leaving it `.alerting` forever, FB24407814
-  ([842638](https://developer.apple.com/forums/thread/842638), REPORTED); `stopIntent` skipped
-  on swipe-away ([815064](https://developer.apple.com/forums/thread/815064), REPORTED).
+One open question, the owner's to settle: the work calendar is shared into the personal Google
+account as free/busy, and CALarm shows those blocks ("Busy blocks only" in Settings). Leave
+that calendar as the owner set it and do not re-raise it.
 
 ---
 
@@ -620,9 +446,9 @@ not let a rarely-opened app poll in the background at all.
 
 - A research agent concluded the push architecture is "quietly broken" because a push that
   wakes the app to re-read EventKit reads 15-minute-stale data. Sound reasoning, wrong
-  target — it had inspected `predecessor iOS target`, not calarm. **calarm has a direct Google API
+  target — it had inspected the predecessor iOS target, not calarm. **calarm has a direct Google API
   client**, so a push leads to a fresh Google fetch.
-- One agent claimed `MeetingProvider` in predecessor app "is already a protocol" (it is an enum).
+- One agent claimed `MeetingProvider` in the predecessor project "is already a protocol" (it is an enum).
 - Four implementation agents once stalled for 600s and wrote zero files.
 
 **Verify agent claims against primary sources before acting on them.**
@@ -787,9 +613,9 @@ and **nobody has ever seen the diagnostic**. Pure helpers and DTOs need explicit
 - **All-day events are excluded by design** (`filter { !$0.isAllDay }`). Stated in the UI so
   it doesn't read as a bug.
 
-### Worth stealing from predecessor iOS target
+### Worth stealing from the predecessor iOS target
 
-Not a recommendation to resurrect it — just where the useful bits are, in the predecessor app repo
+Not a recommendation to resurrect it — just where the useful bits are, in the predecessor project
 under `ios/`:
 
 - `AlarmPlan.swift` — a **pure, Foundation-only** alarm planner with 16 tests, each pinning

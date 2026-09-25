@@ -199,7 +199,7 @@ final class GoogleCalendarService: ObservableObject {
         guard !event.isCancelled else { return nil }
         guard !event.isAllDay else { return nil }
         // Focus blocks, out-of-office and working-location entries are not meetings.
-        // The predecessor app macOS app has always filtered these; the Google path here never did.
+        // The predecessor macOS app always filtered these; the Google path here never did.
         guard event.isAlertableEventType else { return nil }
         guard let googleEventID = event.id else { return nil }
         guard let dates = api.parseEventDates(event) else { return nil }
