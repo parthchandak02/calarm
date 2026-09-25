@@ -28,13 +28,10 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Verify vibrate mode on device (build 20260924.1518+).** Turn on Settings → Alarms → Vibrate
-instead of ringing, then Settings → Status → Test alarm. It should vibrate with no sound (the
-test alarm has no fallback). Then leave a **real event's** vibrating alarm undismissed: a
-normal ring should follow a minute later. Snooze one: a ring should follow a minute after the
-snooze ends if that is missed too. If the test
-alarm makes a sound or stays silent without vibrating, the silent-sound approach fails on this
-iOS version (see RESEARCH.md § Alarm sound and vibration).
+**Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
+(2026-09-24: the silent sound vibrates). Leave a **real event's** vibrating alarm undismissed:
+a normal ring should follow a minute later. Snooze one and ignore the re-alert: a ring should
+follow a minute after the snooze ends. The test alarm has no fallback.
 
 **Confirm one ring per minute (build 20260924.1342+).** After installing, open CALarm once. A minute with
 several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, titled
@@ -51,16 +48,9 @@ themselves (2026-09-24). Do not file anything for them.
 
 *Older items below are from builds 1106–1613 and have not been confirmed done.*
 
-**0. Measure AlarmKit's countdown timing (build 20260923.1106 or later).** Keep CALarm open,
-tap **Settings → Status → Test alarm**, and read **Alarm timing**. *On time · 8s* means iOS
-follows Apple's docs and the phantom 9:00→10:14 countdown needs another explanation;
-*Late · 16s* confirms iOS starts `.fixed` countdowns at the fixed date, which the new
-countdown-mode Live Activity alarm already sidesteps. (Already strongly indicated: the 8:59
-alarm on 2026-09-23 never rang — see RESEARCH.md.) Either way, record it in RESEARCH.md.
-Then watch the next real alarm: the lock-screen card should read *Starts <time>* and ring on
-time.
-
-**1. Confirm the calendar fix.** Build 1613 changed the per-calendar filter from an
+**1. Confirm the calendar fix.** (2026-09-24: all 20 EventKit calendars are switched off and
+Google supplies events; all-off now reads nothing, so this item is moot unless an iOS-only
+calendar is wanted.) Build 1613 changed the per-calendar filter from an
 allow-list to a deny-list. The previous build reported `ek 40 · google off · 4 cals`,
 meaning the filter was cutting the schedule down to 4 calendars. Open **Settings →
 Calendar**; if calendars are switched off, tap **Turn all calendars back on**. Then

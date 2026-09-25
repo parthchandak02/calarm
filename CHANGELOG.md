@@ -15,6 +15,22 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-24
+
+### Fixed
+
+- **Switching every iOS calendar off read all of them.** `filteredCalendars()` fell back to
+  "every calendar" when nothing was left on, so with all 20 off the phone still loaded 37
+  EventKit events and could ring for calendars the owner had turned off. All off now reads
+  none, as the switches say.
+- **The test alarm rang at ~16s instead of 8s.** It was deliberately `.fixed` plus a pre-alert
+  to probe AlarmKit's timing; the device has answered (*Late · 16s*, RESEARCH.md), so it now
+  uses countdown mode like the Live Activity alarm and rings on time.
+- **RESEARCH.md's whole AlarmKit section had been deleted** by the edit that removed the
+  employer section (`858f891`), a slice that ran to the wrong `---`. Restored.
+
+---
+
 ## Build 20260924.1743 — 2026-09-24
 
 ### Changed

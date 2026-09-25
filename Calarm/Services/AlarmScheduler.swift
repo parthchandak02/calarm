@@ -170,17 +170,21 @@ final class AlarmScheduler {
                 metadata: AlarmAppMetadata(title: "CALarm Test", offsetLabel: "Test", eventID: testID),
                 tintColor: resolvedAccentColor()
             )
+            // Countdown mode, like the Live Activity alarm. It used to be `.fixed` plus an
+            // equal pre-alert, to probe how AlarmKit times that pair; on 2026-09-24 the device
+            // answered "Late · 16s", confirming the countdown starts at the fixed date.
             let configuration = AlarmConfiguration(
-                // Deliberately `.fixed` plus an equal pre-alert, unlike real alarms: it is the
-                // probe for how AlarmKit times that combination. See AlarmTimingProbe.
                 countdownDuration: Alarm.CountdownDuration(preAlert: testPreAlert, postAlert: snoozeSeconds),
-                schedule: .fixed(fireDate),
+                schedule: nil,
                 attributes: attributes,
                 stopIntent: StopAlarmIntent(alarmID: idString),
                 secondaryIntent: SnoozeAlarmIntent(alarmID: idString),
                 sound: alertSound(vibrates: AlarmSoundPolicy.vibratesNow)
             )
             _ = try await AlarmManager.shared.schedule(id: alarmID, configuration: configuration)
+            // Without a stored target the orphan reconciler sees a dateless countdown and
+            // cancels it before it rings.
+            Self.setCountdownTarget(fireDate, for: alarmID)
             AlarmJournalStore.record(.scheduled, alarmID: idString, occurrenceID: testID, intendedFire: fireDate)
             AlarmJournalStore.recordTestProbe(alarmID: idString, scheduledAt: scheduledAt, preAlert: testPreAlert)
             return nil

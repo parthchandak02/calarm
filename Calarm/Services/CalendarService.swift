@@ -90,6 +90,7 @@ final class CalendarService: ObservableObject {
         let start = Date()
         let end = Calendar.current.date(byAdding: .day, value: days, to: start) ?? start
         let calendars = filteredCalendars()
+        if let calendars, calendars.isEmpty { return [] }
         let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: calendars)
 
         return eventStore
@@ -117,13 +118,13 @@ final class CalendarService: ObservableObject {
         return false
     }
 
-    /// `nil` means "every calendar", which is also the fallback when the user has
-    /// switched everything off — an empty predicate list reads nothing at all.
+    /// `nil` means "every calendar" (nothing switched off). All switched off returns `[]`,
+    /// and nothing is read: with Google connected that is a real setup, and treating it as
+    /// "read everything" rang alarms for calendars the owner had turned off.
     private func filteredCalendars() -> [EKCalendar]? {
         let disabled = CalendarFilterPreferences.disabledCalendarIDs
         if disabled.isEmpty { return nil }
-        let calendars = eventStore.calendars(for: .event).filter { !disabled.contains($0.calendarIdentifier) }
-        return calendars.isEmpty ? nil : calendars
+        return eventStore.calendars(for: .event).filter { !disabled.contains($0.calendarIdentifier) }
     }
 
     func onCalendarChanged(_ handler: @escaping () async -> Void) -> AnyCancellable {
