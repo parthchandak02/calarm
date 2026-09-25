@@ -161,6 +161,12 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **A separate Apps Script mutates this calendar.** "Focus Block Creator" converts solo
   events via insert-then-remove, which **changes the event ID** and orphans preferences
   keyed to it.
+- **Tip IDs carry a generation** (`CalarmTips`). Never call `Tips.resetDatastore()` to replay
+  tips: it is ignored after `Tips.configure()`. Bump the generation (`CalarmTips.replay()`).
+  Screenshot mode hides all tips, and its demo preferences mark the install as returning.
+- **Alarm permission is asked on the first armed alarm, not at launch.** `rescheduleIfNeeded`
+  requests it whenever an event is armed; keep that, or an alarm armed without the list's
+  toggle would never get permission.
 - **`ScreenshotMode` is a live branch in the launch path**, short-circuiting
   `ScheduleStore.bootstrap()` to inject demo data.
 

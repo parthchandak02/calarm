@@ -66,6 +66,13 @@ struct SettingsSheet: View {
                     TestAlarmButton()
                         .padding(.top, 16)
 
+                    BoardButton(title: "Show tips again", systemImage: "lightbulb") {
+                        CalarmTips.replay()
+                        dismiss()
+                    }
+                    .padding(.top, 8)
+                    .accessibilityIdentifier("settings.showTips")
+
                     buildInfo
                         .padding(.top, 32)
                 }

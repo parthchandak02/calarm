@@ -19,6 +19,13 @@ this file exists so an agent can see the shape of the project's history without 
 
 ### Added
 
+- **First-run tips.** New installs get Apple TipKit tips that point at the real controls,
+  one at a time: arm square → tap a row → bell → gear, plus an inline tip on the calendar
+  access screen. Each tip disappears once its action is done (or on its ×). Anyone who has
+  used CALarm before (a permission already asked, Google connected, or any saved preference)
+  skips them. **Settings → Show tips again** brings them all back without a relaunch.
+  Styled with CALarm's fonts and theme (`Calarm/Views/CalarmTips.swift`).
+
 - **The Live Activity now appears only shortly before each alarm** (Settings → Alarms →
   *Island · min before ring*: ALL / 10 / 5 / 2, default 5). Every upcoming alarm gets its own
   window instead of the next one counting down for hours: it is scheduled `.fixed(ring − L)`
@@ -30,6 +37,9 @@ this file exists so an agent can see the shape of the project's history without 
 
 ### Changed
 
+- **The alarm permission prompt waits for the first armed alarm**, not app launch. The arm
+  tip explains it first. Any reschedule with an armed event (bulk arm, event detail, a default
+  offset) and the test alarm also ask, so no armed alarm is left without permission.
 - **Vibrate means vibrate only: the ringing fallback is gone.** Owner's rule: exactly one ring
   per chosen offset (an event at 12:45 with −1m rings at 12:44 only). The fallback a minute
   after an undismissed vibration was a second ring, and it could ring after a dismiss: while

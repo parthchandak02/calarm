@@ -6,6 +6,7 @@
 import AlarmKit
 import EventKit
 import SwiftUI
+import TipKit
 import UIKit
 
 private struct EventRoute: Hashable {
@@ -20,6 +21,8 @@ struct ScheduleView: View {
 
     @State private var showingSettings = false
     @State private var navigationPath = NavigationPath()
+    @AppStorage(CalarmTips.generationKey) private var tipGeneration = 0
+    @State private var scheduleTips = CalarmTips.scheduleGroup(generation: CalarmTips.generation)
 
     private var canManageAlarms: Bool {
         store.hasEventSource && !store.schedulableEvents.isEmpty
@@ -39,10 +42,21 @@ struct ScheduleView: View {
                     hasEnabledAlarms: store.schedulableEvents.contains(where: \.alarmEnabled),
                     canRefresh: store.hasEventSource,
                     isRefreshing: store.isLoading,
-                    onTurnAllOn: { store.setAllAlarmsEnabled(true) },
-                    onTurnAllOff: { store.setAllAlarmsEnabled(false) },
+                    onTurnAllOn: {
+                        BulkAlarmsTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
+                        store.setAllAlarmsEnabled(true)
+                    },
+                    onTurnAllOff: {
+                        BulkAlarmsTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
+                        store.setAllAlarmsEnabled(false)
+                    },
                     onRefresh: { Task { await store.reload() } },
-                    onSettings: { showingSettings = true }
+                    onSettings: {
+                        SettingsTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
+                        showingSettings = true
+                    },
+                    bulkTip: scheduleTips.currentTip as? BulkAlarmsTip,
+                    settingsTip: scheduleTips.currentTip as? SettingsTip
                 )
 
                 statusBanners
@@ -117,10 +131,24 @@ struct ScheduleView: View {
             }
         }
         .font(CalarmFont.body)
+        .calarmTipStyle(theme)
         .accessibilityIdentifier("schedule.screen")
         .onAppear {
             applyScreenshotSceneIfNeeded()
             presentPendingEventDeepLinkIfNeeded()
+        }
+        .onChange(of: tipGeneration) { _, generation in
+            scheduleTips = CalarmTips.scheduleGroup(generation: generation)
+        }
+        .onChange(of: store.schedulableEvents.contains(where: \.alarmEnabled)) { _, hasArmed in
+            if hasArmed {
+                ArmAlarmTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
+            }
+        }
+        .onChange(of: navigationPath.isEmpty) { _, isEmpty in
+            if !isEmpty {
+                OpenEventTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
+            }
         }
         .onChange(of: store.pendingEventDeepLinkID) { _, _ in
             presentPendingEventDeepLinkIfNeeded()
@@ -229,33 +257,50 @@ struct ScheduleView: View {
         }
     }
 
+    private var tipAnchorEventID: String? {
+        store.groupedDays.lazy
+            .flatMap(\.events)
+            .first(where: \.isEventUpcoming)?
+            .id
+    }
+
     private var scheduleList: some View {
-        List {
-            ForEach(store.groupedDays) { day in
-                Section {
-                    ForEach(day.events) { event in
-                        EventRow(
-                            event: event,
-                            isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
-                            hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
-                            onOpen: { navigationPath.append(EventRoute(id: event.id)) },
-                            onToggle: { store.toggleAlarm(for: event.id) }
-                        )
-                        .listRowInsets(rowInsets)
-                        .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
+        let anchorID = tipAnchorEventID
+        return ScrollViewReader { proxy in
+            List {
+                ForEach(store.groupedDays) { day in
+                    Section {
+                        ForEach(day.events) { event in
+                            EventRow(
+                                event: event,
+                                isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
+                                hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
+                                armTip: event.id == anchorID ? scheduleTips.currentTip as? ArmAlarmTip : nil,
+                                openTip: event.id == anchorID ? scheduleTips.currentTip as? OpenEventTip : nil,
+                                onOpen: { navigationPath.append(EventRoute(id: event.id)) },
+                                onToggle: { store.toggleAlarm(for: event.id) }
+                            )
+                            .listRowInsets(rowInsets)
+                            .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
+                        }
+                    } header: {
+                        BoardDayLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
                     }
-                } header: {
-                    BoardDayLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .refreshable {
+                await store.reload()
+            }
+            .accessibilityIdentifier("schedule.list")
+            .id(themeStore.themeToken)
+            .onChange(of: tipGeneration) { _, _ in
+                if let anchorID {
+                    withAnimation { proxy.scrollTo(anchorID, anchor: .center) }
                 }
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .refreshable {
-            await store.reload()
-        }
-        .accessibilityIdentifier("schedule.list")
-        .id(themeStore.themeToken)
     }
 
     private var rowInsets: EdgeInsets {
@@ -263,6 +308,16 @@ struct ScheduleView: View {
     }
 
     private var accessPrompt: some View {
+        VStack(spacing: 0) {
+            TipView(ConnectCalendarTip(generation: tipGeneration))
+                .tipBackground(theme.surfaceStroke.opacity(0.35))
+                .padding(.horizontal, CalarmTheme.rowPaddingH)
+                .padding(.top, 12)
+            accessPromptContent
+        }
+    }
+
+    private var accessPromptContent: some View {
         ContentUnavailableView {
             Label(accessPromptTitle, systemImage: accessPromptSymbol)
         } description: {
@@ -337,6 +392,8 @@ private struct EventRow: View {
     let event: ScheduleEvent
     let isNextAlarm: Bool
     let hasTooSoonWarning: Bool
+    var armTip: ArmAlarmTip?
+    var openTip: OpenEventTip?
     let onOpen: () -> Void
     let onToggle: () -> Void
 
@@ -383,8 +440,10 @@ private struct EventRow: View {
                 .accessibilityLabel("\(event.title), \(CalarmTheme.eventTimeString(event.startDate)), \(event.alarmSummary)")
             }
             .buttonStyle(.plain)
+            .popoverTip(openTip, arrowEdge: .top)
 
             ArmSquareToggle(isOn: event.alarmEnabled, label: "Alarm for \(event.title)", onToggle: onToggle)
+                .popoverTip(armTip, arrowEdge: .top)
         }
         .opacity(event.isEventUpcoming ? 1 : 0.4)
         .listRowBackground(Color.clear)

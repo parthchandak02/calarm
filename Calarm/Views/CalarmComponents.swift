@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import TipKit
 
 struct ScheduleHeaderBar: View {
     let theme: CalarmTheme
@@ -16,6 +17,8 @@ struct ScheduleHeaderBar: View {
     let onTurnAllOff: () -> Void
     let onRefresh: () -> Void
     let onSettings: () -> Void
+    var bulkTip: (any Tip)?
+    var settingsTip: (any Tip)?
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -48,6 +51,7 @@ struct ScheduleHeaderBar: View {
                     }
                     .disabled(!canManageAlarms)
                     .accessibilityLabel("Alarm bulk actions")
+                    .popoverTip(bulkTip, arrowEdge: .top)
 
                     if isRefreshing {
                         ProgressView()
@@ -67,6 +71,7 @@ struct ScheduleHeaderBar: View {
 
                     CalarmToolbarIconButton(systemName: "gearshape", theme: theme, action: onSettings)
                         .accessibilityLabel("Settings")
+                        .popoverTip(settingsTip, arrowEdge: .top)
                 }
             }
             .fixedSize()

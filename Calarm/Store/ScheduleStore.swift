@@ -141,7 +141,9 @@ final class ScheduleStore: ObservableObject {
             await self?.reload()
         }
         MorningSyncScheduler.scheduleNext()
-        await requestAlarmAuthorizationIfNeeded()
+        // The permission prompt waits for the first armed alarm, where the arm tip has
+        // already said why it is coming. `rescheduleIfNeeded` asks then.
+        alarmAuthorization = AlarmManager.shared.authorizationState
         await runMetadataMigrationIfNeeded()
 
         if googleCalendarService.isConnected {
@@ -303,6 +305,15 @@ final class ScheduleStore: ObservableObject {
     }
 
     func toggleAlarm(for eventID: String) {
+        if alarmAuthorization == .notDetermined {
+            Task {
+                await requestAlarmAuthorizationIfNeeded()
+                if alarmAuthorization != .notDetermined {
+                    toggleAlarm(for: eventID)
+                }
+            }
+            return
+        }
         guard alarmAuthorization == .authorized else {
             scheduleFailures = [ScheduleFailure(
                 occurrenceID: eventID,
@@ -323,9 +334,6 @@ final class ScheduleStore: ObservableObject {
             }
             events[index].alarmOffsets = []
         } else {
-            if alarmAuthorization == .notDetermined {
-                Task { await requestAlarmAuthorizationIfNeeded() }
-            }
             if preferences.hasPausedAlarms(for: eventID) {
                 preferences.resumeAlarms(for: eventID, defaultOffset: defaultAlarmOffset)
             } else {
@@ -458,6 +466,7 @@ final class ScheduleStore: ObservableObject {
     }
 
     func scheduleTestAlarm() async -> String? {
+        await requestAlarmAuthorizationIfNeeded()
         guard alarmAuthorization == .authorized else {
             return "Enable alarm permission for CALarm in Settings first."
         }
@@ -562,6 +571,9 @@ final class ScheduleStore: ObservableObject {
 
     @discardableResult
     private func rescheduleIfNeeded(force: Bool) async -> RescheduleSummary {
+        if events.contains(where: \.alarmEnabled) {
+            await requestAlarmAuthorizationIfNeeded()
+        }
         var shouldForce = force
         let cleaned = await alarmScheduler.reconcileAlarmLifecycle(events: events)
         if cleaned > 0 {

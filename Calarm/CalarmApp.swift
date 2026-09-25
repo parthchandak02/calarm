@@ -17,6 +17,7 @@ struct CalarmApp: App {
             ScreenshotDemoData.applyDemoPreferencesSync()
         }
         CalarmPersistence.migrateIfNeeded()
+        CalarmTips.configure()
     }
 
     var body: some Scene {

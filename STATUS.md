@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Latest build** | `20260924.2243` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
-| **Tests** | 153 passing (`CalarmTests`, 2026-09-25) |
+| **Tests** | 155 passing (`CalarmTests`, 2026-09-25) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -27,6 +27,14 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 ---
 
 ## Waiting on the owner
+
+**Check the first-run tips and the moved alarm prompt on device (next build).** Delete and
+reinstall CALarm (the tips only show on a fresh install). Launch: **no alarm permission prompt**
+should appear, and the calendar screen shows a "Start with your calendar" tip. Allow calendar
+access; a "Tap the square to arm" tip points at the first upcoming event. Tap the square: iOS
+asks to allow alarms, and the event arms once allowed. Then the row, bell and gear tips follow
+one at a time. Settings → *Show tips again* brings them back. An existing install updated in
+place should show no tips.
 
 **Check the Live Activity lead and the vibrate/snooze fixes (next build, unreleased).** With
 Settings → Alarms → Island at **5**:

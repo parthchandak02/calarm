@@ -245,6 +245,22 @@ rendering the production compact views on an ActivityKit activity.
 
 ---
 
+## TipKit (researched 2026-09-25)
+
+- **`Tips.resetDatastore()` only takes effect before `Tips.configure()`**, so a reset needs a
+  relaunch. To replay tips in place, give each tip an ID containing a generation and bump
+  it; TipKit treats them as tips it has never seen. **CONFIRMED** in the Simulator.
+  [Apple docs](https://developer.apple.com/documentation/tipkit/tips/resetdatastore())
+- **`TipGroup(.ordered)` (iOS 18+) shows one tip at a time**, the next once the previous is
+  invalidated or closed. Anchor with `.popoverTip(group.currentTip as? SomeTip)`.
+  **CONFIRMED** in the Simulator. [WWDC24 10070](https://developer.apple.com/videos/play/wwdc2024/10070/)
+- **`tipViewStyle` and `tipBackground` style popover tips as well as inline `TipView`s**, and
+  `Font.custom` renders inside them. **CONFIRMED** in the Simulator.
+- Apple's onboarding guidance: teach in context rather than front-loading a tour, and ask for
+  a permission where its purpose is obvious. **DOCUMENTED.**
+
+---
+
 ## EventKit
 
 - **Zero new API in iOS 26 or 27.** Every header in `EventKit.framework/Headers` grepped for
