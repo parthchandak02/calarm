@@ -22,7 +22,7 @@ never through a symlink, because Claude Code refuses to write into one. See
 | [calarm-release-pipeline](calarm-release-pipeline/SKILL.md) | ship.sh, ios-doctor, pipeline bootstrap |
 | [calarm-app-icon-alpha](calarm-app-icon-alpha/SKILL.md) | App icon transparency rejection, logo processing |
 | [calarm-ios-ui-design](calarm-ios-ui-design/SKILL.md) | View polish, HIG alignment, design tokens, UI consistency |
-| [herdr-remote-build](herdr-remote-build/SKILL.md) | Ship or build on a remote Mac through a persistent herdr pane, no password, monitored |
+| [herdr-remote-build](herdr-remote-build/SKILL.md) | Run and monitor any long remote job in a persistent herdr pane, no password |
 
 ## Agents (delegation)
 
