@@ -107,6 +107,13 @@ watch live by attaching (`ssh -t <host> herdr`) and opening the space.
 
 ## Traps
 
+- **When you finish a failed run by hand, verify the exact artifact by its version or build
+  number, never "latest" or an ID a previous step printed.** A retried TestFlight group step
+  ran with `--latest` while the new build was still processing at Apple, attached the
+  *previous* build, and printed that build's ID; checking that ID "confirmed" a build that
+  testers could not see. Apple processing can take well over 30 minutes: an upload that is
+  not in the builds list yet is visible in `asc builds uploads list` as `PROCESSING`.
+
 - **`--source recent-unwrapped` for grepping.** `recent` wraps long lines at the pane
   width, which splits the text you are matching.
 - **zsh globs square brackets** in `pane run` text: `echo X=[$Y]` fails with
