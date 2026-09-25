@@ -17,6 +17,15 @@ this file exists so an agent can see the shape of the project's history without 
 
 ## Unreleased — 2026-09-24
 
+### Changed
+
+- **The next-alarm countdown flips like a real split-flap board.** Each tile is two halves:
+  the old top half falls forward on the midline hinge and the new bottom half lands with a
+  small settle, darkening as each turns edge-on (500 ms, `FlipTile`). Reduce Motion swaps
+  without motion. Tuned by the owner in `notes/ui-redesign/flip.html`.
+- **Live Activity tiles look mechanical when still:** a lighter upper flap, a darker lower
+  one, a hinge gap and a drop shadow. They cannot flip: iOS ticks the timer text itself.
+
 ### Fixed
 
 - **The Live Activity countdown was blank on device.** In build 2129 the Lock Screen card was

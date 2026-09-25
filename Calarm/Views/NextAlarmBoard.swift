@@ -105,17 +105,12 @@ private struct FlapCountdown: View {
     }
 
     private func tile(_ character: String) -> some View {
-        Text(character)
-            .font(CalarmFont.countdown)
-            .foregroundStyle(isLit ? theme.accent : theme.textSecondary)
-            .contentTransition(.numericText(countsDown: true))
-            .animation(.snappy, value: character)
-            .frame(width: tileWidth, height: tileHeight)
-            .background(theme.surface, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay {
-                Rectangle()
-                    .fill(theme.background)
-                    .frame(height: 1)
-            }
+        FlipTile(
+            character: character,
+            font: CalarmFont.countdown,
+            color: isLit ? theme.accent : theme.textSecondary,
+            width: tileWidth,
+            height: tileHeight
+        )
     }
 }

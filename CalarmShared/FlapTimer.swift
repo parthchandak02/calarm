@@ -150,15 +150,22 @@ struct FlapTimer: View {
         }
     }
 
+    /// Still, so it has to read as mechanical without motion: a lighter upper flap, a
+    /// darker lower one, a hinge gap and a drop shadow. iOS ticks the digits itself, so a
+    /// per-second flip cannot be drawn here.
     private var tile: some View {
-        RoundedRectangle(cornerRadius: max(2, fontSize * 0.14), style: .continuous)
-            .fill(Color.white.opacity(0.1))
-            .overlay {
-                Rectangle()
-                    .fill(Color.black.opacity(0.6))
-                    .frame(height: 1)
-            }
-            .padding(.horizontal, 1)
-            .frame(width: digitWidth, height: tileHeight)
+        VStack(spacing: 0) {
+            Color.white.opacity(0.13)
+            Color.white.opacity(0.07)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: max(2, fontSize * 0.14), style: .continuous))
+        .overlay {
+            Rectangle()
+                .fill(Color.black.opacity(0.85))
+                .frame(height: max(1, fontSize * 0.05))
+        }
+        .shadow(color: .black.opacity(0.6), radius: 1.5, y: 1)
+        .padding(.horizontal, 1)
+        .frame(width: digitWidth, height: tileHeight)
     }
 }

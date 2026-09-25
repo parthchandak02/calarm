@@ -100,6 +100,7 @@ via `themeStore.theme(colorScheme:)` in child rows.
 | `BoardLine` / `BoardValue` | One board row: title, optional detail and dot, trailing value |
 | `ArmSquare` / `ArmSquareToggle` | The lit square; the toggle adds haptic + a11y toggle trait |
 | `FlapPicker` | Single choice as split-flap tiles (offset, snooze, sound, appearance) |
+| `FlipTile` | One mechanical split-flap character (two hinged halves, 500 ms). The hero countdown uses it; widgets cannot (no per-tick code) |
 | `StatusLight`, `BoardButton` | Amber/red light; full-width filled or outlined action |
 | `.boardNavigationTitle(_:)` | Uppercase tracked pixel title for pushed board screens |
 | `ScheduleHeaderBar` | Schedule top chrome |
