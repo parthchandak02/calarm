@@ -26,11 +26,9 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     expandedIslandContent(for: context)
                 }
             } compactLeading: {
-                Text(title(for: context).uppercased())
-                    .font(.custom(FlapTimer.fontName, fixedSize: 11))
-                    .foregroundStyle(tintColor(for: context))
-                    .lineLimit(1)
-                    .frame(maxWidth: 64, alignment: .leading)
+                // Not the title: it cost ~64pt of pill width and truncated anyway (owner's
+                // call, 2026-09-24). Long-press shows it.
+                LitSquare(tint: tintColor(for: context))
             } compactTrailing: {
                 CompactCountdown(context: context, tint: tintColor(for: context))
             } minimal: {

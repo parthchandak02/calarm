@@ -35,6 +35,8 @@ this file exists so an agent can see the shape of the project's history without 
 - **The compact Island stretched into a long pill.** `FlapTimer` gave the timer text
   `.fixedSize()`, and timer text asks for the width of the longest value it could show. It is
   now framed to its tiles' exact width, as the pre-2129 countdown was. Regression from 241078d.
+  The compact Island's leading side is the lit square instead of the title, which cost ~64pt
+  and truncated anyway (owner's call).
 
 ## Build 20260924.2129 — 2026-09-24
 

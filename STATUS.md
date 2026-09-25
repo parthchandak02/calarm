@@ -33,7 +33,7 @@ card and the compact Island's countdown blank in countdown and paused states; th
 state rendered. Cause (inferred, not provable off device): `FlapTimer` set its text with a
 UIFont-backed `Font(uiFont)`; now `.custom`. Arm an event, lock the phone, and check: the card
 shows the title row and tiles; digits sit on their tiles; after 10:00 or 1:00:00 the left tile
-goes blank and the rest stay aligned; the compact Island fits `TITLE` + tiles. Also check the
+goes blank and the rest stay aligned; the compact Island is a short pill (lit square + tiles). Also check the
 in-app countdown's new flip looks right on device.
 
 **Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
