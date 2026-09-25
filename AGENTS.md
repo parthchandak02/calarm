@@ -95,6 +95,18 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
   ```
 
   The owner types the keychain password; never handle it. Afterwards `git pull` here.
+- **Passwordless ship via herdr** (preferred when it works): the Mac mini runs a persistent
+  `herdr` server whose login keychain stays unlocked. Its `calarm` space has a `ship` tab
+  (pane `w2:p1`) created with `SSH_CONNECTION=` empty, so the script takes its
+  "already unlocked" path:
+
+  ```bash
+  ssh macmini-remote 'herdr pane run w2:p1 "./scripts/ship-testflight.sh"'
+  ```
+
+  Watch with `ssh macmini-remote 'herdr pane read w2:p1 --source recent --lines 40'`. If the
+  keychain has locked, the script prompts inside that pane; fall back to the command above.
+  If the pane is gone, `herdr workspace list` / `herdr pane list` on the Mac mini.
 - **Compile check on the release Mac** (no keychain needed):
 
   ```bash
