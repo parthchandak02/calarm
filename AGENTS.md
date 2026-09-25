@@ -139,6 +139,9 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **The Live Activity alarm is countdown-mode (`schedule: nil`), not `.fixed` + `preAlert`.**
   The latter rang late on device by exactly its pre-alert. AlarmKit keeps no fire date for a
   countdown alarm; `AlarmScheduler` stores it. See the `calarm-alarmkit-reschedule` skill.
+- **System timer text is not zero-padded** (`45:07`, `9:59`, `2:05:00`) and shortens as it
+  ticks. `FlapTimer` lays its tiles from the trailing edge for that reason; do not lay them
+  out left to right. See RESEARCH.md § Timer text format.
 - **The compact Island cannot shrink mid-countdown.** AlarmKit re-renders the widget only
   on state changes; width is sized from time remaining at render.
 - **The Simulator cannot ring an AlarmKit alarm** and the app blocks the test alarm there.

@@ -9,10 +9,13 @@ import SwiftUI
 import WidgetKit
 
 // MARK: - Live Activity Widget
+// Flight-board style (owner's pick, 2026-09-24): pixel labels, and the countdown as flap
+// tiles behind the system timer text (`FlapTimer`). The ringing screen stays AlarmKit's.
 struct CalarmWidgetExtensionLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: AlarmAttributes<AlarmAppMetadata>.self) { context in
             lockScreenView(context: context)
+                .activityBackgroundTint(Color.black.opacity(0.88))
                 .activitySystemActionForegroundColor(tintColor(for: context))
                 .widgetURL(deepLinkURL(for: context))
         } dynamicIsland: { context in
@@ -23,15 +26,15 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                     expandedIslandContent(for: context)
                 }
             } compactLeading: {
-                Image(systemName: "alarm.fill")
-                    .font(.caption)
+                Text(title(for: context).uppercased())
+                    .font(.custom(FlapTimer.fontName, fixedSize: 11))
                     .foregroundStyle(tintColor(for: context))
+                    .lineLimit(1)
+                    .frame(maxWidth: 64, alignment: .leading)
             } compactTrailing: {
                 CompactCountdown(context: context, tint: tintColor(for: context))
             } minimal: {
-                Image(systemName: "alarm.fill")
-                    .font(.caption2)
-                    .foregroundStyle(tintColor(for: context))
+                LitSquare(tint: tintColor(for: context))
             }
             .contentMargins(.horizontal, 8, for: .compactTrailing)
             .contentMargins(.horizontal, 12, for: .expanded)
@@ -44,68 +47,85 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
     private func expandedIslandContent(
         for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
     ) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "alarm.fill")
-                .foregroundStyle(tintColor(for: context))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(context.attributes.metadata?.title ?? "Alarm")
-                    .font(.subheadline.weight(.semibold))
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(stateLabel(for: context))
+                    .font(.custom(FlapTimer.fontName, fixedSize: 10))
+                    .tracking(1.5)
+                    .foregroundStyle(tintColor(for: context))
+                Text(title(for: context))
+                    .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                if let caption = caption(for: context) {
-                    Text(caption)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                if let start = startLabel(for: context) {
+                    Text("STARTS \(start)")
+                        .font(.custom(FlapTimer.fontName, fixedSize: 9))
+                        .tracking(1.5)
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
             .layoutPriority(1)
 
             Spacer(minLength: 4)
 
-            CountdownText(context: context, style: .expanded, tint: tintColor(for: context))
+            BoardCountdown(context: context, style: .expanded, tint: tintColor(for: context))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "alarm.fill")
-                .font(.headline)
-                .foregroundStyle(tintColor(for: context))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(context.attributes.metadata?.title ?? "Alarm")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                if let caption = caption(for: context) {
-                    Text(caption)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                CountdownText(context: context, style: .lockScreen, tint: tintColor(for: context))
+        VStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text([title(for: context).uppercased(), startLabel(for: context)].compactMap { $0 }.joined(separator: " · "))
+                    .foregroundStyle(tintColor(for: context))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text(stateLabel(for: context))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                    .fixedSize()
             }
+            .font(.custom(FlapTimer.fontName, fixedSize: 11))
+            .tracking(1.5)
 
-            Spacer(minLength: 0)
+            BoardCountdown(context: context, style: .lockScreen, tint: tintColor(for: context))
+                .frame(maxWidth: .infinity)
         }
-        .padding()
+        .padding(14)
     }
 
-    /// "Starts 9:00 AM", or "Snoozed · starts 9:00 AM". Without the start time a countdown
-    /// that outlived its meeting reads as a phantom event; with it, it explains itself.
-    private func caption(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> String? {
+    private func title(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> String {
+        context.attributes.metadata?.title ?? "Alarm"
+    }
+
+    /// The meeting's start. Without it a countdown that outlived its meeting reads as a
+    /// phantom event; with it, it explains itself.
+    private func startLabel(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> String? {
         guard let startTimestamp = context.attributes.metadata?.eventStartTimestamp else { return nil }
-        let start = Date(timeIntervalSince1970: startTimestamp)
-        let time = start.formatted(date: .omitted, time: .shortened)
-        if case .countdown(let countdown) = context.state.mode,
-           AlarmSchedulingHelpers.isSnoozeCountdown(countdownFireDate: countdown.fireDate, eventStart: start) {
-            return "Snoozed · starts \(time)"
+        return Date(timeIntervalSince1970: startTimestamp).formatted(date: .omitted, time: .shortened).uppercased()
+    }
+
+    /// "RINGS 8:50 AM", "SNOOZED", "PAUSED", or "RINGING".
+    private func stateLabel(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> String {
+        switch context.state.mode {
+        case .countdown(let countdown):
+            if let startTimestamp = context.attributes.metadata?.eventStartTimestamp,
+               AlarmSchedulingHelpers.isSnoozeCountdown(
+                   countdownFireDate: countdown.fireDate,
+                   eventStart: Date(timeIntervalSince1970: startTimestamp)
+               ) {
+                return "SNOOZED"
+            }
+            return "RINGS \(countdown.fireDate.formatted(date: .omitted, time: .shortened))".uppercased()
+        case .paused:
+            return "PAUSED"
+        case .alert:
+            return "RINGING"
+        @unknown default:
+            return ""
         }
-        return "Starts \(time)"
     }
 
     /// AlarmKit exposes the app-chosen accent on `AlarmAttributes.tintColor` (ActivityKit).
@@ -124,20 +144,29 @@ private enum CountdownStyle {
     case expanded
     case compact
 
-    var font: Font {
+    var fontSize: CGFloat {
         switch self {
-        case .lockScreen:
-            .system(.caption, design: .rounded).monospacedDigit()
-        case .expanded:
-            .system(.body, design: .rounded).monospacedDigit()
-        case .compact:
-            .system(size: 11, weight: .semibold, design: .rounded).monospacedDigit()
+        case .lockScreen: 30
+        case .expanded: 20
+        case .compact: 13
         }
     }
 }
 
+private struct LitSquare: View {
+    let tint: Color
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(tint)
+            .frame(width: 11, height: 11)
+            .shadow(color: tint.opacity(0.7), radius: 3)
+    }
+}
+
 /// Compact trailing region. When iOS 27 reports a width-limited Island (landscape), there
-/// is no room for digits, so it shows the icon alone, as Apple's WWDC26 sample does.
+/// is no room for digits, so it shows the lit square alone, as Apple's WWDC26 sample shows
+/// an icon.
 private struct CompactCountdown: View {
     let context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
     let tint: Color
@@ -147,10 +176,10 @@ private struct CompactCountdown: View {
         if #available(iOS 27.0, *) {
             LimitedWidthAware(context: context, tint: tint)
         } else {
-            CountdownText(context: context, style: .compact, tint: tint)
+            BoardCountdown(context: context, style: .compact, tint: tint)
         }
         #else
-        CountdownText(context: context, style: .compact, tint: tint)
+        BoardCountdown(context: context, style: .compact, tint: tint)
         #endif
     }
 }
@@ -166,17 +195,15 @@ private struct LimitedWidthAware: View {
 
     var body: some View {
         if isLimitedInWidth {
-            Image(systemName: "timer")
-                .font(.caption)
-                .foregroundStyle(tint)
+            LitSquare(tint: tint)
         } else {
-            CountdownText(context: context, style: .compact, tint: tint)
+            BoardCountdown(context: context, style: .compact, tint: tint)
         }
     }
 }
 #endif
 
-private struct CountdownText: View {
+private struct BoardCountdown: View {
     let context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
     let style: CountdownStyle
     let tint: Color
@@ -184,56 +211,39 @@ private struct CountdownText: View {
     var body: some View {
         switch context.state.mode {
         case .countdown(let countdown):
-            let fireDate = countdown.fireDate
-            let remaining = fireDate.timeIntervalSinceNow
-            if remaining <= 0 {
-                Text("Now")
-                    .font(style.font)
-                    .foregroundStyle(tint)
-                    .lineLimit(1)
+            if countdown.fireDate.timeIntervalSinceNow <= 0 {
+                label("NOW")
             } else {
-                // Sized from the time left at render. The timer reserves its width once per
-                // render and AlarmKit re-renders only on a state change, so the pill cannot
-                // shrink mid-countdown; but remaining time only falls, so this can only be
-                // too wide, never clipped. No `.numericText()` transition: on system timer
-                // text it can leave digits mid-animation in the Island.
-                Text(timerInterval: Date.now...fireDate, countsDown: true, showsHours: remaining >= 3_600)
-                    .font(style.font)
-                    .foregroundStyle(tint)
-                    .monospacedDigit()
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .frame(
-                        width: style == .compact
-                            ? CGFloat(AlarmSchedulingHelpers.compactCountdownWidth(remaining: remaining))
-                            : nil,
-                        alignment: .trailing
-                    )
+                // Sized from the time left at render; AlarmKit re-renders only on a state
+                // change, so this can only be too wide, never clipped. No `.numericText()`
+                // transition: on system timer text it can leave digits mid-animation.
+                FlapTimer(
+                    fireDate: countdown.fireDate,
+                    fontSize: style.fontSize,
+                    tint: tint,
+                    showsUnits: style == .lockScreen
+                )
             }
         case .paused(let paused):
-            Text(pausedLabel(paused))
-                .font(style.font)
-                .foregroundStyle(tint.opacity(0.85))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+            let left = max(0, paused.totalCountdownDuration - paused.previouslyElapsedDuration)
+            FlapTimer(
+                text: Duration.seconds(left).formatted(.time(pattern: left >= 3_600 ? .hourMinuteSecond : .minuteSecond)),
+                remaining: left,
+                fontSize: style.fontSize,
+                tint: tint.opacity(0.6),
+                showsUnits: style == .lockScreen
+            )
         case .alert:
-            Text(style == .compact ? "Now" : "Alerting")
-                .font(style.font)
-                .foregroundStyle(tint)
-                .lineLimit(1)
+            label(style == .compact ? "NOW" : "RINGING")
         @unknown default:
-            Text("-")
-                .font(style.font)
-                .foregroundStyle(.secondary)
+            label("-")
         }
     }
 
-    private func pausedLabel(_ paused: AlarmPresentationState.Mode.Paused) -> String {
-        let left = max(0, paused.totalCountdownDuration - paused.previouslyElapsedDuration)
-        let formatted = Duration.seconds(left).formatted(
-            .time(pattern: left >= 3_600 ? .hourMinuteSecond : .minuteSecond)
-        )
-        return style == .compact ? formatted : "Paused · \(formatted)"
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(.custom(FlapTimer.fontName, fixedSize: style.fontSize))
+            .foregroundStyle(tint)
+            .lineLimit(1)
     }
 }

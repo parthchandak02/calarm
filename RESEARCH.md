@@ -201,6 +201,17 @@ Measured glyph widths for `.system(size: 11, weight: .semibold, design: .rounded
   ([842638](https://developer.apple.com/forums/thread/842638), REPORTED); `stopIntent` skipped
   on swipe-away ([815064](https://developer.apple.com/forums/thread/815064), REPORTED).
 
+### Timer text format (measured 2026-09-24)
+
+`Text(timerInterval:countsDown:showsHours:)` does **not** zero-pad its leading unit. Rendered
+with `ImageRenderer` on the iOS 26.5 Simulator: 5m7s → `5:07`, 45m7s → `45:07`, 2h5m →
+`2:05:00` (`125:00` with `showsHours: false`), 14h3m → `14:03:00`, 30h → `30:00:00`. So the
+string gets shorter as it crosses 10:00 or 1:00:00, and a Live Activity does not re-render
+when it does. Anything drawn per digit behind it must be anchored to the trailing edge
+(`CalarmShared/FlapTimer.swift`). SwiftUI `.tracking` adds no space after the last glyph, so
+trailing-aligned tracked text needs a `-tracking/2` nudge to centre each glyph in its cell.
+**VERIFIED** (rendered, one SDK).
+
 ---
 
 ## EventKit

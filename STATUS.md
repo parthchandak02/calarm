@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Latest build** | `20260924.2104` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
-| **Tests** | 120 passing (`CalarmTests`, 2026-09-24) |
+| **Tests** | 125 passing (`CalarmTests`, 2026-09-24) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -28,9 +28,11 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
-**Look at the new Settings (next build).** The schedule (build 1948, owner: "much better")
-and now Settings are departure boards. Say what to change. Event detail, the add-alarm
-sheet and the Live Activity are the screens left in the old style.
+**Check the flight-board Live Activity on device (next build).** It can only be seen on a
+phone (the Simulator cannot run an AlarmKit countdown). Arm an event, lock the phone, and
+check: digits sit on their tiles; after crossing 10:00 or 1:00:00 the left tile goes blank
+and the rest stay aligned; the compact Island fits `TITLE` + tiles; paused/snoozed labels.
+The countdown, day headers and Settings tint shipped in build 2104.
 
 **Verify the vibrate fallback (build 20260924.1518+).** Vibration itself is confirmed
 (2026-09-24: the silent sound vibrates). Leave a **real event's** vibrating alarm undismissed:
