@@ -505,7 +505,7 @@ plain frequency table over `(recurrenceID, action)` will beat k-NN for months.
 ## Fixed and verified
 
 Detailed evidence for the September 2026 sync fixes, kept because each write-up explains a
-trap that can be re-entered. Shipped in `443feec`; see [CHANGELOG.md](CHANGELOG.md).
+trap that can be re-entered. Shipped in `efc14bd`; see [CHANGELOG.md](CHANGELOG.md).
 
 **Background sync was registered too late to exist.** `BGTaskScheduler` requires every
 launch handler to be registered before `didFinishLaunchingWithOptions` returns.

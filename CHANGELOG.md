@@ -23,6 +23,12 @@ this file exists so an agent can see the shape of the project's history without 
   it runs on any Mac holding the signing identity, at the Mac or over SSH, and unlocks the
   keychain only when needed (always over SSH). The owner's machine and exact command live in
   one place, AGENTS.md § Owner's setup.
+- **History rewritten (force-pushed 2026-09-24).** Old revisions no longer carry the ASC key
+  ID, tester-group ID, `/Users/…` paths, the work email, or employer policy and tool names
+  (those lines read `[redacted]`); every commit is authored and committed by the owner's
+  personal address. **All commit hashes changed**; the ones quoted in this file were remapped.
+  Details and how to update a clone: SECURITY.md. The employer notes moved to the gitignored
+  `notes/`.
 - **No personal values in scripts.** The ASC key ID default in `configure-credentials.sh`
   (now discovered from `~/Keys/AuthKey_*.p8`), the tester-group ID default in
   `add-testflight-internal-group.sh` (now required from `fastlane/.env`), the team ID in
@@ -94,7 +100,7 @@ A three-way audit (docs, code review, build/config) after the day's builds.
   cancel it by `AlarmSchedulingHelpers.fallbackAlarmID`). A fallback that would land on
   another alarm's minute is dropped; that alarm's own fallback covers it. The test alarm uses
   the current sound mode, so it doubles as the vibration check.
-  `CalarmTests/AlarmSoundPolicyTests.swift` — 4 tests. `738fbaf`
+  `CalarmTests/AlarmSoundPolicyTests.swift` — 4 tests. `73032a3`
 
 ---
 
@@ -117,12 +123,12 @@ A three-way audit (docs, code review, build/config) after the day's builds.
 - A row whose reminder had passed said "Reminder passed" twice.
 
 `CalarmTests/AlarmGroupingTests.swift` — 4 tests; `ScheduleEventSourcePolicyTests` — 3 more.
-`259336c`.
+`e4e9434`.
 
 ### Changed (tooling)
 
-- Ship with `./scripts/ship-remote.sh`, which commits the build stamp to `main` (`db57cd2`).
-  Stamps: 1342 `bfb441c`, 1447 `a341b6a`.
+- Ship with `./scripts/ship-remote.sh`, which commits the build stamp to `main` (`a4d6f47`).
+  Stamps: 1342 `2ae2fb7`, 1447 `a2b14bd`.
 
 ---
 
@@ -140,7 +146,7 @@ Stamp not committed to `main`; this build predates `ship-remote.sh`.
   when a managed alarm fires within 30s of it; orphans at their own time are still kept, so
   a meeting briefly missing from a fetch still rings. The orphan pass also runs after each
   reschedule, once the replacement exists, and `cancelRemoved` no longer stops on task
-  cancellation. `e2a1ad9` `CalarmTests/AlarmSchedulingHelpersTests.swift` — 2 tests.
+  cancellation. `78b1a08` `CalarmTests/AlarmSchedulingHelpersTests.swift` — 2 tests.
 
 ---
 
@@ -156,7 +162,7 @@ Stamp not committed to `main`; this build predates `ship-remote.sh`.
   `Config/Calarm.xcconfig` and overridden by a gitignored `Config/Google.local.xcconfig`.
 - `scripts/setup-google-oauth.sh <client plist>` installs the plist and writes that local
   xcconfig; run once per building Mac. `ship.sh doctor` warns when it has not been run.
-  `3c3cea3`
+  `4cd7e9f`
 
 ### Fixed
 
@@ -178,8 +184,8 @@ the fixed fire date (8:59) *plus* the pre-alert does.
   `preAlert` = seconds until fire. Apple documents that as counting down *to* the fixed date;
   on device it behaved as counting down *from* it. It is now a countdown-mode alarm
   (`schedule: nil`), which starts now and rings after `preAlert` under either reading. This
-  is also the likely root of the "stuck countdown" hours-late fires patched in `ea79c68`.
-  `70fbe13`
+  is also the likely root of the "stuck countdown" hours-late fires patched in `813c3cb`.
+  `2a44b76`
 - **Opening the app killed a real snooze.** Countdowns past their fire time were cancelled
   after 60s; the grace is now snooze length + 60s.
 - **The Dynamic Island countdown was wider than needed.** Width now follows time remaining
@@ -199,7 +205,7 @@ the fixed fire date (8:59) *plus* the pre-alert does.
 ### Changed
 
 - The iOS 27 width-limited check compiles only under Swift 6.4. The release Mac runs Xcode
-  26.6, whose SDK lacks it, and the first ship attempt failed its Release build. `a57d5f2`
+  26.6, whose SDK lacks it, and the first ship attempt failed its Release build. `4261c91`
 - `ship.sh beta` runs the unit tests once. The `| xcbeautify || xcodebuild test` fallback
   re-ran the suite whenever xcbeautify was missing — which it is on the release Mac — or a
   test failed.
@@ -221,20 +227,20 @@ Two user-reported bugs, both found to have real causes rather than cosmetic ones
   so a calendar subscribed after the list was written — or one whose EventKit identifier
   changed on an account resync — was absent from the list and silently excluded from the
   schedule. Now stores the calendars you switch *off*, with a migration that inverts any
-  existing allow-list. Anything unrecognised defaults to visible. `d5bbb47`
+  existing allow-list. Anything unrecognised defaults to visible. `b04f698`
 - **The Dynamic Island countdown stretched the pill.** The compact region asked for a flat
   58pt regardless of format; `m:ss` needs 38pt, so the digits sat ~31pt short of the pill's
   right edge. Width is now derived from the format, and the format from the countdown's
   *total* duration rather than the time remaining at render — the widget body renders once
-  and the system animates the digits from there. `17b9a00`
+  and the system animates the digits from there. `dd6d82c`
 
 ### Added
 
 - Settings → Calendar reports how many calendars are switched off and offers a one-tap
-  reset. The Events-loaded diagnostic reports enabled-of-total (`4/9 cals`). `d5bbb47`
+  reset. The Events-loaded diagnostic reports enabled-of-total (`4/9 cals`). `b04f698`
 - `CalarmTests/CalendarFilterPreferencesTests.swift` — 6 tests covering the deny-list
   semantics and the allow-list migration, including the case where EventKit has not
-  answered yet. `d5bbb47`
+  answered yet. `b04f698`
 
 ---
 
@@ -249,21 +255,21 @@ success message and a build that reached no tester.
   under `set -euo pipefail` when the directory does not exist — and with
   `destination: upload` xcodebuild writes no IPA, so it never does. The script died before
   reaching the branch that handles exactly that case, taking every chained step with it.
-  `6b879ff`
+  `bc2f4cb`
 - **`ship.sh beta` used the broken path.** It called `fastlane ios upload_beta`, which
   builds through gym; gym never received the App Store Connect API key auth that
   `release.sh` passes to xcodebuild, so it failed with *No Accounts / No signing
-  certificate iOS Distribution*. Now calls `./release.sh`. `6b879ff`
+  certificate iOS Distribution*. Now calls `./release.sh`. `bc2f4cb`
 - **Group assignment raced App Store Connect processing.** `asc builds add-groups --latest`
   resolves to the newest *processed* build, which right after an upload is the previous
   one — so it re-assigned an already-distributed build and stranded the new one. Now polls
-  for the stamped `CURRENT_PROJECT_VERSION` before assigning. `08ecf1c`
+  for the stamped `CURRENT_PROJECT_VERSION` before assigning. `e137a14`
 - **EventKit events vanished when Google returned nothing.** `reload()` suppressed mirrored
   EventKit events whenever Google was merely *connected*, so a Google fetch that silently
   returned nothing emptied the schedule. Suppression now requires Google to have actually
-  returned events. `b08db48`
+  returned events. `285da3f`
 - **The settings tab bar squared off its own rounded corners.** The selected tab painted an
-  unclipped rectangle inside a 16pt rounded container. `8a2d0e1`
+  unclipped rectangle inside a 16pt rounded container. `fe1b498`
 
 ---
 
@@ -277,16 +283,16 @@ success message and a build that reached no tester.
   (`subsystem: com.calarmapp.calarm`, `category: alarmjournal`) and UserDefaults.
   `CalarmShared/AlarmJournal.swift` is a pure reconciler with 10 tests; the IO side is
   `Calarm/Services/AlarmJournalStore.swift`. Reconciles on launch, because `alarmUpdates`
-  is in-process and cannot observe a fire that happened while the app was dead. `ab95c17`
+  is in-process and cannot observe a fire that happened while the app was dead. `c157712`
 - **`preAlert: 1` on alarms without a Live Activity.** A one-second pre-alert, and not a
   cosmetic one: AlarmKit alarms fail to present when the foregrounded app is in landscape,
-  and Apple's own Reminders works around it the same way. `2281589`
+  and Apple's own Reminders works around it the same way. `12f570c`
 - `HANDOFF.md` and `PLAN.md` — architecture research, since merged into
-  [RESEARCH.md](RESEARCH.md). `493b682`
+  [RESEARCH.md](RESEARCH.md). `f56eb6c`
 
 ### Fixed
 
-Five calendar sync bugs in one commit (`443feec`) — each is written up with its evidence in
+Five calendar sync bugs in one commit (`efc14bd`) — each is written up with its evidence in
 [RESEARCH.md § Fixed and verified](RESEARCH.md#fixed-and-verified):
 
 - Background sync was registered too late to exist. `BGTaskScheduler` handlers must be
@@ -306,12 +312,12 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 ### Fixed
 
-- Stale AlarmKit alarms firing hours after their events. `ea79c68`
-- Calendar color hex byte rounding in a unit test. `6965b69`
+- Stale AlarmKit alarms firing hours after their events. `813c3cb`
+- Calendar color hex byte rounding in a unit test. `b123216`
 
 ### Added
 
-- Optional calendar-color tint for the Live Activity and Dynamic Island. `09dc63e`
+- Optional calendar-color tint for the Live Activity and Dynamic Island. `58f9ccc`
 
 ---
 
@@ -319,11 +325,11 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 ### Fixed
 
-- AlarmKit reschedule races and stale Dynamic Island countdown UX. `c25e229`
+- AlarmKit reschedule races and stale Dynamic Island countdown UX. `543c2f5`
 
 ### Changed
 
-- TestFlight ship skips Simulator boots on this Mac (RAM constraint). `96ceb3a`
+- TestFlight ship skips Simulator boots on this Mac (RAM constraint). `dec2f5e`
 
 ---
 
@@ -333,8 +339,8 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 - **Google Calendar direct sync** with EventKit merge — the architectural choice that
   [RESEARCH.md](RESEARCH.md) later found Fantastical also made, and every indie competitor
-  did not. `85fff46`, `dfb0e93`
-- Agent skills, then under `.cursor/skills/` — moved to `.claude/skills/` on 2026-09-22. `dfb0e93`
+  did not. `1379e64`, `8fd5fb8`
+- Agent skills, then under `.cursor/skills/` — moved to `.claude/skills/` on 2026-09-22. `8fd5fb8`
 
 ---
 
@@ -342,8 +348,8 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 ### Fixed
 
-- Alarm persistence, Dynamic Island theme, countdown sizing. `8a52a86`
-- Stacked countdown notifications. `4ddb51e`
+- Alarm persistence, Dynamic Island theme, countdown sizing. `3dd20aa`
+- Stacked countdown notifications. `693c86f`
 
 ---
 
@@ -351,7 +357,7 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 ### Added
 
-- Alarm scheduling fixes, the release pipeline, and the first Cursor skills. `af0d149`
+- Alarm scheduling fixes, the release pipeline, and the first Cursor skills. `5256d47`
 
 ---
 
@@ -359,16 +365,16 @@ Five calendar sync bugs in one commit (`443feec`) — each is written up with it
 
 ### Added
 
-- App Store publishing scaffold, screenshot automation, GitHub Pages. `571cf69`, `449a4b8`
+- App Store publishing scaffold, screenshot automation, GitHub Pages. `adb6b65`, `f933f26`
 - Durable local preferences via `CalarmPersistence`. `f671987`
 
 ### Security
 
-- Git history purged of personal data; `SECURITY.md` added. `e985c69`, `83fbe1c`
+- Git history purged of personal data; `SECURITY.md` added. `e985c69`, `4e15b00`
 
 ### Changed
 
-- Bundle ID switched to `com.calarmapp.calarm`. `8e0a7ce`
+- Bundle ID switched to `com.calarmapp.calarm`. `8553176`
 
 ---
 
