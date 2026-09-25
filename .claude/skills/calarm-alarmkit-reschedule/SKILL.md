@@ -38,8 +38,9 @@ await alarmScheduler.reschedule(events: events, snoozeSeconds: defaultSnooze.sec
   under `CalarmPersistence.Key.countdownTargets`; `intendedFireDate(for:)` reads either.
   `needsReschedule` keys Live Activity on schedule type (`nil` = countdown), not `preAlert`.
 - Every other alarm stays `.fixed` with `preAlert: 1` (landscape workaround).
-- Settings → Status → **Alarm timing** reports the 8-second test alarm's actual ring time,
-  which tells you how the device times `.fixed` + `preAlert`.
+- Settings → Status → **Alarm timing** reports the 8-second test alarm's actual ring time.
+  The test alarm is countdown-mode too, so anything but ~8s is a regression. The `.fixed` +
+  `preAlert` probe is retired (device measured *Late · 16s*, 2026-09-24; see RESEARCH.md).
 
 ## Guard behavior
 
