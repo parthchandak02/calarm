@@ -48,10 +48,10 @@ build="$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([^;]*\);.*/\1/p' Calarm.xcodepr
 step "2/4 Verify build $build in App Store Connect"
 # shellcheck disable=SC1091
 source fastlane/.env
+export ASC_TIMEOUT="${ASC_TIMEOUT:-90s}"
 state=""
 for _ in $(seq 1 40); do
-  id="$(asc builds list --app "$ASC_APP_APPLE_ID" --limit 5 --output json \
-    | jq -r --arg v "$build" '.data[] | select(.attributes.version == $v) | .id' | head -n1)"
+  id="$(./scripts/asc-build-id.sh "$build" 2>/dev/null || true)"
   if [[ -n "$id" ]]; then
     state="$(asc builds build-beta-detail view --build-id "$id" --output json \
       | jq -r '.. | .internalBuildState? // empty' | head -n1)"

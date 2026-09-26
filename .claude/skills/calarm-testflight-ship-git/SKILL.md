@@ -100,10 +100,10 @@ not `READY_FOR_BETA_TESTING`. The API key's role returns 403 on `/builds/{id}/be
 read the beta detail rather than group membership.
 
 Group assignment runs automatically at the end of `ship.sh beta` via
-`scripts/add-testflight-internal-group.sh`, which waits for the stamped
-`CURRENT_PROJECT_VERSION` to finish processing before assigning it. It used to pass
-`--latest`, which resolves to the newest *processed* build — right after an upload that is
-the previous one, so it re-assigned an old build and stranded the new one.
+`scripts/add-testflight-internal-group.sh`. It looks up the stamped
+`CURRENT_PROJECT_VERSION` with `scripts/asc-build-id.sh` (numeric match: App Store Connect
+lists `.0204` as `.204`), waits up to 30 min for it to be `VALID`, and assigns **that build
+ID**. Never use `--latest`: right after an upload it is the previous build.
 
 ## Common errors
 
@@ -112,7 +112,7 @@ the previous one, so it re-assigned an old build and stranded the new one.
 | Build number already used | `stamp-build-version.sh`, delete `build/export/`, rebuild |
 | `No Accounts / No signing certificate "iOS Distribution"` | You are on the fastlane/gym path. Use `./scripts/ship.sh beta` |
 | `CodeSign errSecInternalComponent` over SSH | The login keychain is locked. Unlock it **in the same** `ssh -t` session as the build |
-| Upload succeeded, build never appears for testers | Group assignment raced processing, or was skipped. Run `./scripts/add-testflight-internal-group.sh` |
+| Upload succeeded, build never appears for testers | Apple still processing (check `asc builds uploads list`), or the group step failed. When it is `VALID`: `./scripts/add-testflight-internal-group.sh <build-number>` |
 | Tests fail / DB locked | `pkill -9 -f xcodebuild`; retry with separate `-derivedDataPath /tmp/calarm-ci-dd` |
 | Missing ASC credentials | `./scripts/configure-credentials.sh <ISSUER_ID>` |
 

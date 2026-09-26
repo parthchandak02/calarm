@@ -29,25 +29,29 @@ if ! command -v asc >/dev/null 2>&1; then
   exit 0
 fi
 
-# `--latest` resolves to the newest build App Store Connect has finished processing.
-# Immediately after an upload that is still the *previous* build, so assigning without
-# waiting silently re-adds an already-distributed build and leaves the new one stranded
-# in READY_FOR_BETA_TESTING. Wait for the just-uploaded build to land first.
+# Assign the just-uploaded build by its own ID, never `--latest`. Right after an upload,
+# "latest" is still the *previous* build: assigning it re-adds an already-distributed build
+# and strands the new one in READY_FOR_BETA_TESTING. Apple's processing has taken hours, so
+# wait up to 30 minutes, then fail loudly rather than guess.
+export ASC_TIMEOUT="${ASC_TIMEOUT:-90s}"
 WANT_VERSION="${1:-}"
 if [[ -z "$WANT_VERSION" ]]; then
   WANT_VERSION="$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([^;]*\);.*/\1/p' Calarm.xcodeproj/project.pbxproj | head -n1)"
 fi
 
-if [[ -n "$WANT_VERSION" ]]; then
-  echo "==> Waiting for build $WANT_VERSION to finish processing"
-  for _ in $(seq 1 40); do
-    if asc builds list --app "$APP_ID" --limit 1 --output json 2>/dev/null | grep -q "\"$WANT_VERSION\""; then
-      echo "    build $WANT_VERSION is available"
-      break
-    fi
-    sleep 15
-  done
+echo "==> Waiting for build $WANT_VERSION to finish processing"
+BUILD_ID=""
+for _ in $(seq 1 120); do
+  BUILD_ID="$("$SCRIPT_DIR/asc-build-id.sh" "$WANT_VERSION" 2>/dev/null || true)"
+  [[ -n "$BUILD_ID" ]] && break
+  sleep 15
+done
+if [[ -z "$BUILD_ID" ]]; then
+  echo "ERROR: build $WANT_VERSION is not VALID in App Store Connect after 30 minutes."
+  echo "       Nothing was assigned. When Apple finishes processing, run:"
+  echo "       ./scripts/add-testflight-internal-group.sh $WANT_VERSION"
+  exit 1
 fi
 
-echo "==> Adding latest build to Internal Testing group ($GROUP_ID)"
-asc builds add-groups --app "$APP_ID" --latest --group "$GROUP_ID" --output table
+echo "==> Adding build $WANT_VERSION ($BUILD_ID) to Internal Testing group ($GROUP_ID)"
+asc builds add-groups --build-id "$BUILD_ID" --group "$GROUP_ID" --output table

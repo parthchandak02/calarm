@@ -247,6 +247,16 @@ attributes type, started from a launch argument) and keep it out of release buil
 
 ---
 
+## App Store Connect API (observed 2026-09-26)
+
+- **Build numbers come back with leading zeros stripped per dotted part**: `20260926.0204`
+  is listed as `20260926.204`. Match build numbers numerically. **VERIFIED** (`asc builds list`).
+- **An upload can stay `PROCESSING` for hours** while it is absent from the builds list; it
+  shows only in `asc builds uploads list`. Seen 2026-09-25: 15:16 upload, still processing
+  after 16:14, `VALID` by the next morning. **VERIFIED.**
+- The `asc` CLI's default request timeout was exceeded twice by `builds add-groups --latest`
+  (which pages up to 200 builds); `ASC_TIMEOUT=90s` succeeded. **VERIFIED.**
+
 ## TipKit (researched 2026-09-25)
 
 - **`Tips.resetDatastore()` only takes effect before `Tips.configure()`**, so a reset needs a

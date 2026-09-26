@@ -15,6 +15,20 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-26
+
+### Fixed
+
+- **The TestFlight tester group gets the build that was just uploaded, every time.** App Store
+  Connect drops leading zeros from build numbers (`20260926.0204` is listed as
+  `20260926.204`), so the scripts' exact-string match never found a build stamped before
+  10:00 and the group step fell back to `--latest` — the *previous* build when Apple was slow.
+  New `scripts/asc-build-id.sh` matches numerically and only returns a processed (`VALID`)
+  build; `add-testflight-internal-group.sh` assigns by that build ID, waits up to 30 min, and
+  fails loudly with a re-run command instead of guessing. `ship-testflight.sh` verifies with
+  the same lookup. `ASC_TIMEOUT` now defaults to 90s (the default timed out twice). Builds
+  20260925.1515 and 20260926.0204 needed the group added by hand because of this.
+
 ## Build 20260926.0204 — 2026-09-26
 
 No user-facing changes recorded.
