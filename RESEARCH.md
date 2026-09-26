@@ -315,6 +315,42 @@ attributes type, started from a launch argument) and keep it out of release buil
 
 ---
 
+### What other AlarmKit codebases taught (researched 2026-09-26)
+
+No open-source AlarmKit app is ahead of calarm on reconciliation: it already diffs by stable
+ID, journals fire times and reschedules on time-zone and clock changes. Most careful peer:
+[nightscout/Trio](https://github.com/nightscout/Trio)
+(`CriticalAlertAlarmScheduler.swift`); also
+[NedaaDevs/nedaa](https://github.com/NedaaDevs/nedaa),
+[gdelataillade/flutter_alarmkit](https://github.com/gdelataillade/flutter_alarmkit),
+[Cizzuk/Alare](https://github.com/Cizzuk/Alare), Loop
+[PR #2520](https://github.com/LoopKit/Loop/pull/2520).
+
+- **Missed-ring detection**: Nedaa treats an alarm that is past due, gone from AlarmKit and never
+  stopped or snoozed as *missed* and surfaces it. calarm journals but does not flag this.
+- **Stop *and* cancel** when removing an alarm that may be alerting (Trio, Alare). calarm's
+  `cancel(alarmID:)` calls only `cancel`.
+- **Keep `LiveActivityIntent`s in the app target**: compiled into a static library they get an
+  empty type name and do not resolve (Nedaa). calarm's are in `Calarm/Intents`.
+- **Stable IDs plus diff, not cancel-all, fixed the 00:00 firing for one developer**; another says
+  not ([815714](https://developer.apple.com/forums/thread/815714)). **REPORTED.**
+- **Alarms outlive app deletion**, titled with the bundle ID, and a reinstall may not see them
+  ([812273](https://developer.apple.com/forums/thread/812273)). Whether an app or TestFlight
+  update keeps them: no report either way. **REPORTED.**
+- **Setting the clock back past a `.fixed` time means it never rings**
+  ([812784](https://developer.apple.com/forums/thread/812784)); a `.fixed` date at or before now
+  schedules without error and never fires (Trio adds 2s; calarm refuses under 1s). **REPORTED.**
+- **After reboot or iOS update, alarm text showed raw localization keys** on 26.0.1–26.1
+  ([802740](https://developer.apple.com/forums/thread/802740)); a relative alarm fired with no UI
+  while unlocked ([797618](https://developer.apple.com/forums/thread/797618)). **REPORTED.**
+- **A countdown secondary button with zero or missing `postAlert` crashes AlarmKit**
+  (flutter_alarmkit). calarm's shortest snooze is 60s. **REPORTED.**
+- **`.fixed` ignores time zone** ("at a specific time, not a time relative to the current time
+  zone"), so travel does not move calendar alarms. **CONFIRMED** (AlarmKit docs).
+- Nedaa independently hit `.fixed` + `preAlert` "alerting at twice the requested delay",
+  corroborating the trap in AGENTS.md. **REPORTED.**
+- Nobody found names `maximumLimitReached` or knows the real limit; calarm does not name it.
+
 ## App Store Connect API (observed 2026-09-26)
 
 - **Build numbers come back with leading zeros stripped per dotted part**: `20260926.0204`
@@ -469,6 +505,37 @@ Note "(apparently)". **CONFIRMED that it works; CONFIRMED that it is undocumente
 - **Cron Triggers have no automatic retries by design.** A throw or timeout is gone until the
   next tick. Combined with silent channel expiry, two consecutive cron failures = the alarm
   app stops working and nothing tells you. **A correctness problem, not an inconvenience.**
+
+### How on-time apps actually do it (researched 2026-09-26)
+
+Reliable apps are server-authoritative: the server decides what is due and sends a **visible**
+push. Uber moved Live Activity updates to a backend because the app "is not guaranteed to be
+running" ([Uber](https://www.uber.com/us/en/blog/live-activity-on-ios/)); Flighty's speed is its
+data feed (FlightAware Firehose, ~110s faster,
+[FlightAware](https://blog.flightaware.com/partnerspotlight-flighty)); Fantastical's Live
+Activities are pushed and can be deferred
+([Flexibits](https://flexibits.com/fantastical-ios/help/live-activities)). Gmail and Google
+Calendar internals: not found. **CONFIRMED** where linked.
+
+APNs rules that shape the design, **CONFIRMED**
+([Apple](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns)):
+- **Offline, APNs keeps one notification per app per device**, until `apns-expiration`; `0`
+  means one attempt, never stored. Apple says to resync with the server for what was missed.
+- **Priority 5 is batched and power-deferred**; 10 is immediate but budgeted for Live Activities.
+- Old peer-reviewed latency: mean under 1s Wi-Fi, under 4s cellular, 0.03% over 100s. Silent
+  pushes are "heavily throttled" (DTS, [797329](https://developer.apple.com/forums/thread/797329)).
+
+Patterns from open-source push stacks: ntfy, Mastodon's relay and Matrix Sygnal all send a
+**visible `mutable-content` placeholder that tells the extension to fetch**, never the content
+itself; Sygnal retries 3× with backoff and drops tokens on 410; Home Assistant uses collapse IDs
+so queued pushes do not duplicate; Slack's extension records push IDs and flushes receipts
+later. **CONFIRMED** (source read).
+
+**For calarm, INFERRED:** AlarmKit stays the thing that rings; push is only a *resync* signal.
+One collapse ID per user, so APNs' keep-latest-only costs nothing; `apns-expiration` at the next
+affected ring; priority 10 only for changes due soon; a push never deletes an alarm by itself,
+and a failed refetch keeps existing alarms (fail open). The extension posts a receipt so the
+Worker can alert when a device goes quiet.
 
 ---
 
