@@ -8,7 +8,7 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [x] **Export compliance** — `ITSAppUsesNonExemptEncryption` = false in `Calarm/Info.plist`
 - [x] **Permission strings** — AlarmKit + calendar usage descriptions
 - [x] **Widget scaffolds removed** — only Live Activity extension ships
-- [x] **Release script** — `release.sh` (Archive Release + export IPA)
+- [x] **Release step** — `archive_and_upload` in `scripts/lib/pipeline.sh` (Archive Release, upload to ASC)
 - [x] **Export options example** — `ExportOptions.plist.example` (copy to `ExportOptions.plist` locally)
 - [x] **fastlane** — `Fastfile`, `Deliverfile`, `Appfile`, `metadata/en-US/*`, review notes
 - [x] **Bootstrap lane** — `bundle exec fastlane ios bootstrap_asc`
@@ -17,7 +17,7 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [x] **GitHub Pages** — enabled (`main` → `/docs`); landing + privacy + support
 - [x] **App Store screenshots (6.9")** — four PNGs in `fastlane/screenshots/en-US/`
 - [x] **Publish playbook** — `docs/app-store/PUBLISH_PLAYBOOK.md`
-- [x] **Ship pipeline** — `scripts/ship.sh`, `scripts/ios-doctor.sh`, `ios-app.config.sh`
+- [x] **Ship pipeline** — `scripts/ship.sh`, `scripts/lib/pipeline.sh`, `ios-app.config.sh`
 - [x] **Multi-app bootstrap** — `pipeline/install-into-repo.sh`, `pipeline/BOOTSTRAP_NEW_APP.md`
 - [x] **API key on disk** — `~/Keys/AuthKey_<KEY_ID>.p8`, `fastlane/.env` (partial)
 - [x] **asc + apple-docs CLIs** — installed (`brew install asc`, Printing Press)
@@ -50,16 +50,12 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 ./scripts/ship.sh doctor
 ./scripts/ship.sh beta                           # TestFlight
 ./scripts/ship.sh metadata
-./scripts/ship.sh all
 ```
 
 Legacy / granular:
 
 ```bash
-./scripts/preflight-release.sh
 bundle exec fastlane ios bootstrap_asc      # first time only
-./release.sh
-bundle exec fastlane ios upload_beta
 bundle exec fastlane ios upload_metadata screenshots:true
 bundle exec fastlane ios release submit:true screenshots:true
 ```

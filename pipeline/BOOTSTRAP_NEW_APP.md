@@ -4,23 +4,14 @@ Copy the **pipeline kit** from CALarm into any iOS repo. Same flow: config → c
 
 ## 1. Copy files into your new repo
 
-From this repo:
-
-```bash
-NEW_APP=/path/to/MyNewApp
-
-cp ios-app.config.sh.example "$NEW_APP/ios-app.config.sh"
-cp -R scripts/lib "$NEW_APP/scripts/"
-cp scripts/{ios-doctor,configure-credentials,bootstrap-portal,setup-asc-cli,verify-asc-api,ship,preflight-release}.sh "$NEW_APP/scripts/"
-cp -R pipeline/template-fastlane "$NEW_APP/"  # optional — or copy fastlane/ manually
-cp release.sh ExportOptions.plist.example "$NEW_APP/"
-```
-
-Or run:
-
 ```bash
 ./pipeline/install-into-repo.sh /path/to/MyNewApp
 ```
+
+This copies `ios-app.config.sh.example`, `ExportOptions.plist.example`,
+`scripts/lib/pipeline.sh`, `scripts/configure-credentials.sh`,
+`scripts/bootstrap-portal.sh`, `scripts/setup-asc-cli.sh`, `scripts/ship.sh`, and this file
+into the target repo. Add `fastlane/` yourself (copy from CALarm or run `fastlane init`).
 
 ## 2. Edit `ios-app.config.sh`
 
@@ -49,7 +40,6 @@ This updates `fastlane/.env`, registers `asc`, discovers app ID, tries portal ca
 ./scripts/ship.sh doctor    # health check
 ./scripts/ship.sh beta      # build + TestFlight
 ./scripts/ship.sh metadata  # descriptions, URLs, screenshots
-./scripts/ship.sh all         # beta + metadata
 ```
 
 ## Tool stack

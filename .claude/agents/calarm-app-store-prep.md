@@ -31,7 +31,7 @@ Your job is to get the repo as close to submission-ready as possible **without**
    - `Calarm.xcodeproj/project.pbxproj` — signing, version, deployment target
    - `Calarm/Assets.xcassets/AppIcon.appiconset` — 1024×1024 icon present
    - `fastlane/` — Fastfile, metadata, Appfile
-   - `release.sh` / `ExportOptions.plist`
+   - `scripts/ship.sh` / `scripts/lib/pipeline.sh` / `ExportOptions.plist`
 3. Grep for undeclared APIs: `BGTask`, `UserDefaults`, `EventKit`, network calls, analytics SDKs.
 4. Flag review risks: unused background modes, misleading permission strings, missing privacy manifest, Debug-only deploy scripts.
 
@@ -41,8 +41,8 @@ Apply minimal, accurate fixes:
 
 - **Info.plist**: User-facing permission strings must match actual behavior (calendar read for schedule + per-event alarms; AlarmKit for countdown alarms + Live Activities). Remove `UIBackgroundModes` and `BGTaskSchedulerPermittedIdentifiers` if no BGTask code exists.
 - **PrivacyInfo.xcprivacy**: Declare `NSPrivacyAccessedAPICategoryUserDefaults` with `CA92.1`. Declare calendar data collection if EventKit is used. Set `NSPrivacyTracking` false unless tracking exists.
-- **Release tooling**: Ensure `release.sh` archives with **Release** config and uploads straight to ASC (`destination: upload`, no local IPA). TestFlight ships go through `scripts/ship-testflight.sh` on the signing Mac.
-- **fastlane**: Maintain lanes for `build_release`, `upload_metadata`, `precheck`. `upload_beta` is broken for binaries (see `calarm-testflight-fastlane`). Use App Store Connect API key env vars — never commit `.p8` keys.
+- **Release tooling**: Ensure `archive_and_upload` (in `scripts/lib/pipeline.sh`) archives with **Release** config and uploads straight to ASC (`destination: upload`, no local IPA). TestFlight ships go through `./scripts/ship.sh beta` on the signing Mac.
+- **fastlane**: Maintain lanes for `build_release`, `upload_metadata`, `precheck_metadata`. The `upload_beta` lane was removed (see `calarm-testflight-fastlane`); use App Store Connect API key env vars — never commit `.p8` keys.
 - **Metadata drafts**: Keep `fastlane/metadata/en-US/*.txt` accurate and conservative; no unverifiable claims.
 - **Docs**: Update `APP_STORE_CHECKLIST.md` — separate **Agent-done** vs **Human-only**.
 
@@ -80,17 +80,17 @@ Always end with:
 ```bash
 bundle install
 bundle exec fastlane ios build_release   # archive + export IPA
-# TestFlight: scripts/ship-testflight.sh on the signing Mac — upload_beta is broken for binaries
+# TestFlight: ./scripts/ship.sh beta on the signing Mac
 bundle exec fastlane ios upload_metadata # descriptions, keywords (no binary)
-bundle exec fastlane ios precheck        # catch common review issues
+bundle exec fastlane ios precheck_metadata # catch common review issues
 ```
 
 Auth via env: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` or `ASC_KEY_CONTENT`.
 
 ### Apple-native upload (no fastlane) — legacy
 
-`release.sh` no longer writes `build/export/Calarm.ipa`; this applies only to a manually
-exported IPA.
+`ship.sh beta` uploads straight to ASC and writes no local IPA; this applies only to a
+manually exported IPA.
 
 ```bash
 xcrun altool --validate-app -f build/export/Calarm.ipa -t ios \

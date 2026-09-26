@@ -27,12 +27,13 @@ Per [Apple CFBundleVersion](https://developer.apple.com/documentation/bundlereso
 ## Stamp before build
 
 ```bash
-./scripts/stamp-build-version.sh
+./scripts/ship.sh stamp
 ```
 
-Updates all `CURRENT_PROJECT_VERSION = ...` in `Calarm.xcodeproj/project.pbxproj`.
+Updates all `CURRENT_PROJECT_VERSION = ...` in `Calarm.xcodeproj/project.pbxproj` via
+`stamp_build_number` in `scripts/lib/pipeline.sh`.
 
-Called automatically by `deploy.sh` and `release.sh`.
+Called automatically by `deploy.sh` and by `ship.sh beta`.
 
 ## Info.plist wiring
 

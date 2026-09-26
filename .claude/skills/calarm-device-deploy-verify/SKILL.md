@@ -14,14 +14,14 @@ cd "$(git rev-parse --show-toplevel)"
 ./deploy.sh 2
 ```
 
-- Stamps build via `scripts/stamp-build-version.sh`
+- Stamps build via `./scripts/ship.sh stamp`
 - Uses `xcodebuild install` (not devicectl-only) for physical devices
 - Verifies on-device `CFBundleVersion` via `verify_device_install` in `deploy-lib.sh`
 
 ## Manual USB path (when deploy.sh fails)
 
 ```bash
-./scripts/stamp-build-version.sh
+./scripts/ship.sh stamp
 xcodebuild -project Calarm.xcodeproj -scheme Calarm -sdk iphoneos \
   -configuration Debug -destination 'platform=iOS,id=DEVICE_UDID' \
   -derivedDataPath ./build -allowProvisioningUpdates install

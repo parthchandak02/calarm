@@ -25,8 +25,8 @@ cd path/to/calarm
 # 1. asc CLI auth (reads fastlane/.env)
 ./scripts/setup-asc-cli.sh
 
-# 2. Verify fastlane API key
-./scripts/verify-asc-api.sh
+# 2. Verify fastlane API key, tools, signing, screenshots
+./scripts/ship.sh doctor
 
 # 3. Find numeric app ID for .env
 asc apps list --bundle-id com.calarmapp.calarm --output table
@@ -65,8 +65,8 @@ Skills for agents: `asc install-skills` or [app-store-connect-cli-skills](https:
 ### fastlane — already configured in this repo
 
 ```bash
-./scripts/preflight-release.sh
-bundle exec fastlane ios upload_beta      # TestFlight
+./scripts/ship.sh doctor
+./scripts/ship.sh beta                    # TestFlight
 bundle exec fastlane ios upload_metadata  # metadata from fastlane/metadata/
 ```
 
@@ -113,7 +113,7 @@ Apple ID + 2FA required. For deleting old `pchandak.*` / `XC*` App IDs.
 1. Fill `ASC_ISSUER_ID` in `fastlane/.env`
 2. `./scripts/setup-asc-cli.sh` → copy app ID into `ASC_APP_APPLE_ID`
 3. Enable **Siri** on `com.calarmapp.calarm` in Developer portal
-4. `bundle exec fastlane ios upload_beta`
+4. `./scripts/ship.sh beta`
 5. Browser: attach build, App Privacy, Age Rating, Submit
 
 Docs: [PUBLISH_PLAYBOOK.md](./PUBLISH_PLAYBOOK.md) · [IDENTIFIER_CLEANUP.md](./IDENTIFIER_CLEANUP.md)

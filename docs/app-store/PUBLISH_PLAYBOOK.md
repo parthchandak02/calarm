@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-30. Read this end-to-end before your first upload.
 
-This repo is **terminal-first** after a short one-time human setup. Everything after that is `./scripts/preflight-release.sh` → `./release.sh` → `bundle exec fastlane ios upload_beta`.
+This repo is **terminal-first** after a short one-time human setup. Everything after that is `./scripts/ship.sh doctor` → `./scripts/ship.sh beta`.
 
 **CLI stack:** [TERMINAL_TOOLS.md](./TERMINAL_TOOLS.md) — `asc` (App Store Connect), `apple-docs-pp-cli` (framework docs), `fastlane` (upload lanes), `spaceship` (portal cleanup).
 
@@ -14,12 +14,12 @@ This repo is **terminal-first** after a short one-time human setup. Everything a
 |------|----------|
 | Privacy manifest | `Calarm/PrivacyInfo.xcprivacy` |
 | Permission strings + export compliance | `Calarm/Info.plist` |
-| Release archive script | `release.sh` |
-| fastlane lanes (build, TestFlight, metadata, submit) | `fastlane/Fastfile` |
+| Release archive + upload | `scripts/ship.sh beta` (`archive_and_upload` in `scripts/lib/pipeline.sh`) |
+| fastlane lanes (build, metadata, submit) | `fastlane/Fastfile` |
 | App metadata drafts | `fastlane/metadata/en-US/*` |
 | Review notes for App Review | `fastlane/metadata/review_information/notes.txt` |
 | Privacy + support pages (GitHub Pages ready) | `docs/privacy.html`, `docs/support.html` |
-| Preflight + screenshot helpers | `scripts/preflight-release.sh`, `scripts/capture-screenshots.sh` |
+| Doctor + screenshot helpers | `./scripts/ship.sh doctor`, `scripts/generate-app-store-screenshots.sh` |
 | Bootstrap lane (create ASC app) | `bundle exec fastlane ios bootstrap_asc` |
 
 ---
@@ -118,11 +118,8 @@ cp ExportOptions.plist.example ExportOptions.plist
 ## Phase 2 — Build + TestFlight (mostly terminal)
 
 ```bash
-./scripts/preflight-release.sh
-./release.sh
-# or: bundle exec fastlane ios build_release
-
-bundle exec fastlane ios upload_beta
+./scripts/ship.sh doctor
+./scripts/ship.sh beta
 ```
 
 **Validate without fastlane (optional):**
@@ -147,7 +144,7 @@ Install the TestFlight build on your iPhone. Verify:
 See **[docs/app-store/SCREENSHOTS.md](SCREENSHOTS.md)** for full details.
 
 ```bash
-./scripts/generate-app-store-screenshots.sh
+./scripts/ship.sh screenshots
 ```
 
 Uses simulator + fictional demo data (`SCREENSHOT_MODE`) — no personal calendar content.
@@ -177,10 +174,9 @@ Or in App Store Connect: select the TestFlight build → **Submit for Review**.
 
 | Step | Command |
 |------|---------|
-| Preflight | `./scripts/preflight-release.sh` |
+| Doctor | `./scripts/ship.sh doctor` |
 | Create ASC app | `bundle exec fastlane ios bootstrap_asc` |
-| Archive + IPA | `./release.sh` |
-| TestFlight | `bundle exec fastlane ios upload_beta` |
+| TestFlight (archive + upload) | `./scripts/ship.sh beta` |
 | Metadata | `bundle exec fastlane ios upload_metadata` |
 | Metadata + screenshots | `bundle exec fastlane ios upload_metadata screenshots:true` |
 | Precheck | `bundle exec fastlane ios precheck_metadata` |
@@ -229,5 +225,5 @@ Or in App Store Connect: select the TestFlight build → **Submit for Review**.
 ## When you're ready
 
 1. Complete **Phase 0** (API key, app record, GitHub Pages, questionnaires).
-2. Run `./scripts/preflight-release.sh` — should pass.
-3. Say: **“Upload CALarm to TestFlight”** and we can run the upload lane together.
+2. Run `./scripts/ship.sh doctor` — should pass.
+3. Say: **”Upload CALarm to TestFlight”** and we can run `./scripts/ship.sh beta` together.
