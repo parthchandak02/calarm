@@ -284,7 +284,11 @@ struct ScheduleView: View {
                             .listRowSeparatorTint(theme.surfaceStroke.opacity(0.6))
                         }
                     } header: {
-                        BoardDayLabel(title: DepartureBoard.dayTitle(for: day.date, now: .now))
+                        BoardDayLabel(
+                            parts: DepartureBoard.dayParts(for: day.date, now: .now),
+                            accessibilityTitle: DepartureBoard.dayTitle(for: day.date, now: .now)
+                        )
+                        .listRowInsets(EdgeInsets())
                     }
                 }
             }

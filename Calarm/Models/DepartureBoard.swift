@@ -39,6 +39,30 @@ nonisolated enum DepartureBoard {
         return event.scheduledAlarms.map { shortOffset($0.offset) }.joined(separator: " ")
     }
 
+    struct DayParts: Equatable {
+        let relative: String?
+        let tiles: [String]
+    }
+
+    /// The day header split for flap tiles: "TODAY" + [SAT, 26], or [MON, 28, SEP] further out.
+    static func dayParts(for date: Date, now: Date, calendar: Calendar = .current, locale: Locale = .current) -> DayParts {
+        func part(_ style: Date.FormatStyle) -> String {
+            var style = style.locale(locale)
+            style.timeZone = calendar.timeZone
+            return date.formatted(style).uppercased(with: locale)
+        }
+        let weekday = part(Date.FormatStyle().weekday(.abbreviated))
+        let day = part(Date.FormatStyle().day())
+        if calendar.isDate(date, inSameDayAs: now) {
+            return DayParts(relative: "TODAY", tiles: [weekday, day])
+        }
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+           calendar.isDate(date, inSameDayAs: tomorrow) {
+            return DayParts(relative: "TOMORROW", tiles: [weekday, day])
+        }
+        return DayParts(relative: nil, tiles: [weekday, day, part(Date.FormatStyle().month(.abbreviated))])
+    }
+
     static func dayTitle(for date: Date, now: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {
         let weekdayAndDay = date.formatted(.dateTime.weekday(.abbreviated).day().locale(locale))
         if calendar.isDate(date, inSameDayAs: now) {

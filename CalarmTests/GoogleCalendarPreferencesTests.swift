@@ -31,6 +31,16 @@ final class GoogleCalendarPreferencesTests: XCTestCase {
         XCTAssertTrue(preferences.isCalendarEnabled("a"))
     }
 
+    func testSetAllCalendarsEnabled() {
+        let preferences = GoogleCalendarPreferences()
+        preferences.setAllCalendarsEnabled(false, allCalendarIDs: ["a", "b"])
+        XCTAssertFalse(preferences.isCalendarEnabled("a"))
+        XCTAssertFalse(preferences.isCalendarEnabled("b"))
+        XCTAssertTrue(preferences.isCalendarEnabled("subscribed-later"))
+        preferences.setAllCalendarsEnabled(true, allCalendarIDs: ["a", "b"])
+        XCTAssertTrue(preferences.disabledCalendarIDs.isEmpty)
+    }
+
     func testAllowListMigratesToDenyList() throws {
         UserDefaults.standard.set(try JSONEncoder().encode(["a"]), forKey: enabledKey)
         let preferences = GoogleCalendarPreferences()

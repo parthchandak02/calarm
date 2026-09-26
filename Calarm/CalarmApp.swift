@@ -5,6 +5,7 @@
 
 import AlarmKit
 import SwiftUI
+import UIKit
 
 @main
 struct CalarmApp: App {
@@ -57,12 +58,25 @@ private struct CalarmRootView: View {
     var body: some View {
         ScheduleView()
             .environment(\.calarmTheme, theme)
-            .preferredColorScheme(themeStore.appearance.preferredColorScheme)
+            .onAppear(perform: applyAppearance)
+            .onChange(of: themeStore.appearance) { _, _ in applyAppearance() }
             .onChange(of: themeStore.accent) { _, _ in
                 scheduleStore.refreshAfterThemeChange()
             }
             .onChange(of: themeStore.useCalendarColorInLiveActivity) { _, _ in
                 scheduleStore.refreshAfterThemeChange()
             }
+    }
+
+    // `.preferredColorScheme` does not reach an already-presented sheet when it goes back to
+    // nil (System): the sheet kept the last explicit scheme. Overriding the window reaches
+    // every presented controller at once.
+    private func applyAppearance() {
+        let style = themeStore.appearance.userInterfaceStyle
+        for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+            for window in scene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
     }
 }

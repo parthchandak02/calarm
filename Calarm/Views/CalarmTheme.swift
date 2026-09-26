@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 enum CalarmAppearance: String, CaseIterable, Identifiable, Codable {
     case system
@@ -20,9 +21,9 @@ enum CalarmAppearance: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    var preferredColorScheme: ColorScheme? {
+    var userInterfaceStyle: UIUserInterfaceStyle {
         switch self {
-        case .system: nil
+        case .system: .unspecified
         case .light: .light
         case .dark: .dark
         }

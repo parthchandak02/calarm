@@ -69,8 +69,8 @@ final class CalendarService: ObservableObject {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
-    func enableAllCalendars() {
-        CalendarFilterPreferences.disabledCalendarIDs = []
+    func setAllCalendarsEnabled(_ enabled: Bool) {
+        CalendarFilterPreferences.setAllEnabled(enabled, allCalendarIDs: availableCalendars.map(\.id))
         refreshCalendarList()
     }
 

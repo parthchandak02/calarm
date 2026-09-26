@@ -41,6 +41,32 @@ owner's gitignored `notes/ui-redesign/index.html`, when present.
 
 ---
 
+## Owner feedback rules (binding; add new ones here)
+
+Durable rules from the owner's reviews. Every UI change must satisfy all of them.
+
+- **Compact over redundant.** Never show the same fact twice on one screen. `NextAlarmBoard`
+  is only the label and the countdown; the event is in the list below and the board opens it
+  (2026-09-26).
+- **Copy states real numbers.** No "a few days", no hardcoded "8 seconds". Derive the number
+  from the constant the behaviour uses (`AlarmOffsetOption.recommendedCalendarFetchDays`,
+  `AlarmScheduler.testAlarmExpectedRing(lead:)`), so a button and its confirmation can never
+  disagree (2026-09-26).
+- **Settings apply instantly, everywhere.** A theme change repaints the open sheet and the
+  screen behind it immediately. Appearance goes through the window's
+  `overrideUserInterfaceStyle` (`CalarmRootView.applyAppearance`); never
+  `.preferredColorScheme`, which leaves a presented sheet in the last explicit scheme when set
+  back to System (2026-09-26).
+- **Lists of toggles get a bulk action per group.** Each calendar source (Google, iOS) has its
+  own turn all on / turn all off, alongside the per-row squares (2026-09-26).
+- **Pinned chrome is opaque.** Anything that pins over scrolling content (day headers) paints
+  a solid `theme.background` band; translucent fills ghosted the rows behind them. Day
+  headers are `BoardDayLabel`: relative day ("TODAY" / "TOMORROW") in `boardLabel`, then the
+  date as flap tiles (`DepartureBoard.dayParts`), today's tiles lit in the accent. Chosen by
+  the owner over a plain rail and a full-width band (2026-09-26).
+
+---
+
 ## Design tokens (source of truth)
 
 ### Files
@@ -96,7 +122,8 @@ via `themeStore.theme(colorScheme:)` in child rows.
 |-----------|---------|
 | `NextAlarmBoard` | Split-flap countdown hero on the schedule |
 | `CalarmGlassIcon` | 44pt Liquid Glass circle icon (toolbar, menu labels) |
-| `BoardSectionLabel` | Pixel label + hairline rule (day headers, Settings sections) |
+| `BoardSectionLabel` | Pixel label + hairline rule (Settings sections) |
+| `BoardDayLabel` | Schedule day header: relative day + flap date tiles + rule, opaque band |
 | `BoardLine` / `BoardValue` | One board row: title, optional detail and dot, trailing value |
 | `ArmSquare` / `ArmSquareToggle` | The lit square; the toggle adds haptic + a11y toggle trait |
 | `FlapPicker` | Single choice as split-flap tiles (offset, snooze, sound, appearance) |

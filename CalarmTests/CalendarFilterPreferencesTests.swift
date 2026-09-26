@@ -33,6 +33,17 @@ final class CalendarFilterPreferencesTests: XCTestCase {
     }
 
     @MainActor
+    func testSetAllEnabled() {
+        CalendarFilterPreferences.setEnabled(false, calendarID: "a")
+        CalendarFilterPreferences.setAllEnabled(false, allCalendarIDs: ["a", "b"])
+        XCTAssertEqual(CalendarFilterPreferences.disabledCalendarIDs, ["a", "b"])
+        XCTAssertTrue(CalendarFilterPreferences.isEnabled(calendarID: "c"))
+
+        CalendarFilterPreferences.setAllEnabled(true, allCalendarIDs: ["a", "b"])
+        XCTAssertTrue(CalendarFilterPreferences.disabledCalendarIDs.isEmpty)
+    }
+
+    @MainActor
     func testAllowListMigratesToTheComplementaryDenyList() {
         CalarmPersistence.encode(["a", "b"], forKey: CalarmPersistence.Key.enabledCalendarIDs)
 

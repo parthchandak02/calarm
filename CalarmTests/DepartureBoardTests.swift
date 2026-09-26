@@ -52,4 +52,19 @@ final class DepartureBoardTests: XCTestCase {
         XCTAssertTrue(DepartureBoard.dayTitle(for: now.addingTimeInterval(86_400), now: now, calendar: calendar, locale: locale).hasPrefix("TOMORROW · "))
         XCTAssertFalse(DepartureBoard.dayTitle(for: now.addingTimeInterval(3 * 86_400), now: now, calendar: calendar, locale: locale).contains("·"))
     }
+
+    func testDayPartsSplitsRelativeDayFromDateTiles() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let locale = Locale(identifier: "en_US")
+        let today = DepartureBoard.dayParts(for: now, now: now, calendar: calendar, locale: locale)
+        XCTAssertEqual(today.relative, "TODAY")
+        XCTAssertEqual(today.tiles.count, 2)
+        let tomorrow = DepartureBoard.dayParts(for: now.addingTimeInterval(86_400), now: now, calendar: calendar, locale: locale)
+        XCTAssertEqual(tomorrow.relative, "TOMORROW")
+        let later = DepartureBoard.dayParts(for: now.addingTimeInterval(3 * 86_400), now: now, calendar: calendar, locale: locale)
+        XCTAssertNil(later.relative)
+        XCTAssertEqual(later.tiles.count, 3)
+        XCTAssertTrue(later.tiles.allSatisfy { $0 == $0.uppercased() && !$0.isEmpty })
+    }
 }

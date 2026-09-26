@@ -16,7 +16,12 @@ struct SettingsCalendarsPage: View {
 
     private var google: GoogleCalendarService { store.googleCalendarService }
     private var eventKitCalendars: [CalendarSummary] { store.calendarService.availableCalendars }
-    private var hiddenEventKitCount: Int { eventKitCalendars.filter { !$0.isEnabled }.count }
+    private var googleBulkAction: CalendarBulkAction? {
+        CalendarSelectionPolicy.bulkAction(enabledStates: google.availableCalendars.map { google.isCalendarEnabled($0.id) })
+    }
+    private var eventKitBulkAction: CalendarBulkAction? {
+        CalendarSelectionPolicy.bulkAction(enabledStates: eventKitCalendars.map(\.isEnabled))
+    }
 
     var body: some View {
         ScrollView {
@@ -24,7 +29,7 @@ struct SettingsCalendarsPage: View {
                 googleSection
                 eventKitSection
 
-                Text("All-day events are always skipped. Numbers are events in the next few days.")
+                Text(CalendarSelectionPolicy.countsFootnote(fetchDays: AlarmOffsetOption.recommendedCalendarFetchDays))
                     .font(CalarmFont.boardDetail)
                     .foregroundStyle(theme.textSecondary)
                     .padding(.top, 12)
@@ -68,6 +73,11 @@ struct SettingsCalendarsPage: View {
             HStack(spacing: 16) {
                 Button("Sync now") { Task { await store.reload() } }
                     .foregroundStyle(theme.accent)
+                if let action = googleBulkAction {
+                    bulkButton(action, identifier: "settings.calendars.google.bulk") {
+                        google.setAllCalendarsEnabled(action.enables)
+                    }
+                }
                 Button("Disconnect", role: .destructive) { store.disconnectGoogleCalendar() }
                     .foregroundStyle(theme.destructive)
                 Spacer()
@@ -115,12 +125,15 @@ struct SettingsCalendarsPage: View {
                     Task { await store.reload() }
                 }
             }
-            if hiddenEventKitCount > 0 {
-                BoardButton(title: "\(hiddenEventKitCount) off · turn all on") {
-                    store.calendarService.enableAllCalendars()
-                    Task { await store.reload() }
+            if let action = eventKitBulkAction {
+                HStack(spacing: 16) {
+                    bulkButton(action, identifier: "settings.calendars.ios.bulk") {
+                        store.calendarService.setAllCalendarsEnabled(action.enables)
+                    }
+                    Spacer()
                 }
-                .padding(.top, 14)
+                .font(CalarmFont.boardDetail)
+                .frame(minHeight: CalarmTheme.minimumTouchTarget)
             }
             if !google.isConnected {
                 Text("Without Google, iOS syncs these on its own schedule, often minutes behind.")
@@ -162,8 +175,21 @@ struct SettingsCalendarsPage: View {
         }
     }
 
+    private func bulkButton(
+        _ action: CalendarBulkAction,
+        identifier: String,
+        apply: @escaping () -> Void
+    ) -> some View {
+        Button(action.title) {
+            apply()
+            Task { await store.reload() }
+        }
+        .foregroundStyle(theme.accent)
+        .accessibilityIdentifier(identifier)
+    }
+
     private func eventCount(source: CalendarSource, calendarTitle: String) -> Int {
-        store.events.filter { $0.source == source && $0.calendarTitle == calendarTitle }.count
+        CalendarSelectionPolicy.upcomingCount(in: store.events, source: source, calendarTitle: calendarTitle, now: Date())
     }
 
     private func connectGoogle() {

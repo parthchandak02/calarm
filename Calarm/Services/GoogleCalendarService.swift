@@ -16,6 +16,10 @@ final class GoogleCalendarService: ObservableObject {
     let authManager = GoogleAuthManager()
     private let api = GoogleCalendarAPIClient()
     private var preferences = GoogleCalendarPreferences()
+    /// Cached events carry no calendar ID and a newly enabled calendar may hold a sync token
+    /// with no pending delta, so the cheap path would keep a disabled calendar's events and
+    /// never fetch an enabled one's. Any selection change forces the window fetch.
+    private var selectionChangedSinceWindowFetch = false
 
     var isConnected: Bool { preferences.isConnected && authManager.isSignedIn }
     var connectedEmail: String? { preferences.connectedEmail ?? authManager.userEmail }
@@ -60,6 +64,12 @@ final class GoogleCalendarService: ObservableObject {
 
     func setCalendarEnabled(_ calendarID: String, enabled: Bool) {
         preferences.setCalendarEnabled(calendarID, enabled: enabled)
+        selectionChangedSinceWindowFetch = true
+    }
+
+    func setAllCalendarsEnabled(_ enabled: Bool) {
+        preferences.setAllCalendarsEnabled(enabled, allCalendarIDs: availableCalendars.map(\.id))
+        selectionChangedSinceWindowFetch = true
     }
 
     func isCalendarEnabled(_ calendarID: String) -> Bool {
@@ -92,7 +102,7 @@ final class GoogleCalendarService: ObservableObject {
             // could only ever return what the full fetch had already returned. Now the
             // incremental is what it should be, a change detector, and the expensive
             // expanded fetch in step 2 runs only when it reports something.
-            var needsWindowFetch = cachedEvents.isEmpty
+            var needsWindowFetch = cachedEvents.isEmpty || selectionChangedSinceWindowFetch
 
             for calendar in enabledCalendars {
                 guard let syncToken = preferences.syncToken(for: calendar.id) else {
@@ -161,6 +171,7 @@ final class GoogleCalendarService: ObservableObject {
                 }
             }
 
+            selectionChangedSinceWindowFetch = false
             lastSyncError = nil
             return merged.values
                 .filter { $0.startDate >= now && $0.startDate <= end }

@@ -245,6 +245,74 @@ attributes type, started from a launch argument) and keep it out of release buil
 - `SystemFormatStyle.Timer` with `maxPrecision: .seconds(60)` renders words (`1 hou…`), and
   `.offset` renders `-44 min`; neither is a compact clock format. **VERIFIED.**
 
+### Live Activity surfaces and the Island opt-out (researched 2026-09-26)
+
+- **A Live Activity cannot skip the Dynamic Island.** "you must support all presentations. The
+  system automatically chooses the best presentation for each location"
+  ([ActivityKit](https://developer.apple.com/documentation/activitykit/displaying-live-data-with-live-activities)).
+  The one forum thread asking for Lock-Screen-only has no reply
+  ([773302](https://developer.apple.com/forums/thread/773302)). The only off switch is the
+  user's per-app Live Activities toggle, which removes every surface. **CONFIRMED.**
+- **The compact views are the default elsewhere too**: Apple Watch Smart Stack (watchOS 11+,
+  forwarded "on purpose", only the wearer can disable it,
+  [765634](https://developer.apple.com/forums/thread/765634)) and the macOS 26 menu bar. With
+  `.supplementalActivityFamilies([.small])` the Watch uses the Lock Screen view instead, branched
+  on `activityFamily == .small` (iOS 18 SDK). CarPlay (iOS 26) is contradictory: WWDC25/278 says
+  compact by default, WWDC26/223 says the Lock Screen view; buttons are inert there. So blanking
+  the compact Island blanks those surfaces as well. **CONFIRMED**
+  ([WWDC24/10068](https://developer.apple.com/videos/play/wwdc2024/10068/),
+  [WWDC25/278](https://developer.apple.com/videos/play/wwdc2025/278/)). calarm sets no
+  supplemental family, so those surfaces show the lit square and digits with no title.
+- **Whether AlarmKit's *countdown* reaches the Watch, Mac or CarPlay is unverified.** Only the
+  ringing alert is documented to forward to a paired Watch
+  ([sample](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit)).
+  **INFERRED** that the countdown forwards like any Live Activity.
+- **Phones without an Island** show only the Lock Screen view, as a banner only for alerting
+  updates while unlocked. **iPad**: Lock Screen view only. **visionOS/tvOS**: none. **StandBy**:
+  minimal view, tap for the Lock Screen view at 2x (`isActivityFullscreen`), red in Night Mode.
+  **CONFIRMED** ([HIG](https://developer.apple.com/design/human-interface-guidelines/live-activities)).
+- **iPhone 18 Pro's Island holds three Live Activities**; two leaves the second one room for
+  data. Layout rules for the third slot are not documented. **REPORTED** (Apple VP via
+  [AppleInsider](https://appleinsider.com/articles/26/09/09/dynamic-island-now-shows-three-live-activities)).
+- **HIG: minimal should show live data, not just a logo.** calarm's minimal is the lit square.
+  Two calarm countdowns side by side are two indistinguishable squares. **CONFIRMED** (HIG).
+- **Ordering between several activities of one app is `relevanceScore`, which AlarmKit gives the
+  app no way to set.** Per-app cap is undocumented (developers report 5,
+  [799522](https://developer.apple.com/forums/thread/799522)); whether it applies to AlarmKit is
+  unknown. **INFERRED.**
+- **The Island drops an activity after 8 hours; the Lock Screen keeps it to 12.** Whether AlarmKit
+  countdowns are exempt is not documented, and matters for Island ALL (countdown from scheduling
+  time). **CONFIRMED** for ActivityKit, **unknown** for AlarmKit.
+- **The Island's `colorScheme` is always dark** (FB20187110,
+  [799684](https://developer.apple.com/forums/thread/799684)); **VoiceOver reads compact text
+  2–4 times** after updates ([719235](https://developer.apple.com/forums/thread/719235)).
+  **REPORTED.**
+
+### AlarmKit presentation edge cases (researched 2026-09-26)
+
+- **An alert-only alarm (`AlarmPresentation(alert:)`, no countdown) has no documented Island or
+  Lock Screen presence before it rings.** Countdown and paused are optional. **CONFIRMED**
+  (sample) / **INFERRED** (no presence).
+- **When the Live Activity cannot render, the system draws its own countdown**: "the system will
+  guarantee that a countdown interface will be shown", e.g. after restart before first unlock
+  ([WWDC25/230](https://developer.apple.com/videos/play/wwdc2025/230/)). **CONFIRMED.**
+- **Nobody documents whether an alarm rings with the app's Live Activities switched off**, or
+  after the countdown card is swiped away. The only documented failure is a *missing* widget
+  extension. One developer: with no extension a countdown timer still rang but never rendered
+  ([expo-alarm-kit#4](https://github.com/nickdeupree/expo-alarm-kit/issues/4), **REPORTED**).
+  The app can read `ActivityAuthorizationInfo().areActivitiesEnabled`; calarm does not.
+- **Unlocked, the alert is a banner or the Island, not full screen**; one report says it gives a
+  single short vibration ([808260](https://developer.apple.com/forums/thread/808260),
+  [nilcoalescing](https://nilcoalescing.com/blog/CountdownTimerWithAlarmKit/)). **REPORTED.**
+  An AlarmKit banner showing with the app foregrounded since 26.1
+  ([806092](https://developer.apple.com/forums/thread/806092)). **REPORTED.**
+- **calarm's alert-only alarms carry a 1-second countdown with no countdown presentation**
+  (landscape workaround), and snooze (`.countdown`) on them runs `postAlert` with no countdown
+  presentation either. What either shows is unobserved.
+- **Blank capsule after an alarm fires**, more duplicates of the zombie:
+  [807335](https://developer.apple.com/forums/thread/807335),
+  [817305](https://developer.apple.com/forums/thread/817305). **REPORTED.**
+
 ---
 
 ## App Store Connect API (observed 2026-09-26)

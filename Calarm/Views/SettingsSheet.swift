@@ -184,9 +184,13 @@ struct TestAlarmButton: View {
     @State private var isScheduling = false
     @State private var message: String?
 
+    private var expectedRingSeconds: Int {
+        Int(AlarmScheduler.testAlarmExpectedRing(lead: store.liveActivityLead))
+    }
+
     var body: some View {
         BoardButton(
-            title: isScheduling ? "Scheduling…" : "Test alarm · \(Int(AlarmScheduler.testAlarmExpectedRing(lead: store.liveActivityLead)))s",
+            title: isScheduling ? "Scheduling…" : "Test alarm · \(expectedRingSeconds)s",
             systemImage: "play.fill",
             isProminent: isProminent,
             isDisabled: isScheduling,
@@ -208,9 +212,10 @@ struct TestAlarmButton: View {
         message = "Test alarms must be run on a physical iPhone — the Simulator cannot ring."
         #else
         isScheduling = true
+        let seconds = expectedRingSeconds
         Task {
             message = await store.scheduleTestAlarm()
-                ?? "Test alarm scheduled — it should ring in about 8 seconds. Keep CALarm open so Alarm timing can measure it."
+                ?? "Test alarm scheduled — it should ring in about \(seconds) seconds. Keep CALarm open so Alarm timing can measure it."
             isScheduling = false
         }
         #endif

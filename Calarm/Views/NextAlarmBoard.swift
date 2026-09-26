@@ -5,7 +5,9 @@
 
 import SwiftUI
 
-/// The schedule's one next-alarm signal: a split-flap countdown to the next ring.
+/// The schedule's one next-alarm signal: a split-flap countdown to the next ring. The event
+/// itself is not repeated here (owner feedback 2026-09-26): it is in the list below, and
+/// tapping the board opens it.
 struct NextAlarmBoard: View {
     @Environment(\.calarmTheme) private var theme
 
@@ -21,23 +23,12 @@ struct NextAlarmBoard: View {
                     .tracking(2)
                     .foregroundStyle(event == nil ? theme.textSecondary : theme.accent)
 
-                if let event, let fireDate {
+                if event != nil, let fireDate {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         FlapCountdown(
                             groups: DepartureBoard.countdownGroups(until: fireDate, now: context.date),
                             isLit: true
                         )
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(event.title)
-                            .font(CalarmFont.boardTitle)
-                            .foregroundStyle(theme.textPrimary)
-                            .lineLimit(1)
-                        Text("Rings \(CalarmTheme.eventTimeString(fireDate)) · starts \(CalarmTheme.eventTimeString(event.startDate))")
-                            .font(CalarmFont.boardDetail)
-                            .foregroundStyle(theme.textSecondary)
-                            .lineLimit(1)
                     }
                 } else {
                     FlapCountdown(groups: ["--", "--", "--", "--"], isLit: false)
@@ -48,8 +39,8 @@ struct NextAlarmBoard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, CalarmTheme.rowPaddingH)
-            .padding(.top, 10)
-            .padding(.bottom, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

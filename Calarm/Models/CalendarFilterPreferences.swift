@@ -42,6 +42,10 @@ enum CalendarFilterPreferences {
         disabledCalendarIDs = ids
     }
 
+    static func setAllEnabled(_ enabled: Bool, allCalendarIDs: [String]) {
+        disabledCalendarIDs = CalendarSelectionPolicy.disabledIDs(allCalendarIDs: allCalendarIDs, enabled: enabled)
+    }
+
     /// Converts a stored allow-list into the equivalent deny-list.
     ///
     /// Runs only with a real calendar list in hand: an empty `allCalendarIDs`

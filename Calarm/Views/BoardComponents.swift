@@ -30,35 +30,53 @@ struct BoardSectionLabel: View {
     }
 }
 
-/// Schedule day header: white pixel text on a flap tile, then a rule. Louder than
-/// `BoardSectionLabel` because it separates days, not sections.
+/// Schedule day header: the relative day, then the date as split-flap tiles, then a rule.
+/// Today's tiles are lit in the accent. It sits on an opaque band so a pinned header hides
+/// the rows scrolling under it (the old translucent chip ghosted them).
 struct BoardDayLabel: View {
     @Environment(\.calarmTheme) private var theme
+    @ScaledMetric(relativeTo: .body) private var tileHeight: CGFloat = 24
 
-    let title: String
+    let parts: DepartureBoard.DayParts
+    let accessibilityTitle: String
+
+    private var isToday: Bool { parts.relative == "TODAY" }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(title.uppercased())
-                .font(CalarmFont.dayHeader)
-                .tracking(1.5)
-                .foregroundStyle(theme.textPrimary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(theme.surface, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                .overlay {
-                    Rectangle()
-                        .fill(theme.background.opacity(0.6))
-                        .frame(height: 1)
+        HStack(spacing: 8) {
+            if let relative = parts.relative {
+                Text(relative)
+                    .font(CalarmFont.boardLabel)
+                    .tracking(2)
+                    .foregroundStyle(isToday ? theme.accent : theme.textSecondary)
+                    .fixedSize()
+            }
+            HStack(spacing: 3) {
+                ForEach(Array(parts.tiles.enumerated()), id: \.offset) { _, tile in
+                    Text(tile)
+                        .font(CalarmFont.flapTile)
+                        .foregroundStyle(isToday ? theme.onAccent : theme.textPrimary)
+                        .padding(.horizontal, 6)
+                        .frame(height: tileHeight)
+                        .background {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isToday ? theme.accent : theme.surface)
+                        }
                 }
+            }
+            .fixedSize()
             Rectangle()
-                .fill(theme.textSecondary.opacity(0.35))
+                .fill(theme.surfaceStroke)
                 .frame(height: 1)
         }
-        .padding(.top, 18)
-        .padding(.bottom, 6)
+        .lineLimit(1)
+        .padding(.horizontal, CalarmTheme.rowPaddingH)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.background)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityTitle)
         .accessibilityAddTraits(.isHeader)
     }
 }

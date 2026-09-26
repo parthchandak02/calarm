@@ -66,6 +66,10 @@ final class GoogleCalendarPreferences {
         disabledCalendarIDs = disabled
     }
 
+    func setAllCalendarsEnabled(_ enabled: Bool, allCalendarIDs: [String]) {
+        disabledCalendarIDs = CalendarSelectionPolicy.disabledIDs(allCalendarIDs: allCalendarIDs, enabled: enabled)
+    }
+
     /// Inverts a stored allow-list against a real calendar list. Skipped while the list is
     /// empty, since inverting against nothing would disable every remembered choice.
     func migrateAllowListIfNeeded(allCalendarIDs: [String]) {

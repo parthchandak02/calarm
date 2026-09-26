@@ -185,6 +185,10 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **Alarm permission is asked on the first armed alarm, not at launch.** `rescheduleIfNeeded`
   requests it whenever an event is armed; keep that, or an alarm armed without the list's
   toggle would never get permission.
+- **Never `.preferredColorScheme` for the appearance setting.** Set back to System, it left
+  the open Settings sheet in the old scheme. `CalarmRootView.applyAppearance` overrides the
+  window instead. UI work also follows the owner-feedback rules in the
+  `calarm-ios-ui-design` skill.
 - **`ScreenshotMode` is a live branch in the launch path**, short-circuiting
   `ScheduleStore.bootstrap()` to inject demo data.
 

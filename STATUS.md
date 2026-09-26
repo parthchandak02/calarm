@@ -56,6 +56,13 @@ shows the title row and tiles; digits sit on their tiles; after 10:00 or 1:00:00
 goes blank and the rest stay aligned; the compact Island is a short pill (lit square + tiles). Also check the
 in-app countdown's new flip looks right on device.
 
+**Live Activity edge cases nobody documents (researched 2026-09-26).** On device: (1) turn
+Settings → CALarm → Live Activities **off**, arm an event with Island at 5 — does it ring?
+(2) swipe the countdown card away mid-countdown — does it still ring? (3) with the phone
+unlocked and in use, how loud is the alert? (4) snooze an alert-only alarm — what shows? (5) is
+the countdown on the Watch / Mac menu bar, and does it show a title? See RESEARCH.md § Live
+Activity surfaces.
+
 *The vibrate-fallback check is retired*: the fallback was removed (2026-09-25, owner's
 one-ring rule). Vibration itself is confirmed (2026-09-24).
 

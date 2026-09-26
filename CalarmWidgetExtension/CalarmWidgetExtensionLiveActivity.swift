@@ -14,7 +14,11 @@ import WidgetKit
 struct CalarmWidgetExtensionLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: AlarmAttributes<AlarmAppMetadata>.self) { context in
-            lockScreenView(context: context)
+            LockScreenOrSmall {
+                lockScreenView(context: context)
+            } small: {
+                smallView(context: context)
+            }
                 .activityBackgroundTint(Color.black.opacity(0.88))
                 .activitySystemActionForegroundColor(tintColor(for: context))
                 .widgetURL(deepLinkURL(for: context))
@@ -32,7 +36,7 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
             } compactTrailing: {
                 CompactCountdown(context: context, tint: tintColor(for: context))
             } minimal: {
-                LitSquare(tint: tintColor(for: context))
+                MinimalRing(context: context, tint: tintColor(for: context))
             }
             .contentMargins(.trailing, 8, for: .compactTrailing)
             // HIG: compact views sit snug against the camera. Every point of trailing width
@@ -42,6 +46,8 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
             .keylineTint(tintColor(for: context))
             .widgetURL(deepLinkURL(for: context))
         }
+        // Without this, Apple Watch and CarPlay show the compact Island, which carries no title.
+        .supplementalActivityFamilies([.small])
     }
 
     @ViewBuilder
@@ -95,6 +101,25 @@ struct CalarmWidgetExtensionLiveActivity: Widget {
                 .frame(maxWidth: .infinity)
         }
         .padding(14)
+    }
+
+    @ViewBuilder
+    private func smallView(context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(stateLabel(for: context))
+                .font(.custom(FlapTimer.fontName, fixedSize: 9))
+                .tracking(1.5)
+                .foregroundStyle(tintColor(for: context))
+                .lineLimit(1)
+            Text(title(for: context))
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            BoardCountdown(context: context, style: .expanded, tint: tintColor(for: context))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
     }
 
     private func title(for context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>) -> String {
@@ -162,6 +187,50 @@ private struct LitSquare: View {
             .fill(tint)
             .frame(width: 11, height: 11)
             .shadow(color: tint.opacity(0.7), radius: 3)
+    }
+}
+
+private struct LockScreenOrSmall<LockScreen: View, Small: View>: View {
+    @ViewBuilder let lockScreen: () -> LockScreen
+    @ViewBuilder let small: () -> Small
+    @Environment(\.activityFamily) private var family
+
+    var body: some View {
+        switch family {
+        case .small: small()
+        default: lockScreen()
+        }
+    }
+}
+
+/// HIG: the minimal view should carry live data, not a logo. A ring drains to the ring time;
+/// progress views animate on their own, which matters because AlarmKit re-renders only on
+/// state changes. Anchored to the total duration so a resumed countdown does not refill.
+private struct MinimalRing: View {
+    let context: ActivityViewContext<AlarmAttributes<AlarmAppMetadata>>
+    let tint: Color
+
+    var body: some View {
+        Group {
+            switch context.state.mode {
+            case .countdown(let countdown) where countdown.fireDate.timeIntervalSinceNow > 0:
+                ProgressView(
+                    timerInterval: countdown.fireDate.addingTimeInterval(-countdown.totalCountdownDuration)...countdown.fireDate,
+                    countsDown: true,
+                    label: { EmptyView() },
+                    currentValueLabel: { EmptyView() }
+                )
+                .progressViewStyle(.circular)
+            case .paused(let paused) where paused.totalCountdownDuration > 0:
+                ProgressView(value: max(0, 1 - paused.previouslyElapsedDuration / paused.totalCountdownDuration))
+                    .progressViewStyle(.circular)
+                    .opacity(0.6)
+            default:
+                LitSquare(tint: tint)
+            }
+        }
+        .tint(tint)
+        .frame(width: 20, height: 20)
     }
 }
 
