@@ -19,7 +19,7 @@ never through a symlink, because Claude Code refuses to write into one. See
 | [calarm-live-activity-deep-links](calarm-live-activity-deep-links/SKILL.md) | Island tap behavior, `calarm://` deep links |
 | [calarm-occurrence-identity](calarm-occurrence-identity/SKILL.md) | Recurring events, per-occurrence IDs, preference migration |
 | [calarm-trust-diagnostics](calarm-trust-diagnostics/SKILL.md) | Permission banners, test alarm, schedule failures |
-| [calarm-release-pipeline](calarm-release-pipeline/SKILL.md) | ship.sh, ios-doctor, pipeline bootstrap |
+| [calarm-release-pipeline](calarm-release-pipeline/SKILL.md) | ship.sh + lib/pipeline.sh, doctor, porting the pipeline |
 | [calarm-app-icon-alpha](calarm-app-icon-alpha/SKILL.md) | App icon transparency rejection, logo processing |
 | [calarm-ios-ui-design](calarm-ios-ui-design/SKILL.md) | View polish, HIG alignment, design tokens, UI consistency |
 | [herdr-remote-build](herdr-remote-build/SKILL.md) | Run and monitor any long remote job in a persistent herdr pane, no password |
