@@ -71,8 +71,8 @@ struct BoardDayLabel: View {
         }
         .lineLimit(1)
         .padding(.horizontal, CalarmTheme.rowPaddingH)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.background)
         .accessibilityElement(children: .ignore)

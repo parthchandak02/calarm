@@ -19,6 +19,27 @@ this file exists so an agent can see the shape of the project's history without 
 
 ### Changed
 
+Owner UI feedback, 2026-09-26 (code landed inside `15a22ce` by a concurrent session; spacing
+follow-up in the commit after it):
+
+- **Test alarm popup states the real ring time.** The button said 16s and the popup said
+  "about 8 seconds". 16s is correct under an Island window (`.fixed(+8)` + 8s pre-alert rings
+  at +16); 8s only under ALL. Both now read `AlarmScheduler.testAlarmExpectedRing(lead:)`.
+- **Calendars footer names the window:** "upcoming events in the next 8 days", computed from
+  `recommendedCalendarFetchDays`. Counts now cover only events not yet started in both sources.
+- **Turn all on / turn all off per source** (Google and iOS) on the Calendars page. Any Google
+  calendar on/off change now forces a full re-fetch; the incremental path kept events from a
+  calendar just switched off and could miss one just switched on.
+- **Appearance changes apply instantly, including the open Settings sheet.** Going back to
+  System left the sheet in the old scheme under `.preferredColorScheme`; the window's
+  `overrideUserInterfaceStyle` is set instead.
+- **Day headers are flap date tiles** on an opaque band ("TODAY" + SAT 26, today lit in the
+  accent), chosen by the owner from three options. The old translucent chip ghosted the rows
+  scrolling under it.
+- **Next-alarm board is only the countdown.** The title and "Rings … · starts …" line repeated
+  the first row of the list.
+- Design rules from owner feedback are now in the `calarm-ios-ui-design` skill.
+
 - **Live Activity on Apple Watch and CarPlay shows the meeting.** The widget opts into the
   `.small` activity family, so those surfaces get state, title and countdown instead of the
   compact Island's lit square and digits.

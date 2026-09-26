@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Latest build** | `20260926.1256` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
-| **Tests** | 155 passing (`CalarmTests`, 2026-09-25) |
+| **Tests** | 165 passing (`CalarmTests`, 2026-09-26) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -27,6 +27,12 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 ---
 
 ## Waiting on the owner
+
+**Check the owner-feedback UI round on device (next build).** Home: the countdown has no event
+line under it, and day headers are flap tiles that stay opaque when pinned while scrolling (the
+Simulator demo list is too short to pin). Settings → Look: Light → System (phone in dark)
+turns the open sheet dark at once. Settings → Calendars: "Turn all on/off" in each section, and
+the footer says "next 8 days". Test alarm popup says 16 seconds with Island at 5.
 
 **Check the first-run tips and the moved alarm prompt on device (next build).** Delete and
 reinstall CALarm (the tips only show on a fresh install). Launch: **no alarm permission prompt**

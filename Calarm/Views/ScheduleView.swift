@@ -293,6 +293,7 @@ struct ScheduleView: View {
                 }
             }
             .listStyle(.plain)
+            .listSectionSpacing(0)
             .scrollContentBackground(.hidden)
             .refreshable {
                 await store.reload()
