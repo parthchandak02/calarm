@@ -31,7 +31,8 @@ nonisolated enum DepartureBoard {
         }
     }
 
-    static func rowLabel(for event: ScheduleEvent, tooSoon: Bool) -> String {
+    static func rowLabel(for event: ScheduleEvent, tooSoon: Bool, missed: Bool = false) -> String {
+        if missed { return "missed" }
         if tooSoon { return "too soon" }
         guard event.alarmEnabled else { return "off" }
         if event.isAlarmInPast { return "past" }

@@ -45,6 +45,11 @@ follow-up in the commit after it):
   compact Island's lit square and digits.
 - **Minimal Island is a draining ring**, not a static square, per HIG (minimal shows live data).
   Two CALarm countdowns sharing the Island are now distinguishable. Paused shows a dimmed ring.
+- **Missed alarms are shown.** An alarm whose time passed with no ring, stop or snooze seen
+  reads `missed` (red) on its event row and appears under Settings → Status → *Missed alarms*
+  for 24 hours. It means AlarmKit did not fire, the alarm rang unanswered, or it was dismissed
+  by a path that skips the stop intent. Built from the existing alarm journal
+  (`AlarmJournalReconciler.missed`), after Nedaa's pattern.
 - RESEARCH.md: Live Activity surfaces, the Island opt-out (there is none) and AlarmKit
   presentation edge cases; STATUS lists the device checks nobody documents.
 

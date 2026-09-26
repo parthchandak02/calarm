@@ -327,9 +327,13 @@ ID, journals fire times and reschedules on time-zone and clock changes. Most car
 [PR #2520](https://github.com/LoopKit/Loop/pull/2520).
 
 - **Missed-ring detection**: Nedaa treats an alarm that is past due, gone from AlarmKit and never
-  stopped or snoozed as *missed* and surfaces it. calarm journals but does not flag this.
-- **Stop *and* cancel** when removing an alarm that may be alerting (Trio, Alare). calarm's
-  `cancel(alarmID:)` calls only `cancel`.
+  stopped or snoozed as *missed* and surfaces it. Adopted 2026-09-26 (`missed` row label,
+  Settings → Status).
+- **Stop *and* cancel** when removing an alarm that may be alerting (Trio, Alare). **Not adopted,
+  deliberately:** calarm's `cancel(alarmID:)` is reached only from sync-driven removal, and the
+  Focus Block Creator script changes event IDs by insert-then-remove. Stopping there would
+  silence a correct ring whose replacement is already in the past. `terminate` already stops
+  alerting alarms once their hold ends.
 - **Keep `LiveActivityIntent`s in the app target**: compiled into a static library they get an
   empty type name and do not resolve (Nedaa). calarm's are in `Calarm/Intents`.
 - **Stable IDs plus diff, not cancel-all, fixed the 00:00 firing for one developer**; another says

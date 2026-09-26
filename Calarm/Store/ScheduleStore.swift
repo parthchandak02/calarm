@@ -22,6 +22,7 @@ final class ScheduleStore: ObservableObject {
     @Published private(set) var scheduleFailures: [ScheduleFailure] = []
     @Published private(set) var tooSoonWarnings: Set<String> = []
     @Published private(set) var lastRescheduleSummary: RescheduleSummary?
+    @Published private(set) var missedAlarms: [AlarmFireOutcome] = []
     @Published private(set) var deepLinkFailureMessage: String?
     @Published var showBulkEnableConfirmation = false
     @Published private(set) var eventsIdentityToken: String = ""
@@ -170,6 +171,7 @@ final class ScheduleStore: ObservableObject {
         // Reconcile before reload so missed/stuck AlarmKit alarms are cancelled even if
         // EventKit fetch hasn't run yet (AlarmKit does not wake the app — Apple docs).
         _ = await alarmScheduler.reconcileAlarmLifecycle(events: events)
+        refreshMissedAlarms()
         if hasEventSource {
             await reload()
         }
@@ -522,8 +524,18 @@ final class ScheduleStore: ObservableObject {
         requestReschedule(force: true)
     }
 
+    var missedOccurrenceIDs: Set<String> {
+        Set(missedAlarms.compactMap(\.occurrenceID))
+    }
+
+    func refreshMissedAlarms() {
+        let missed = AlarmJournalStore.missed()
+        if missed != missedAlarms { missedAlarms = missed }
+    }
+
     private func handleAlarmKitUpdate() async {
         objectWillChange.send()
+        refreshMissedAlarms()
         let cleaned = await alarmScheduler.reconcileAlarmLifecycle(events: events)
         let fingerprint = alarmScheduler.schedulingFingerprint(
             for: events,

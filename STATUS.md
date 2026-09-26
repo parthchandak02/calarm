@@ -62,6 +62,12 @@ shows the title row and tiles; digits sit on their tiles; after 10:00 or 1:00:00
 goes blank and the rest stay aligned; the compact Island is a short pill (lit square + tiles). Also check the
 in-app countdown's new flip looks right on device.
 
+**Check missed-alarm detection (next build).** Arm an event a few minutes out, lock the phone,
+let it ring out without touching it. About 5 minutes after the ring time the row should read
+`missed` and Settings → Status → *Missed alarms* should name it. Then arm another and tap
+Dismiss: it must *not* show as missed. Also check the Watch/CarPlay Live Activity shows the
+meeting title, and the minimal Island (start a timer in Clock too) is a draining ring.
+
 **Live Activity edge cases nobody documents (researched 2026-09-26).** On device: (1) turn
 Settings → CALarm → Live Activities **off**, arm an event with Island at 5 — does it ring?
 (2) swipe the countdown card away mid-countdown — does it still ring? (3) with the phone

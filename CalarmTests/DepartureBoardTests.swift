@@ -42,6 +42,7 @@ final class DepartureBoardTests: XCTestCase {
         XCTAssertEqual(DepartureBoard.rowLabel(for: event(startIn: 60, offsets: [.tenMinutes]), tooSoon: false), "passed")
         XCTAssertEqual(DepartureBoard.rowLabel(for: event(startIn: -60, offsets: [.tenMinutes]), tooSoon: false), "past")
         XCTAssertEqual(DepartureBoard.rowLabel(for: event(startIn: 3_600, offsets: [.tenMinutes]), tooSoon: true), "too soon")
+        XCTAssertEqual(DepartureBoard.rowLabel(for: event(startIn: -60, offsets: [.tenMinutes]), tooSoon: false, missed: true), "missed")
     }
 
     func testDayTitleNamesTodayAndTomorrow() {

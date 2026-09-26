@@ -174,7 +174,7 @@ final class AlarmScheduler {
         let scheduledAt = Date()
         let usesWindow = lead != .always
         let fireDate = scheduledAt.addingTimeInterval(Self.testAlarmExpectedRing(lead: lead))
-        let testID = "calarm.test.\(Int(fireDate.timeIntervalSince1970))"
+        let testID = "\(AlarmJournalReconciler.testOccurrencePrefix)\(Int(fireDate.timeIntervalSince1970))"
         let alarmID = AlarmSchedulingHelpers.stableAlarmID(occurrenceID: testID, offsetRawValue: "test")
         let idString = alarmID.uuidString
 

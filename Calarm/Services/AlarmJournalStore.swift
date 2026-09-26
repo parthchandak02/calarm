@@ -82,6 +82,10 @@ nonisolated enum AlarmJournalStore {
         AlarmJournalReconciler.reconcile(entries: load(), now: now)
     }
 
+    static func missed(now: Date = Date()) -> [AlarmFireOutcome] {
+        AlarmJournalReconciler.missed(in: outcomes(now: now), now: now)
+    }
+
     /// Called once per launch. `alarmUpdates` dies with the process, so this is the only
     /// place a fire that happened while the app was dead can be classified.
     static func reconcileOnLaunch(now: Date = Date()) {

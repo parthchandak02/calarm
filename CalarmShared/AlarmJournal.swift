@@ -150,6 +150,27 @@ nonisolated enum AlarmJournalReconciler {
         .sorted { $0.intendedFire < $1.intendedFire }
     }
 
+    /// Past alarms with no ring, stop or snooze seen. AlarmKit failed to fire, it rang
+    /// unanswered, or it was dismissed by a path that skips the stop intent (forums 842638,
+    /// 815064). The grace absorbs a ring the app observes a little late; the window keeps
+    /// yesterday's misses from lingering.
+    static func missed(
+        in outcomes: [AlarmFireOutcome],
+        now: Date,
+        grace: TimeInterval = 5 * 60,
+        window: TimeInterval = 24 * 3600
+    ) -> [AlarmFireOutcome] {
+        outcomes.filter { outcome in
+            let age = now.timeIntervalSince(outcome.intendedFire)
+            return outcome.status == .unobserved
+                && age >= grace
+                && age <= window
+                && !(outcome.occurrenceID?.hasPrefix(testOccurrencePrefix) ?? false)
+        }
+    }
+
+    static let testOccurrencePrefix = "calarm.test."
+
     static func summary(of outcomes: [AlarmFireOutcome]) -> String {
         let settled = outcomes.filter { $0.status != .pending }
         guard !settled.isEmpty else { return "no settled alarms yet" }

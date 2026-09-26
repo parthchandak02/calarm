@@ -266,6 +266,7 @@ struct ScheduleView: View {
 
     private var scheduleList: some View {
         let anchorID = tipAnchorEventID
+        let missedIDs = store.missedOccurrenceIDs
         return ScrollViewReader { proxy in
             List {
                 ForEach(store.groupedDays) { day in
@@ -275,6 +276,7 @@ struct ScheduleView: View {
                                 event: event,
                                 isNextAlarm: store.nextUpcomingAlarm?.id == event.id,
                                 hasTooSoonWarning: store.tooSoonWarnings.contains(event.id),
+                                hasMissedAlarm: missedIDs.contains(event.id),
                                 armTip: event.id == anchorID ? scheduleTips.currentTip as? ArmAlarmTip : nil,
                                 openTip: event.id == anchorID ? scheduleTips.currentTip as? OpenEventTip : nil,
                                 onOpen: { navigationPath.append(EventRoute(id: event.id)) },
@@ -397,16 +399,18 @@ private struct EventRow: View {
     let event: ScheduleEvent
     let isNextAlarm: Bool
     let hasTooSoonWarning: Bool
+    let hasMissedAlarm: Bool
     var armTip: ArmAlarmTip?
     var openTip: OpenEventTip?
     let onOpen: () -> Void
     let onToggle: () -> Void
 
     private var label: String {
-        DepartureBoard.rowLabel(for: event, tooSoon: hasTooSoonWarning)
+        DepartureBoard.rowLabel(for: event, tooSoon: hasTooSoonWarning, missed: hasMissedAlarm)
     }
 
     private var labelColor: Color {
+        if hasMissedAlarm { return theme.destructive }
         if hasTooSoonWarning || event.isReminderPassed { return theme.warning }
         if event.canScheduleAlarm { return theme.accent }
         return theme.textSecondary
@@ -442,7 +446,7 @@ private struct EventRow: View {
                 .padding(.vertical, 12)
                 .contentShape(Rectangle())
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(event.title), \(CalarmTheme.eventTimeString(event.startDate)), \(event.alarmSummary)")
+                .accessibilityLabel("\(event.title), \(CalarmTheme.eventTimeString(event.startDate)), \(hasMissedAlarm ? "alarm missed" : event.alarmSummary)")
             }
             .buttonStyle(.plain)
             .popoverTip(openTip, arrowEdge: .top)

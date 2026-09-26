@@ -197,4 +197,44 @@ final class AlarmJournalReconcilerTests: XCTestCase {
 
         XCTAssertEqual(outcomes[0].status, .unobserved)
     }
+
+    private func outcome(_ status: AlarmFireStatus, fire: Date, occurrenceID: String = "occ") -> AlarmFireOutcome {
+        AlarmFireOutcome(alarmID: "a", occurrenceID: occurrenceID, intendedFire: fire, observedAt: nil, status: status, processChanged: false)
+    }
+
+    func testUnobservedAlarmPastGraceIsMissed() {
+        let missed = AlarmJournalReconciler.missed(in: [outcome(.unobserved, fire: base)], now: base.addingTimeInterval(600))
+        XCTAssertEqual(missed.count, 1)
+    }
+
+    func testUnobservedAlarmWithinGraceIsNotYetMissed() {
+        let missed = AlarmJournalReconciler.missed(in: [outcome(.unobserved, fire: base)], now: base.addingTimeInterval(120))
+        XCTAssertTrue(missed.isEmpty)
+    }
+
+    func testMissedAlarmExpiresAfterADay() {
+        let missed = AlarmJournalReconciler.missed(in: [outcome(.unobserved, fire: base)], now: base.addingTimeInterval(25 * 3600))
+        XCTAssertTrue(missed.isEmpty)
+    }
+
+    func testObservedAndTestAlarmsAreNeverMissed() {
+        let now = base.addingTimeInterval(600)
+        let outcomes = [
+            outcome(.onTime, fire: base),
+            outcome(.late, fire: base),
+            outcome(.unobserved, fire: base, occurrenceID: AlarmJournalReconciler.testOccurrencePrefix + "1"),
+        ]
+        XCTAssertTrue(AlarmJournalReconciler.missed(in: outcomes, now: now).isEmpty)
+    }
+
+    func testArmedNeverObservedBecomesMissedEndToEnd() {
+        let outcomes = AlarmJournalReconciler.reconcile(entries: [armed("a", fire: base)], now: base.addingTimeInterval(600))
+        XCTAssertEqual(AlarmJournalReconciler.missed(in: outcomes, now: base.addingTimeInterval(600)).map(\.occurrenceID), ["occ-a"])
+    }
+
+    func testStoppedAlarmIsNotMissed() {
+        let entries = [armed("a", fire: base), observed("a", event: .stopped, at: base.addingTimeInterval(30))]
+        let outcomes = AlarmJournalReconciler.reconcile(entries: entries, now: base.addingTimeInterval(600))
+        XCTAssertTrue(AlarmJournalReconciler.missed(in: outcomes, now: base.addingTimeInterval(600)).isEmpty)
+    }
 }

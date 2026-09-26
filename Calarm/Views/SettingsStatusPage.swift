@@ -93,7 +93,10 @@ struct SettingsStatusPage: View {
             .padding(.bottom, 24)
         }
         .refreshable { entries = ActivityLog.load() }
-        .onAppear { entries = ActivityLog.load() }
+        .onAppear {
+            entries = ActivityLog.load()
+            store.refreshMissedAlarms()
+        }
         .onChange(of: store.lastRescheduleSummary) { _, _ in entries = ActivityLog.load() }
         .boardNavigationTitle("Status")
     }
@@ -160,6 +163,7 @@ struct SettingsStatusPage: View {
             Check(title: "Alarm access", value: alarmStatusLabel, isProblem: store.alarmAuthorization == .denied),
             Check(title: "Google", value: googleLabel, isProblem: store.googleSyncErrorMessage != nil),
             Check(title: "Alarm timing", value: alarmTimingLabel, isProblem: isTimingLate),
+            Check(title: "Missed alarms", value: missedLabel, isProblem: !store.missedAlarms.isEmpty),
             Check(title: "Last reschedule", value: lastRescheduleLabel, isProblem: !store.scheduleFailures.isEmpty),
             Check(title: "Events loaded", value: eventSourceLabel, isProblem: false),
         ]
@@ -170,6 +174,18 @@ struct SettingsStatusPage: View {
         case .countdownStartsAtFireDate, .other, .early: true
         default: false
         }
+    }
+
+    /// No ring, stop or snooze seen: it did not fire, rang unanswered, or was dismissed by a
+    /// path that skips the stop intent.
+    private var missedLabel: String {
+        let missed = store.missedAlarms
+        guard let last = missed.last else { return "None · 24h" }
+        if missed.count > 1 { return "\(missed.count) · 24h" }
+        let title = store.events.first { $0.id == last.occurrenceID }?.title
+            ?? UUID(uuidString: last.alarmID).map(AlarmScheduler.displayTitle(for:))
+            ?? "Alarm"
+        return "\(title) · \(last.intendedFire.formatted(date: .omitted, time: .shortened))"
     }
 
     private var alarmTimingLabel: String {
