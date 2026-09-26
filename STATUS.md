@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-25** — update this date whenever you change this file.
+**Last updated: 2026-09-26** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
-| **Latest build** | `20260925.1515` — uploaded 15:16, **still `PROCESSING` at Apple** (not yet in TestFlight). `20260924.2243` is the latest testers can install. The ship's tester-group step timed out and was re-run by hand; its `--latest` picked 2243, so 1515 still needs the group once it is `VALID` |
+| **Latest build** | `20260925.1515` — `VALID`, `IN_BETA_TESTING` (build `e60ca6f9…`, verified by build ID 2026-09-26; Apple processing took hours, tester group added by hand) |
 | **Tests** | 155 passing (`CalarmTests`, 2026-09-25) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
