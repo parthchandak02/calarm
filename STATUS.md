@@ -15,7 +15,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
-| **Latest build** | `20260925.1515` — `VALID`, `IN_BETA_TESTING` (build `e60ca6f9…`, verified by build ID 2026-09-26; Apple processing took hours, tester group added by hand) |
+| **Latest build** | `20260926.0204` — `VALID`, `IN_BETA_TESTING` (verified by `ship-testflight.sh`) |
 | **Tests** | 155 passing (`CalarmTests`, 2026-09-25) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |

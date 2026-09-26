@@ -15,6 +15,10 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Build 20260926.0204 — 2026-09-26
+
+No user-facing changes recorded.
+
 ## Build 20260925.1515 — 2026-09-25
 
 ### Added
