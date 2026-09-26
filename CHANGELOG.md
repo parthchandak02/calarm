@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Build 20260926.1256 — 2026-09-26
+## Unreleased — 2026-09-26
 
 ### Changed
 
@@ -26,6 +26,10 @@ this file exists so an agent can see the shape of the project's history without 
   Two CALarm countdowns sharing the Island are now distinguishable. Paused shows a dimmed ring.
 - RESEARCH.md: Live Activity surfaces, the Island opt-out (there is none) and AlarmKit
   presentation edge cases; STATUS lists the device checks nobody documents.
+
+## Build 20260926.1256 — 2026-09-26
+
+### Changed
 
 - **One ship script.** `scripts/ship.sh` is the only entry point; its steps are functions in
   `scripts/lib/pipeline.sh`. A TestFlight ship used to chain seven scripts four levels deep
