@@ -16,16 +16,12 @@ mkdir -p "$TARGET/scripts/lib"
 
 FILES=(
   ios-app.config.sh.example
-  release.sh
   ExportOptions.plist.example
   scripts/lib/pipeline.sh
-  scripts/ios-doctor.sh
   scripts/configure-credentials.sh
   scripts/bootstrap-portal.sh
   scripts/setup-asc-cli.sh
-  scripts/verify-asc-api.sh
   scripts/ship.sh
-  scripts/preflight-release.sh
   pipeline/BOOTSTRAP_NEW_APP.md
 )
 

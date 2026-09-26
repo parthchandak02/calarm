@@ -1,29 +1,36 @@
 ---
 name: calarm-release-pipeline
 description: >-
-  CALarm iOS release pipeline: ship.sh, ios-doctor, configure-credentials, ios-app.config,
-  and reusable scripts for multi-app deployment. Use when bootstrapping releases or CI.
+  CALarm iOS release pipeline: the single ship.sh entry point, its step library
+  (scripts/lib/pipeline.sh), ios-app.config and credential setup. Use when changing the
+  release pipeline, bootstrapping releases, or porting it to another app.
 ---
 
 # CALarm Release Pipeline
 
 ## Entry points
 
+**One script ships: `scripts/ship.sh`.** Its steps are functions in `scripts/lib/pipeline.sh`
+(`run_doctor`, `stamp_build_number`, `archive_and_upload`, `asc_build_id`, `assign_testers`,
+`verify_in_beta`, `record_build`, `publish_build_record`). To change the pipeline, change a
+function or add one and call it from `ship.sh`. **Do not add another ship script**: the
+previous seven-script chain let the upload, tester assignment and verification disagree
+about which build they meant.
+
 | Command | Purpose |
 |---------|---------|
-| `./scripts/ship-testflight.sh` | **The one ship command**, run on the signing Mac (or over `ssh -t`). Updates itself from `main`, prompts for the keychain, ships, verifies `IN_BETA_TESTING`, records the build (`record-build.sh`), pushes |
-| `./deploy.sh 1` | Simulator debug build |
-| `./deploy.sh 2` | Physical device (stamp + install + verify) |
-| `./release.sh` | Release archive + upload straight to App Store Connect (`ExportOptions` sets `destination: upload`, so no local IPA is written) |
-| `./scripts/ship.sh doctor` | Toolchain + signing health check |
-| `./scripts/ship.sh beta` | Doctor → tests → `./release.sh` → Internal Testing group. **The ship path** |
-| `./scripts/ship.sh all` | Still routes through the fastlane `upload_beta` lane, which is broken — see `calarm-testflight-fastlane` |
+| `./scripts/ship.sh beta` | **The ship.** On the signing Mac: fast-forward to `main`, keychain, doctor, tests, stamp, archive + upload, then `finish` |
+| `./scripts/ship.sh finish <build>` | Resume after the upload: wait for Apple (≤30 min), add that build to Internal Testing by ID, verify `IN_BETA_TESTING`, record, push |
+| `./scripts/ship.sh doctor` | Toolchain, credentials, signing probe, ASC auth |
+| `./scripts/ship.sh stamp` | Fresh `YYYYMMDD.HHmm` CFBundleVersion (`deploy.sh` calls it) |
+| `./scripts/ship.sh metadata` / `screenshots` | App Store metadata upload / screenshot generation |
+| `./deploy.sh 1` / `./deploy.sh 2` | Simulator / physical device debug install |
 
 ## Config
 
 - `ios-app.config.sh` — per-app constants (bundle ID, scheme, ASC SKU, capabilities)
 - Copy from `ios-app.config.sh.example` for new apps
-- `scripts/lib/pipeline.sh` — shared `load_app_config`, `asc_env_ready`, logging
+- `scripts/lib/pipeline.sh` — config loading plus every release step
 
 ## Credential setup (one-time)
 
@@ -36,16 +43,18 @@ description: >-
 ## Doctor
 
 ```bash
-./scripts/ios-doctor.sh
+./scripts/ship.sh doctor
 ```
 
-Checks: Xcode, bundle, fastlane, ASC auth, signing probe, screenshots.
+Checks: Xcode, bundler, fastlane, asc, jq, ExportOptions, privacy manifest, export-encryption
+key, `fastlane/.env` values (incl. the tester group ID), ASC auth, placeholder URLs, a Release
+signing build, screenshots.
 
 ## Port to another iOS app
 
 1. Copy `ios-app.config.sh.example` → `ios-app.config.sh`
-2. Copy `scripts/` pipeline scripts
-3. Wire `fastlane/Fastfile` lanes
+2. `./pipeline/install-into-repo.sh <other-repo>` copies `ship.sh`, the library and setup tools
+3. Replace CALarm-specific checks in `run_doctor` (privacy manifest path, Info.plist path) and the test scheme in `run_calarm_unit_tests`
 4. Set `REQUIRED_CAPABILITIES` for portal bootstrap
 
 ## Docs

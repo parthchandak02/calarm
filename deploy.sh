@@ -250,7 +250,7 @@ else
     log_success "Cleaned build directory"
 
     log_step "Stamping date-based build number (CFBundleVersion)"
-    "$SCRIPT_DIR/scripts/stamp-build-version.sh"
+    "$SCRIPT_DIR/scripts/ship.sh" stamp
 
     # Build with Xcode bug workaround
     echo_section "🔨 Building $APP_NAME"

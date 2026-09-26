@@ -50,7 +50,7 @@ Do **not** run `xcodebuild test` or boot simulators on this Mac unless the user 
 3. Doctor:
 
 ```bash
-./scripts/ios-doctor.sh
+./scripts/ship.sh doctor
 ```
 
 ## Ship to TestFlight
@@ -61,24 +61,25 @@ each `ssh` gets its own security session, so unlocking in a separate invocation 
 nothing. The owner types the password; do not handle it.
 
 ```bash
-./scripts/ship-testflight.sh        # at the signing Mac
-ssh -t <signing-mac> '<repo>/scripts/ship-testflight.sh'   # over SSH; owner's exact command is in AGENTS.md § Owner's setup
+./scripts/ship.sh beta        # at the signing Mac
+ssh -t <signing-mac> '<repo>/scripts/ship.sh beta'   # over SSH; owner's exact command is in AGENTS.md § Owner's setup
 ```
 
-One command, the owner types only the keychain password. In one SSH session on the mini:
-`scripts/ship-testflight.sh` discards uncommitted changes → `git pull --ff-only` → re-runs its
-updated self → keychain prompt → `ship.sh beta` (doctor → tests → `./release.sh` → Internal Testing group) → poll ASC until
-`IN_BETA_TESTING` → `scripts/record-build.sh N` (STATUS *Latest build*, top `## Unreleased`
-CHANGELOG heading → `## Build N`) → commit `Ship build N to TestFlight` → rebase → push.
-Then `git pull` here. Timed log in the signing Mac's `build/logs/ship-*.log`. Never hand the owner an inline
-`ssh` one-liner.
+One command; the owner types only the keychain password (or nothing, through the herdr pane in
+AGENTS.md § Owner's setup). `ship.sh beta` refuses if anything but the build stamp is
+uncommitted → `git pull --ff-only` → re-runs its updated self → keychain → doctor → tests →
+stamp → archive + upload → `finish`: wait for Apple to process that exact build → add it to
+Internal Testing **by build ID** → verify `IN_BETA_TESTING` → record (STATUS *Latest build*, top
+`## Unreleased` CHANGELOG heading → `## Build N`) → commit `Ship build N to TestFlight` →
+rebase → push. Then `git pull` here. Timed log in the signing Mac's `build/logs/ship-*.log`.
 
-**Not `fastlane ios upload_beta`.** That lane builds through gym, which never received the
-ASC API key auth `release.sh` passes to xcodebuild, and fails with *No Accounts / No signing
-certificate "iOS Distribution" found*. See the `calarm-testflight-fastlane` skill.
+**If it fails after the upload** (Apple slow, an API timeout), nothing is lost: run
+`./scripts/ship.sh finish <build>` on the signing Mac once Apple has processed the build. Do
+not finish by hand.
 
-No follow-up commit is needed; the script verifies ASC and records the build itself.
-If it stops at step 2 with a non-`IN_BETA_TESTING` state, see *Verify on ASC* below.
+**Not fastlane for binaries.** Its gym path never had the ASC API key auth that
+`archive_and_upload` passes to xcodebuild, and fails with *No Accounts / No signing
+certificate "iOS Distribution" found*. The `upload_beta` lane has been removed.
 
 ### Update release notes
 
@@ -99,20 +100,19 @@ asc builds list --app "$ASC_APP_APPLE_ID" --limit 3 --output table --sort -uploa
 not `READY_FOR_BETA_TESTING`. The API key's role returns 403 on `/builds/{id}/betaGroups`, so
 read the beta detail rather than group membership.
 
-Group assignment runs automatically at the end of `ship.sh beta` via
-`scripts/add-testflight-internal-group.sh`. It looks up the stamped
-`CURRENT_PROJECT_VERSION` with `scripts/asc-build-id.sh` (numeric match: App Store Connect
-lists `.0204` as `.204`), waits up to 30 min for it to be `VALID`, and assigns **that build
-ID**. Never use `--latest`: right after an upload it is the previous build.
+Tester assignment (`assign_testers` in `scripts/lib/pipeline.sh`) looks up the stamped
+`CURRENT_PROJECT_VERSION` with `asc_build_id` (numeric match: App Store Connect lists `.0204`
+as `.204`), waits up to 30 min for it to be `VALID`, and assigns **that build ID**. Never use
+`--latest`: right after an upload it is the previous build.
 
 ## Common errors
 
 | Error | Fix |
 |-------|-----|
-| Build number already used | `stamp-build-version.sh`, delete `build/export/`, rebuild |
+| Build number already used | Re-run `./scripts/ship.sh beta`; it stamps a new number each run |
 | `No Accounts / No signing certificate "iOS Distribution"` | You are on the fastlane/gym path. Use `./scripts/ship.sh beta` |
 | `CodeSign errSecInternalComponent` over SSH | The login keychain is locked. Unlock it **in the same** `ssh -t` session as the build |
-| Upload succeeded, build never appears for testers | Apple still processing (check `asc builds uploads list`), or the group step failed. When it is `VALID`: `./scripts/add-testflight-internal-group.sh <build-number>` |
+| Upload succeeded, build never appears for testers | Apple still processing (check `asc builds uploads list`), or a late step failed. `./scripts/ship.sh finish <build>` |
 | Tests fail / DB locked | `pkill -9 -f xcodebuild`; retry with separate `-derivedDataPath /tmp/calarm-ci-dd` |
 | Missing ASC credentials | `./scripts/configure-credentials.sh <ISSUER_ID>` |
 

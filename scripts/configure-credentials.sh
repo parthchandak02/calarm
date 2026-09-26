@@ -81,7 +81,7 @@ log_step "Portal capabilities (Siri, etc.)"
 "$SCRIPT_DIR/bootstrap-portal.sh" || true
 
 log_step "Re-run doctor"
-"$SCRIPT_DIR/ios-doctor.sh" || true
+"$SCRIPT_DIR/ship.sh" doctor || true
 
 echo ""
 echo "Credentials configured. If doctor still shows Siri blocker, enable Siri manually:"

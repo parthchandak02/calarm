@@ -57,19 +57,24 @@ xcrun simctl delete "$UDID"
 ```
 
 ```bash
-./scripts/ship.sh doctor    # run before anything release-shaped
-./scripts/ship.sh beta      # tests + archive + TestFlight + tester group
-./deploy.sh 1               # simulator      ./deploy.sh 2   # device
+./scripts/ship.sh doctor          # run before anything release-shaped
+./scripts/ship.sh beta            # the whole TestFlight ship (on the signing Mac)
+./scripts/ship.sh finish <build>  # resume a ship that failed after the upload
+./deploy.sh 1                     # simulator      ./deploy.sh 2   # device
 ```
 
-**Shipping** runs `scripts/ship-testflight.sh` on whichever Mac holds the distribution
-signing identity and the App Store Connect API key (configured in its gitignored
-`fastlane/.env`; see `fastlane/.env.example`). It updates itself from `main`, unlocks the
-login keychain (always over SSH, where each session has its own security session; locally
-only if locked), runs `ship.sh beta` (doctor, tests, archive, upload, tester group), waits
-for `IN_BETA_TESTING` in ASC, runs `record-build.sh` (STATUS *Latest build*; the top
-`## Unreleased` CHANGELOG heading becomes `## Build N`), commits and pushes. Timed log in
-that Mac's `build/logs/`. Work happens on `main`; no side branches. Before shipping, title
+**Shipping is one script, `scripts/ship.sh`; its steps are functions in
+`scripts/lib/pipeline.sh`.** Per-app settings live in `ios-app.config.sh`, credentials in the
+gitignored `fastlane/.env` (see `fastlane/.env.example`). `ship.sh beta` runs on whichever Mac
+holds the distribution identity and API key: it refuses if anything but the build stamp is
+uncommitted, fast-forwards to `main` and re-runs the updated copy, unlocks the login keychain
+(always over SSH; otherwise only if locked), runs doctor and unit tests, stamps, archives and
+uploads, then `finish`es: waits for Apple to process that exact build (up to 30 min), adds it
+to Internal Testing **by build ID**, verifies `IN_BETA_TESTING`, records it (STATUS *Latest
+build*; the top `## Unreleased` CHANGELOG heading becomes `## Build N`), commits and pushes. If
+anything after the upload fails, `ship.sh finish <build>` resumes. Timed log in that Mac's
+`build/logs/`. Do not add more ship scripts: add a function to the library and a step to
+`ship.sh`. Work happens on `main`; no side branches. Before shipping, title
 pending CHANGELOG work `## Unreleased — YYYY-MM-DD` so it gets the build number.
 
 **Release Mac vs dev Mac toolchains can differ.** An iOS 27 SDK API compiles under Xcode 27
@@ -91,7 +96,7 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **Ship command — hand the owner exactly this**, nothing longer, no local wrapper scripts:
 
   ```bash
-  ssh -t macmini-remote '~/projects/calarm/scripts/ship-testflight.sh'
+  ssh -t macmini-remote '~/projects/calarm/scripts/ship.sh beta'
   ```
 
   The owner types the keychain password; never handle it. Afterwards `git pull` here.
@@ -101,7 +106,7 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
   "already unlocked" path:
 
   ```bash
-  ssh macmini-remote 'herdr pane run w2:p1 "./scripts/ship-testflight.sh"'
+  ssh macmini-remote 'herdr pane run w2:p1 "./scripts/ship.sh beta"'
   ```
 
   Watch with `ssh macmini-remote 'herdr pane read w2:p1 --source recent --lines 40'`. If the
@@ -194,7 +199,7 @@ CalarmWidgetExtension/   Live Activity + Dynamic Island views
 CalarmShared/            Types compiled into both targets (not a module)
 CalarmTests/             Unit tests      CalarmUITests/   Screenshot automation
 apps-script/             Apps Script relay (alternative backend, not deployed)
-scripts/                 ship.sh, ios-doctor.sh, stamping, credentials
+scripts/                 ship.sh (+ lib/pipeline.sh), credential and asset setup tools
 docs/app-store/          Publishing playbooks; docs/ is also the Pages site
 .claude/skills/          Task playbooks  .claude/agents/  Subagent definitions
 ```
