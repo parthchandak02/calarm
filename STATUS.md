@@ -19,7 +19,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | **Latest build** | `20260926.1356` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
 | **Tests** | 190 passing (`CalarmTests`, 2026-09-27) |
 | **Doctor** | 0 warnings |
-| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
+| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, **sign-in on device not yet retested** |
 | **Backend** | None. No Worker, no relay deployed |
 
 The app is installable from TestFlight and works off EventKit alone. Everything in
@@ -234,6 +234,7 @@ These need credentials or console access an agent should not have:
 
 - ~~Consent screen "In production"~~ — already was (External, 1/100 user cap, unverified).
 - ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
+- **Publish the `calarmapp-ios` consent screen** (Audience → Publish app) if it still says Testing, then delete the old "CALarm iOS" client in the previous project once sign-in works on device.
 - **Google verification** before any public release: calendar read is a sensitive scope, so
   unverified means a warning screen and a lifetime 100-user cap.
 - **Cloudflare account** — existing or new? Free tier suffices.

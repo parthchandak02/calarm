@@ -11,6 +11,6 @@
 	<key>BUNDLE_ID</key>
 	<string>com.calarmapp.calarm</string>
 	<key>PROJECT_ID</key>
-	<string>useful-field-497119-k5</string>
+	<string>calarmapp-ios</string>
 </dict>
 </plist>

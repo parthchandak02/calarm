@@ -165,3 +165,6 @@ reference-photos/
 # Local-only notes (employer details and anything else that must stay out of this public repo)
 notes/
 .claude/worktrees/
+
+# Google OAuth client plists as downloaded from the console
+client_*.apps.googleusercontent.com.plist

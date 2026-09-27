@@ -11,7 +11,7 @@ Tier 1 (implemented in the iOS app) uses direct Google API polling on foreground
 
 ## GCP project
 
-Reuse **`useful-field-497119-k5`** (Calendar API + Pub/Sub already enabled).
+Use **`calarmapp-ios`**, CALarm's own project (Calendar API only; enable Pub/Sub when needed).
 
 ## Google APIs
 

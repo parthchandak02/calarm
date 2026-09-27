@@ -3,7 +3,7 @@
 # CALarm, including macmini-remote, after placing the iOS OAuth client plist.
 #
 # The plist comes from Google Cloud console → Google Auth Platform → Clients → the iOS
-# client for com.calarmapp.calarm (project useful-field-497119-k5) → Download plist.
+# client for com.calarmapp.calarm (project calarmapp-ios) → Download plist.
 #
 #   ./scripts/setup-google-oauth.sh [path/to/client_….plist]
 #

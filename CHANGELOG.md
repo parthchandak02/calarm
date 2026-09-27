@@ -46,6 +46,11 @@ each able to cost a meeting or corrupt Gate 1 data:
 
 ### Changed
 
+- **Google sign-in moved to its own Cloud project, `calarmapp-ios`.** The iOS client lived in
+  a personal project that also held Gmail, Drive and Chat access; Google verifies a consent
+  screen's scopes together, and Gmail is restricted, which would have forced a paid security
+  assessment. The new project has only the Calendar API, no billing, no keys or service
+  accounts. Raw client plists are now gitignored.
 - **README rewritten as a pitch.** Icon hero, fresh screenshots from screenshot mode, a
   Dynamic Island and Lock Screen illustration drawn from the widget's layout and pixel font,
   a comparison with calendar notifications and Clock alarms, and developer detail folded

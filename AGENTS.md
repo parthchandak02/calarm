@@ -175,7 +175,10 @@ is an SSH alias whose host and key live only in the owner's `~/.ssh/config`.
 - **`Calarm/GoogleService-Info.plist` and `Config/Google.local.xcconfig` are gitignored** —
   Google sign-in is off on a fresh clone until `./scripts/setup-google-oauth.sh <client
   plist>` runs. The plist is in Google Cloud console → Google Auth Platform → Clients →
-  "CALarm iOS" (project `useful-field-497119-k5`, account parth.chandak02@gmail.com).
+  "CALarm iOS" (project `calarmapp-ios`, account parth.chandak02@gmail.com). That project
+  holds CALarm alone, with only the Calendar API and no billing; keep it that way, since
+  Google verifies every scope on a project's consent screen together. OAuth clients and the
+  consent screen cannot be created or edited from `gcloud` (the API was shut down in 2026).
 - **A separate Apps Script mutates this calendar.** "Focus Block Creator" converts solo
   events via insert-then-remove, which **changes the event ID** and orphans preferences
   keyed to it.
