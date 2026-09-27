@@ -20,6 +20,6 @@ ARCHIVE_NAME="Calarm.xcarchive"
 REQUIRED_CAPABILITIES="SIRIKIT"
 
 # GitHub Pages base (privacy/support URLs)
-MARKETING_URL="https://parthchandak02.github.io/calarm/"
-PRIVACY_URL="https://parthchandak02.github.io/calarm/privacy.html"
-SUPPORT_URL="https://parthchandak02.github.io/calarm/support.html"
+MARKETING_URL="https://calarm.parthchandak.info/"
+PRIVACY_URL="https://calarm.parthchandak.info/privacy.html"
+SUPPORT_URL="https://calarm.parthchandak.info/support.html"

@@ -73,9 +73,9 @@ Register widget bundle ID in [Identifiers](https://developer.apple.com/account/r
 
 **GitHub Pages is enabled** on this repo (`main` → `/docs`).
 
-- Privacy: https://parthchandak02.github.io/calarm/privacy.html
-- Support: https://parthchandak02.github.io/calarm/support.html
-- Landing: https://parthchandak02.github.io/calarm/
+- Privacy: https://calarm.parthchandak.info/privacy.html
+- Support: https://calarm.parthchandak.info/support.html
+- Landing: https://calarm.parthchandak.info/
 
 After pushing doc changes, wait 1–2 minutes for Pages to rebuild.
 

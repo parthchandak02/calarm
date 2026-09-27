@@ -46,6 +46,10 @@ each able to cost a meeting or corrupt Gate 1 data:
 
 ### Changed
 
+- **Site moved to `calarm.parthchandak.info`.** GitHub Pages now serves `docs/` on the
+  owner's domain (Cloudflare CNAME, DNS only, so GitHub issues the certificate). Homepage,
+  privacy and support URLs in fastlane metadata and `ios-app.config.sh` follow. Google OAuth
+  branding rejects a shared `github.io` host as not owned.
 - **Google sign-in moved to its own Cloud project, `calarmapp-ios`.** The iOS client lived in
   a personal project that also held Gmail, Drive and Chat access; Google verifies a consent
   screen's scopes together, and Gmail is restricted, which would have forced a paid security

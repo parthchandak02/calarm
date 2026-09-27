@@ -32,7 +32,7 @@ Last updated: 2026-06-30. **Start here:** [docs/app-store/PUBLISH_PLAYBOOK.md](d
 - [ ] **Apple Developer Program** — active paid membership
 - [x] **API key `.p8`** — `~/Keys/AuthKey_<KEY_ID>.p8`
 - [ ] **Set `ASC_APP_APPLE_ID`** — auto-filled by `configure-credentials.sh` or ASC URL
-- [ ] **Verify GitHub Pages URLs** — https://parthchandak02.github.io/calarm/privacy.html (after deploy)
+- [ ] **Verify GitHub Pages URLs** — https://calarm.parthchandak.info/privacy.html (after deploy)
 - [ ] **App Privacy questionnaire** — ASC (match `PrivacyInfo.xcprivacy`)
 - [ ] **Age rating** — ASC questionnaire
 - [ ] **Distribution signing** — Xcode Release archive once if export fails
