@@ -46,6 +46,9 @@ each able to cost a meeting or corrupt Gate 1 data:
 
 ### Changed
 
+- **Playbook for Google's OAuth demo video** (`docs/app-store/GOOGLE_OAUTH_DEMO.md`): checkout,
+  simulator recording, a font-free ffmpeg edit (tested), the verification justification text
+  and submission steps. Written for a machine other than the Mac mini.
 - **Site moved to `calarm.parthchandak.info`.** GitHub Pages now serves `docs/` on the
   owner's domain (Cloudflare CNAME, DNS only, so GitHub issues the certificate). Homepage,
   privacy and support URLs in fastlane metadata and `ios-app.config.sh` follow. Google OAuth
