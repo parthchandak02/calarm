@@ -109,7 +109,11 @@ nonisolated enum AlarmJournalReconciler {
             guard let armed = sorted.last(where: { $0.event == .scheduled && $0.intendedFire != nil }),
                   let intendedFire = armed.intendedFire else { return nil }
 
-            if sorted.contains(where: { $0.event == .cancelled && $0.wallClock > armed.wallClock }) {
+            // Only a cancel before the ring withdraws the alarm. Cleanup cancels a spent or
+            // stuck alarm after its time, and that must not erase a miss.
+            if sorted.contains(where: {
+                $0.event == .cancelled && $0.wallClock > armed.wallClock && $0.wallClock < intendedFire
+            }) {
                 return nil
             }
 

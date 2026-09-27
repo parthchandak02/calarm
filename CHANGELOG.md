@@ -15,6 +15,35 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-27
+
+### Fixed
+
+Four reliability bugs found by a multi-agent review (UX, engineering, features, adversarial),
+each able to cost a meeting or corrupt Gate 1 data:
+
+- **A started Google meeting no longer loses its snoozed or ringing alarm.** The Google path
+  kept only events with `startDate >= now`, so the first reload after a meeting began dropped
+  it and `cancelRemoved` cancelled its alarm mid-snooze. Google now keeps in-progress events,
+  as EventKit already did (`GoogleSyncPolicy.isInWindow`), and `cancelRemoved` never cancels
+  an alarm that is ringing or inside its hold (`AlarmSchedulingHelpers.survivesEventRemoval`).
+- **A disarmed alarm no longer shows as missed.** `terminate()` wrote no journal entry, so an
+  alarm removed by `cancelUndesiredAlarms` read as unobserved, then missed. It now records
+  `.cancelled`, and the reconciler honours only a cancel *before* the intended fire, so
+  cleanup after an unanswered ring still leaves the miss visible.
+- **A failed Google fetch no longer strands stale data.** Sync tokens were saved before the
+  window fetch that depended on them; a failure spent the delta and later passes read
+  "nothing changed". Tokens are now committed only after success, the fetch is single-flight
+  (a calendar toggled mid-fetch triggers a fresh one), and the window is refetched hourly so
+  days rolling into the 8-day horizon appear without an edit.
+- **An armed meeting keeps its alarm when its ID changes.** Occurrence IDs embed the start
+  time, so a move, a Focus Block Creator re-insert or an EventKit↔Google swap produced a new
+  ID that fell back to the default ("No alarm"). `EventContinuity.carriedSettings` moves an
+  armed setting to the same underlying event (within 24h) or the same title in the same minute.
+  Only armed settings travel, so a wrong match adds a ring rather than silencing one.
+
+19 new unit tests (190 total).
+
 ## Build 20260926.1356 — 2026-09-26
 
 ### Changed

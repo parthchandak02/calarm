@@ -932,6 +932,11 @@ and **nobody has ever seen the diagnostic**. Pure helpers and DTOs need explicit
   which means an event deleted in another session can still ring once. Orphans that coincide
   with a managed alarm are cancelled as duplicates since 2026-09-24.
 
+- **An event moved while CALarm is not running loses its per-event setting.** Carrying a
+  setting across an ID change (`EventContinuity`) compares against the previous in-memory
+  event list, which is empty on the first reload after a cold launch. Fixing it needs titles
+  and start times persisted beside the overrides.
+
 - **`ScheduleStore` is a ~640-line god object** with 16 `@Published` properties that
   instantiates its own services, so it cannot be constructed in a test without EventKit and
   AlarmKit. This is the structural obstacle to extending the app. Chip at it by extracting

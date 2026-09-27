@@ -159,4 +159,12 @@ final class AlarmSchedulingHelpersTests: XCTestCase {
         XCTAssertFalse(AlarmSchedulingHelpers.isDuplicateFire(base, of: []))
         XCTAssertFalse(AlarmSchedulingHelpers.isDuplicateFire(base, of: [base.addingTimeInterval(60)]))
     }
+
+    func testRingingOrSnoozedAlarmSurvivesItsEventLeavingTheSchedule() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertTrue(AlarmSchedulingHelpers.survivesEventRemoval(isAlerting: true, holdUntil: nil, now: now))
+        XCTAssertTrue(AlarmSchedulingHelpers.survivesEventRemoval(isAlerting: false, holdUntil: now.addingTimeInterval(300), now: now))
+        XCTAssertFalse(AlarmSchedulingHelpers.survivesEventRemoval(isAlerting: false, holdUntil: now.addingTimeInterval(-1), now: now))
+        XCTAssertFalse(AlarmSchedulingHelpers.survivesEventRemoval(isAlerting: false, holdUntil: nil, now: now))
+    }
 }

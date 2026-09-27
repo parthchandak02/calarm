@@ -127,10 +127,20 @@ final class AlarmScheduler {
     }
 
     func cancelRemoved(eventIDs: Set<String>) async {
+        guard !eventIDs.isEmpty else { return }
+        let live = (try? AlarmManager.shared.alarms) ?? []
         // Not cancellable: by now `events` no longer lists these IDs, so a skipped cancel
         // leaves an orphan that rings next to its replacement.
         for eventID in eventIDs {
-            await cancelAll(for: eventID)
+            for offset in AlarmOffsetOption.schedulableOffsets {
+                let id = stableAlarmID(for: eventID, offset: offset)
+                if let alarm = live.first(where: { $0.id == id }),
+                   AlarmSchedulingHelpers.survivesEventRemoval(isAlerting: isAlerting(alarm), holdUntil: holdUntil(for: alarm)) {
+                    SchedulerLog.info("kept ringing or snoozed alarm of removed event \(eventID)")
+                    continue
+                }
+                await cancel(occurrenceID: eventID, offset: offset)
+            }
         }
     }
 
@@ -572,6 +582,8 @@ final class AlarmScheduler {
         do {
             try AlarmManager.shared.cancel(id: alarm.id)
             Self.clearStoredState(for: alarm.id)
+            // A disarm lands here via `cancelUndesiredAlarms`; unrecorded, it read as missed.
+            AlarmJournalStore.record(.cancelled, alarmID: alarm.id.uuidString)
             return true
         } catch {
             SchedulerLog.warning("cancel failed \(alarm.id): \(error.localizedDescription)")

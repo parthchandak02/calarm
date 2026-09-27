@@ -129,6 +129,15 @@ enum AlarmSchedulingHelpers {
         max(alertingCleanupGrace, snoozeSeconds + alertingCleanupGrace)
     }
 
+    /// True when an alarm must survive its event leaving the schedule: it is ringing, or a
+    /// snooze or ring is still held. Cancelling either silently ends the wake-up; the orphan
+    /// reconciler removes it once the hold passes.
+    nonisolated static func survivesEventRemoval(isAlerting: Bool, holdUntil: Date?, now: Date = Date()) -> Bool {
+        if isAlerting { return true }
+        guard let holdUntil else { return false }
+        return now < holdUntil
+    }
+
     /// True when an alarm should go because its event ended. A snooze or ring still held
     /// outlives the event: a short meeting otherwise killed its own alarm.
     static func shouldEndWithEvent(endDate: Date, holdUntil: Date?, now: Date = Date()) -> Bool {

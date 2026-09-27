@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-26** — update this date whenever you change this file.
+**Last updated: 2026-09-27** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -15,8 +15,9 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | | |
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
+| **Where work happens** | On the Mac mini itself (from 2026-09-27), Xcode 26.6 = the release toolchain. Two clones exist there: `/Volumes/ExternalSSD/Projects/calarm` and `~/projects/calarm` (the one `ship.sh` and herdr use); keep both pulled |
 | **Latest build** | `20260926.1356` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
-| **Tests** | 165 passing (`CalarmTests`, 2026-09-26) |
+| **Tests** | 190 passing (`CalarmTests`, 2026-09-27) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Plist + `Config/Google.local.xcconfig` are local on this Mac and `macmini-remote` |
 | **Backend** | None. No Worker, no relay deployed |
@@ -116,6 +117,24 @@ this Xcode install.
 ```bash
 log show --predicate 'subsystem == "com.calarmapp.calarm" AND category == "alarmjournal"' --last 7d --info
 ```
+
+---
+
+## Direction (decided 2026-09-27)
+
+A multi-agent review (UX, engineering, features, adversarial) settled the order: **reliability
+fixes → one consolidated on-device check + Gate 1 → push (Gates 2–3) or stop.** No new
+features or redesign until Gate 1 has data.
+
+- **Done (unreleased):** four missed-meeting bugs, see CHANGELOG *Unreleased — 2026-09-27*.
+- **Next:** ship, then collapse *Waiting on the owner* into one 15-minute checklist that
+  doubles as the Gate 1 overnight run; pull the journal. Then a "synced N min ago" line on home.
+- **Rejected, with reasons:** Foundation Models for scheduling (a wrong "skip" is a missed
+  meeting; rules beat it; see RESEARCH § Apple Intelligence), a database (no bug traced to
+  UserDefaults), a global auto-arm default (work busy blocks would all ring; alarm fatigue),
+  more screens, travel-time alarms, Control Center control, join-meeting button.
+- **Later, if Gate 1 passes:** per-calendar opt-in arm rules (excluding busy-only), Siri
+  `ClockIntent` wiring, board-style pass on event detail and Settings de-duplication.
 
 ---
 

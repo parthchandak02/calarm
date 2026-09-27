@@ -237,4 +237,23 @@ final class AlarmJournalReconcilerTests: XCTestCase {
         let outcomes = AlarmJournalReconciler.reconcile(entries: entries, now: base.addingTimeInterval(600))
         XCTAssertTrue(AlarmJournalReconciler.missed(in: outcomes, now: base.addingTimeInterval(600)).isEmpty)
     }
+
+    func testCleanupCancelAfterTheRingTimeStillCountsAsMissed() {
+        let entries = [
+            armed("a", fire: base),
+            AlarmJournalEntry(
+                event: .cancelled,
+                alarmID: "a",
+                wallClock: base.addingTimeInterval(600),
+                systemUptime: 5,
+                processID: 100
+            )
+        ]
+
+        let now = base.addingTimeInterval(3600)
+        let outcomes = AlarmJournalReconciler.reconcile(entries: entries, now: now)
+
+        XCTAssertEqual(outcomes.first?.status, .unobserved)
+        XCTAssertEqual(AlarmJournalReconciler.missed(in: outcomes, now: now).count, 1)
+    }
 }

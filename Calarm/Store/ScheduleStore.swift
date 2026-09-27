@@ -277,11 +277,12 @@ final class ScheduleStore: ObservableObject {
 
             // Sorted and deduplicated by the pure policy, so the rule that decides
             // whether one meeting becomes one alarm or two is unit testable.
-            let mergedEvents = ScheduleEventSourcePolicy.merge(
+            var mergedEvents = ScheduleEventSourcePolicy.merge(
                 eventKit: eventKitEvents,
                 google: googleEvents
             )
             guard !Task.isCancelled else { return }
+            carrySettingsAcrossIDChanges(from: events, to: &mergedEvents)
             events = mergedEvents
             refreshEventsIdentityToken()
             ActivityLog.record(.sync, [
@@ -641,6 +642,33 @@ final class ScheduleStore: ObservableObject {
             )
         }
         return summary
+    }
+
+    private func carrySettingsAcrossIDChanges(from previous: [ScheduleEvent], to current: inout [ScheduleEvent]) {
+        let currentIDs = Set(current.map(\.id))
+        let previousIDs = Set(previous.map(\.id))
+        let removed = previous
+            .filter { !currentIDs.contains($0.id) && $0.alarmEnabled && preferences.hasOverride(for: $0.id) }
+            .map(continuityOccurrence)
+        guard !removed.isEmpty else { return }
+        let unconfigured = current.filter { !preferences.hasOverride(for: $0.id) }
+        let moves = EventContinuity.carriedSettings(
+            removed: removed,
+            added: unconfigured.filter { !previousIDs.contains($0.id) }.map(continuityOccurrence),
+            unconfigured: unconfigured.map(continuityOccurrence),
+            now: Date()
+        )
+        guard !moves.isEmpty else { return }
+        preferences.moveOverrides(moves)
+        let targets = Set(moves.values)
+        for index in current.indices where targets.contains(current[index].id) {
+            current[index].alarmOffsets = preferences.alarmOffsets(for: current[index].id)
+        }
+        ActivityLog.record(.sync, "kept settings of \(moves.count) moved event\(moves.count == 1 ? "" : "s")")
+    }
+
+    private func continuityOccurrence(_ event: ScheduleEvent) -> EventContinuity.Occurrence {
+        EventContinuity.Occurrence(id: event.id, title: event.title, startDate: event.startDate, endDate: event.endDate)
     }
 
     private func refreshEventsIdentityToken() {

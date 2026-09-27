@@ -20,6 +20,9 @@ final class GoogleCalendarService: ObservableObject {
     /// with no pending delta, so the cheap path would keep a disabled calendar's events and
     /// never fetch an enabled one's. Any selection change forces the window fetch.
     private var selectionChangedSinceWindowFetch = false
+    private var selectionGeneration = 0
+    private var lastWindowFetch: Date?
+    private var inFlightFetch: Task<[GoogleCalendarFetchedEvent], Never>?
 
     var isConnected: Bool { preferences.isConnected && authManager.isSignedIn }
     var connectedEmail: String? { preferences.connectedEmail ?? authManager.userEmail }
@@ -65,27 +68,50 @@ final class GoogleCalendarService: ObservableObject {
     func setCalendarEnabled(_ calendarID: String, enabled: Bool) {
         preferences.setCalendarEnabled(calendarID, enabled: enabled)
         selectionChangedSinceWindowFetch = true
+        selectionGeneration += 1
     }
 
     func setAllCalendarsEnabled(_ enabled: Bool) {
         preferences.setAllCalendarsEnabled(enabled, allCalendarIDs: availableCalendars.map(\.id))
         selectionChangedSinceWindowFetch = true
+        selectionGeneration += 1
     }
 
     func isCalendarEnabled(_ calendarID: String) -> Bool {
         preferences.isCalendarEnabled(calendarID)
     }
 
-    /// Fetch upcoming events across enabled Google calendars for the alarm horizon.
-    /// On failure, returns `cachedEvents` so callers can keep last-known-good schedule data.
+    /// Fetch upcoming and in-progress events across enabled Google calendars for the alarm
+    /// horizon. On failure, returns `cachedEvents` so callers can keep last-known-good data.
+    /// Single-flight: a caller arriving mid-fetch shares it, since two passes spending the
+    /// same sync tokens could each see only half the delta.
     func fetchUpcomingEvents(
         days: Int,
         cachedEvents: [GoogleCalendarFetchedEvent] = []
     ) async -> [GoogleCalendarFetchedEvent] {
         guard isConnected else { return [] }
+        // A calendar toggled mid-fetch is not in the fetch already running; wait it out,
+        // then fetch again.
+        while let inFlightFetch {
+            let result = await inFlightFetch.value
+            if !selectionChangedSinceWindowFetch { return result }
+        }
+        let task = Task {
+            let result = await performFetch(days: days, cachedEvents: cachedEvents)
+            inFlightFetch = nil
+            return result
+        }
+        inFlightFetch = task
+        return await task.value
+    }
 
+    private func performFetch(
+        days: Int,
+        cachedEvents: [GoogleCalendarFetchedEvent]
+    ) async -> [GoogleCalendarFetchedEvent] {
         isLoading = true
         defer { isLoading = false }
+        let selectionAtStart = selectionGeneration
 
         do {
             if availableCalendars.isEmpty {
@@ -102,7 +128,13 @@ final class GoogleCalendarService: ObservableObject {
             // could only ever return what the full fetch had already returned. Now the
             // incremental is what it should be, a change detector, and the expensive
             // expanded fetch in step 2 runs only when it reports something.
-            var needsWindowFetch = cachedEvents.isEmpty || selectionChangedSinceWindowFetch
+            var needsWindowFetch = cachedEvents.isEmpty
+                || selectionChangedSinceWindowFetch
+                || GoogleSyncPolicy.isWindowStale(lastWindowFetch: lastWindowFetch, now: now)
+            // New tokens are committed only once the window fetch they stand for has
+            // succeeded. Saved first, a failed fetch spent the delta and the next pass
+            // read "nothing changed" over stale data.
+            var pendingTokens: [String: String] = [:]
 
             for calendar in enabledCalendars {
                 guard let syncToken = preferences.syncToken(for: calendar.id) else {
@@ -113,7 +145,9 @@ final class GoogleCalendarService: ObservableObject {
                         accessToken: token,
                         timeMin: Self.syncFloor(from: now)
                     )
-                    preferences.setSyncToken(full.nextSyncToken, for: calendar.id)
+                    if let next = full.nextSyncToken {
+                        pendingTokens[calendar.id] = next
+                    }
                     needsWindowFetch = true
                     continue
                 }
@@ -125,7 +159,7 @@ final class GoogleCalendarService: ObservableObject {
                         syncToken: syncToken
                     )
                     if let next = delta.nextSyncToken {
-                        preferences.setSyncToken(next, for: calendar.id)
+                        pendingTokens[calendar.id] = next
                     }
                     if !delta.events.isEmpty {
                         needsWindowFetch = true
@@ -148,10 +182,9 @@ final class GoogleCalendarService: ObservableObject {
 
             guard needsWindowFetch else {
                 // Steady state: one cheap request per calendar and no expansion work.
+                commit(pendingTokens)
                 lastSyncError = nil
-                return cachedEvents
-                    .filter { $0.startDate >= now && $0.startDate <= end }
-                    .sorted { $0.startDate < $1.startDate }
+                return Self.windowed(cachedEvents, now: now, end: end)
             }
 
             // Step 2: the expanded, bounded query that actually feeds the UI and the
@@ -171,24 +204,37 @@ final class GoogleCalendarService: ObservableObject {
                 }
             }
 
-            selectionChangedSinceWindowFetch = false
+            commit(pendingTokens)
+            if selectionGeneration == selectionAtStart {
+                selectionChangedSinceWindowFetch = false
+            }
+            lastWindowFetch = now
             lastSyncError = nil
-            return merged.values
-                .filter { $0.startDate >= now && $0.startDate <= end }
-                .sorted { $0.startDate < $1.startDate }
+            return Self.windowed(Array(merged.values), now: now, end: end)
         } catch {
             lastSyncError = error.localizedDescription
             ActivityLog.record(.fail, "google \(error.localizedDescription)")
             SchedulerLog.error("google calendar sync failed")
-            if cachedEvents.isEmpty {
-                return []
-            }
             let now = Date()
             let end = Calendar.current.date(byAdding: .day, value: days, to: now) ?? now
-            return cachedEvents
-                .filter { $0.startDate >= now && $0.startDate <= end }
-                .sorted { $0.startDate < $1.startDate }
+            return Self.windowed(cachedEvents, now: now, end: end)
         }
+    }
+
+    private func commit(_ tokens: [String: String]) {
+        for (calendarID, token) in tokens {
+            preferences.setSyncToken(token, for: calendarID)
+        }
+    }
+
+    private static func windowed(
+        _ events: [GoogleCalendarFetchedEvent],
+        now: Date,
+        end: Date
+    ) -> [GoogleCalendarFetchedEvent] {
+        events
+            .filter { GoogleSyncPolicy.isInWindow(startDate: $0.startDate, endDate: $0.endDate, now: now, horizonEnd: end) }
+            .sorted { $0.startDate < $1.startDate }
     }
 
     private var enabledCalendars: [GoogleCalendarListEntry] {

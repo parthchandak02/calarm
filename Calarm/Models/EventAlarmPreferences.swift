@@ -156,6 +156,21 @@ final class EventAlarmPreferences {
         save(override, for: occurrenceID)
     }
 
+    func hasOverride(for occurrenceID: String) -> Bool {
+        allOverrides()[occurrenceID] != nil
+    }
+
+    /// Moves settings to new IDs in one write; a target that already has its own is left alone.
+    func moveOverrides(_ moves: [String: String]) {
+        guard !moves.isEmpty else { return }
+        var all = allOverrides()
+        for (from, to) in moves where all[to] == nil {
+            guard let override = all.removeValue(forKey: from) else { continue }
+            all[to] = override
+        }
+        persist(all)
+    }
+
     func removeOverride(for occurrenceID: String) {
         var all = allOverrides()
         all.removeValue(forKey: occurrenceID)
