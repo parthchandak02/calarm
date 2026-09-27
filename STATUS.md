@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Where work happens** | On the Mac mini itself (from 2026-09-27), Xcode 26.6 = the release toolchain. Two clones exist there: `/Volumes/ExternalSSD/Projects/calarm` and `~/projects/calarm` (the one `ship.sh` and herdr use); keep both pulled |
-| **Latest build** | `20260926.1356` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
+| **Latest build** | `20260927.1620` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
 | **Tests** | 190 passing (`CalarmTests`, 2026-09-27) |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, **sign-in on device not yet retested** |

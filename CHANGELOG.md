@@ -15,7 +15,7 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
-## Unreleased — 2026-09-27
+## Build 20260927.1620 — 2026-09-27
 
 ### Fixed
 
