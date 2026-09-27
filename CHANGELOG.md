@@ -44,6 +44,13 @@ each able to cost a meeting or corrupt Gate 1 data:
 
 19 new unit tests (190 total).
 
+### Changed
+
+- **README rewritten as a pitch.** Icon hero, fresh screenshots from screenshot mode, a
+  Dynamic Island and Lock Screen illustration drawn from the widget's layout and pixel font,
+  a comparison with calendar notifications and Clock alarms, and developer detail folded
+  away. Assets in `docs/assets/readme/`.
+
 ## Build 20260926.1356 — 2026-09-26
 
 ### Changed

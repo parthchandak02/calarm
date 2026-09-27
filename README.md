@@ -1,133 +1,158 @@
-# Calarm
+<div align="center">
 
-iOS 26 app for countdown alarms with **AlarmKit**, **Live Activities**, and **Dynamic Island** support. Evolved from the earlier CalendarAlarm prototype; this repo is the clean `calarm` home going forward.
+<img src="docs/assets/readme/icon.png" width="128" height="128" alt="CALarm icon">
 
-## Requirements
+<h1>CALarm</h1>
 
-- **Xcode 26** (full app from App Store or [Apple Developer](https://developer.apple.com/xcode/)) — Command Line Tools alone are not enough
-- **iOS 26+** on simulator or physical device
-- Apple Developer account for device installs (free tier works for personal device testing)
-- **Developer Mode** enabled on a physical iPhone
+<p><b>Your calendar, as real alarms.</b></p>
 
-After installing Xcode, point the active developer directory at it:
+<p><i>A calendar notification is a banner you swipe away. A meeting deserves an alarm.</i></p>
 
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-xcodebuild -version
-```
+<h6>
 
-## Quick start
+![iOS 26+](https://img.shields.io/badge/iOS-26%2B-111111?style=flat-square&logo=apple&logoColor=white)
+![Swift](https://img.shields.io/badge/Swift-SwiftUI-FF736B?style=flat-square&logo=swift&logoColor=white)
+![AlarmKit](https://img.shields.io/badge/AlarmKit-native-FF736B?style=flat-square)
+![Live Activities](https://img.shields.io/badge/Live%20Activities-Dynamic%20Island-111111?style=flat-square)
+![Status](https://img.shields.io/badge/TestFlight-private%20beta-555555?style=flat-square)
 
-### Open in Xcode
+</h6>
 
-```bash
-open Calarm.xcodeproj
-```
+<a href="#how-it-works"><b>How it works</b></a> ·
+<a href="#features"><b>Features</b></a> ·
+<a href="#why-not-just-a-notification"><b>Why</b></a> ·
+<a href="#build-it"><b>Build it</b></a>
 
-1. Select the **Calarm** scheme and your iPhone or an iOS 26 simulator.
-2. Confirm **Signing & Capabilities** → Team is set to your Apple Developer team.
-3. Press **Run** (⌘R).
+<br><br>
 
-### Deploy from terminal
+<img src="docs/assets/readme/schedule.png" width="32%" alt="Schedule with the next-alarm flip board">&nbsp;&nbsp;&nbsp;<img src="docs/assets/readme/settings.png" width="32%" alt="Settings sheet">
 
-```bash
-./deploy.sh 1   # iOS 26 simulator
-./deploy.sh 2   # physical device (connected + trusted)
-```
+<sub>Demo calendar data. Captured from the app's screenshot mode.</sub>
 
-## Project layout
+</div>
 
-```
-calarm/
-├── Calarm/                    # Main app (AlarmKit, calendar-aware alarms)
-├── CalarmWidgetExtension/     # Live Activity + widget extension
-├── Calarm.xcodeproj
-├── deploy.sh                  # Build, install, launch
-└── deploy-lib.sh
-```
+<br>
 
-## Bundle IDs
+## The problem
 
-| Target | Bundle ID |
-|--------|-----------|
-| Calarm | `com.calarmapp.calarm` |
-| Widget extension | `com.calarmapp.calarm.CalarmWidgetExtension` |
+Calendar reminders are notifications. Silent mode mutes them, Focus hides them, and a
+buried banner is exactly how a meeting gets missed. iOS 26 finally lets third-party apps
+schedule **real alarms** through AlarmKit: the same full-screen, ring-through-silent alert
+as the Clock app. CALarm connects that to your calendar.
+
+## How it works
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**1 · Read the calendar**
+
+Events come from your iPhone calendars and straight from Google Calendar, with free/busy
+shares, recurring series and moved meetings kept in step.
+
+</td>
+<td width="33%" valign="top">
+
+**2 · Arm what matters**
+
+Tap the square next to a meeting. Pick one or more lead times: at start, 1, 5, 10, 30 or 60
+minutes before, or a day ahead.
+
+</td>
+<td width="33%" valign="top">
+
+**3 · It rings**
+
+AlarmKit rings through Silent and Focus, even with the app closed, with Snooze and
+Dismiss right on the alert.
+
+</td>
+</tr>
+</table>
+
+## The countdown, everywhere
+
+<div align="center">
+
+<img src="docs/assets/readme/live-activity.png" width="560" alt="Dynamic Island compact, minimal and expanded views, and the Lock Screen card">
+
+<sub>Dynamic Island (compact, minimal, expanded) and the Lock Screen card. Illustration drawn from the widget's layout and font.</sub>
+
+</div>
+
+Minutes before a meeting, a flight-board countdown appears in the Dynamic Island and on
+the Lock Screen, then hands off to the alarm. A compact version is built for Apple Watch
+and CarPlay.
 
 ## Features
 
-- AlarmKit countdown timers with pre-alert and post-alert windows
-- Live Activities in Dynamic Island
-- Calendar-driven per-event alarm offsets (configurable in app)
-- Pause / resume via App Intents and Live Activity controls
+- **Real alarms, not banners.** Full-screen AlarmKit alerts that break through Silent and Focus.
+- **Several alarms per meeting.** A heads-up at 10 minutes and a final call at start.
+- **One ring per minute.** Back-to-back events at the same time merge into one alarm, titled `Standup + 2 more`.
+- **Google Calendar built in.** Direct API sync with incremental change detection, alongside EventKit.
+- **Fails open.** When the app is unsure whether an event still exists, it keeps the alarm.
+  A missed meeting is the one outcome it is built to prevent.
+- **Knows when it missed.** An alarm journal compares intended and actual ring times, and a
+  missed alarm is flagged on its event and in Status.
+- **Vibrate mode and Focus filter.** Buzz instead of ring, automatically inside a chosen Focus.
+- **Flip-board design.** Pixel type, split-flap digits, seven accent colours, light and dark.
+- **Private by design.** No account, no server, no analytics. Calendars are read on device.
 
-## Data persistence
+## Why not just a notification?
 
-User preferences are stored locally with **`UserDefaults.standard`** via `CalarmPersistence`:
+| | Calendar notification | Clock alarm | **CALarm** |
+|---|:---:|:---:|:---:|
+| Follows your calendar automatically | ✓ | – | **✓** |
+| Rings in Silent mode | – | ✓ | **✓** |
+| Breaks through Focus | – | ✓ | **✓** |
+| Full-screen alert with Snooze | – | ✓ | **✓** |
+| Live countdown in the Dynamic Island | – | – | **✓** |
+| Several lead times per event | ✓ | – | **✓** |
 
-| Data | Storage | Survives app update? |
-|------|---------|----------------------|
-| Per-event alarm offsets | JSON map keyed by calendar event ID | Yes |
-| Default alarm offset & snooze | String / integer keys | Yes |
-| Theme (appearance + accent) | String keys | Yes |
+## Build it
 
-Calendar events themselves are **not** copied into app storage; Calarm reads them from EventKit each launch. Alarm preferences are keyed by EventKit `eventIdentifier`, so they reconnect after updates as long as the calendar event still exists.
-
-`CalarmPersistence.migrateIfNeeded()` runs at launch with a schema version so older installs upgrade safely. Data is cleared only if the user deletes the app.
-
-`PrivacyInfo.xcprivacy` declares UserDefaults access (`CA92.1` — app functionality only).
-
-See **[SECURITY.md](SECURITY.md)** for repository security practices and what must not be committed.
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| `xcodebuild` requires Xcode | Install Xcode.app and run `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` |
-| Signing errors | Open project → Signing & Capabilities → pick your Team |
-| AlarmKit denied | Settings → Calarm → allow alarms; enable Developer Mode on device |
-| No iOS 26 simulator | Xcode → Settings → Platforms → download iOS 26 |
-
-## App Store submission
-
-**Pipeline:** `./scripts/ship.sh doctor` → `./scripts/ship.sh beta`
-
-| Doc | Purpose |
-|-----|---------|
-| [PUBLISH_PLAYBOOK.md](docs/app-store/PUBLISH_PLAYBOOK.md) | Full publish guide |
-| [TERMINAL_TOOLS.md](docs/app-store/TERMINAL_TOOLS.md) | `asc`, fastlane, apple-docs |
-| [pipeline/BOOTSTRAP_NEW_APP.md](pipeline/BOOTSTRAP_NEW_APP.md) | Reuse this pipeline for other Xcode apps |
-| [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) | Checklist |
+Requires Xcode 26 and an iPhone on iOS 26. The Simulator runs the app but cannot ring an
+AlarmKit alarm.
 
 ```bash
-# One-time (after downloading API .p8 to ~/Keys/)
-./scripts/configure-credentials.sh <ISSUER_ID>
-
-./scripts/ship.sh doctor    # health check
-./scripts/ship.sh beta      # build + TestFlight
-./scripts/ship.sh metadata  # descriptions, URLs, screenshots
+git clone https://github.com/parthchandak02/calarm.git
+cd calarm
+./deploy.sh 1   # Simulator
+./deploy.sh 2   # connected iPhone
 ```
 
-Subagents:
-- `calarm-app-store-prep` — metadata, fastlane, ASC checklist
-- `calarm-ship-ready` — code polish, device deploy, final QA
+Google sign-in is off on a fresh clone and the iPhone calendar path works without it.
+Tests run from the command line; see [AGENTS.md](AGENTS.md#commands).
 
-**Agent skills** (`.claude/skills/`): repo-specific playbooks for AlarmKit scheduling, device deploy verification, TestFlight, Live Activity deep links, build stamping, release pipeline, and app icon processing. Read natively by Claude Code, Cursor and Copilot. See [skills README](.claude/skills/README.md).
+<details>
+<summary><b>Project layout</b></summary>
 
-## Docs
+```
+Calarm/                  App: AlarmKit scheduling, EventKit and Google sync, SwiftUI views
+CalarmWidgetExtension/   Live Activity and Dynamic Island
+CalarmShared/            Types compiled into both targets
+CalarmTests/             Unit tests for the scheduling and sync logic
+scripts/                 Release pipeline (ship.sh) and asset tools
+```
 
-Working on this repo — start with **[AGENTS.md](AGENTS.md)**, which is also what AI coding
-agents read:
+</details>
 
-| Doc | Purpose |
-|-----|---------|
-| [AGENTS.md](AGENTS.md) | How to work here: commands, constraints, conventions, traps |
+<details>
+<summary><b>Documentation</b></summary>
+
+| | |
+|---|---|
+| [AGENTS.md](AGENTS.md) | How to work in this repo: commands, conventions, known traps |
 | [STATUS.md](STATUS.md) | Where the project stands and what comes next |
-| [CHANGELOG.md](CHANGELOG.md) | What changed, when, and why |
-| [RESEARCH.md](RESEARCH.md) | Verified AlarmKit/EventKit/Google facts, with sources |
+| [RESEARCH.md](RESEARCH.md) | Verified AlarmKit, EventKit and Google Calendar facts, with sources |
+| [CHANGELOG.md](CHANGELOG.md) | What changed, build by build |
 | [SECURITY.md](SECURITY.md) | What must never be committed |
 
-External references:
+</details>
 
-- [AlarmKit](https://developer.apple.com/documentation/alarmkit)
-- [Scheduling an alarm with AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit)
-- [Live Activities](https://developer.apple.com/documentation/activitykit)
+<br>
+
+<div align="center">
+<sub>Built with AlarmKit, ActivityKit, EventKit and SwiftUI.</sub>
+</div>
