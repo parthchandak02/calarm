@@ -234,6 +234,7 @@ These need credentials or console access an agent should not have:
 
 - ~~Consent screen "In production"~~ — already was (External, 1/100 user cap, unverified).
 - ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
+- **Google branding:** `parthchandak.info` is verified in Search Console for parth.chandak02@gmail.com (Domain property, via Cloudflare, 2026-09-27). **Never delete its `google-site-verification` TXT records.** Site: `calarm.parthchandak.info` (GitHub Pages, Cloudflare CNAME, DNS only).
 - **Publish the `calarmapp-ios` consent screen** (Audience → Publish app) if it still says Testing, then delete the old "CALarm iOS" client in the previous project once sign-in works on device.
 - **Google verification** before any public release: calendar read is a sensitive scope, so
   unverified means a warning screen and a lifetime 100-user cap.
