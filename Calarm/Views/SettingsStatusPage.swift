@@ -38,6 +38,7 @@ struct SettingsStatusPage: View {
     @Environment(\.calarmTheme) private var theme
 
     @State private var entries: [ActivityLog.Entry] = []
+    @State private var armed: [AlarmScheduler.ArmedAlarm] = []
 
     var body: some View {
         let problems = store.statusProblems
@@ -53,6 +54,27 @@ struct SettingsStatusPage: View {
                         }
                     }
                 }
+
+                BoardSectionLabel(title: "Armed")
+                if armed.isEmpty {
+                    Text("No alarms armed.")
+                        .font(CalarmFont.boardDetail)
+                        .foregroundStyle(theme.textSecondary)
+                } else {
+                    ForEach(Array(armed.enumerated()), id: \.offset) { _, alarm in
+                        logLine(
+                            time: alarm.fireDate.map(CalarmTheme.eventTimeString) ?? "—",
+                            label: soundLabel(alarm.vibrates),
+                            color: isStale(alarm) ? theme.destructive : theme.accent,
+                            text: isStale(alarm) ? "\(alarm.title) · not updated yet" : alarm.title
+                        )
+                    }
+                }
+                Text("Sound now: \(AlarmSoundPolicy.labelNow). Each alarm keeps the sound it was armed with.")
+                    .font(CalarmFont.boardDetail)
+                    .foregroundStyle(theme.textSecondary)
+                    .padding(.top, 6)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if days.isEmpty {
                     BoardSectionLabel(title: "Today")
@@ -70,6 +92,13 @@ struct SettingsStatusPage: View {
 
                 TestAlarmButton()
                     .padding(.top, 20)
+
+                ShareLink(item: exportText) {
+                    Label("Share log", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.glass)
+                .font(CalarmFont.boardDetail)
+                .padding(.top, 12)
 
                 Text("Log stays on this phone and is cleared after 7 days.")
                     .font(CalarmFont.boardDetail)
@@ -92,22 +121,58 @@ struct SettingsStatusPage: View {
             .padding(.horizontal, CalarmTheme.rowPaddingH)
             .padding(.bottom, 24)
         }
-        .refreshable { entries = ActivityLog.load() }
+        .refreshable { reload() }
         .onAppear {
-            entries = ActivityLog.load()
+            reload()
             store.refreshMissedAlarms()
         }
-        .onChange(of: store.lastRescheduleSummary) { _, _ in entries = ActivityLog.load() }
+        .onChange(of: store.lastRescheduleSummary) { _, _ in reload() }
         .boardNavigationTitle("Status")
     }
 
+    private func reload() {
+        entries = ActivityLog.load()
+        armed = AlarmScheduler.armedAlarms()
+    }
+
+    private func soundLabel(_ vibrates: Bool?) -> String {
+        switch vibrates {
+        case true?: "VIB"
+        case false?: "RING"
+        case nil: "TEST"
+        }
+    }
+
+    private func isStale(_ alarm: AlarmScheduler.ArmedAlarm) -> Bool {
+        alarm.vibrates.map { $0 != AlarmSoundPolicy.vibratesNow } ?? false
+    }
+
+    private var exportText: String {
+        var header = [
+            "\(AppBuildInfo.appName) \(AppBuildInfo.marketingVersion) · Build \(AppBuildInfo.formattedBuildStamp)",
+            "Exported \(Date.now.formatted(.iso8601))",
+            "Sound now: \(AlarmSoundPolicy.labelNow)",
+        ]
+        header += checks.map { "\($0.title): \($0.value)" }
+        header.append("Armed:")
+        header += armed.map { alarm in
+            let time = alarm.fireDate.map { $0.formatted(.iso8601) } ?? "—"
+            return "  \(time)  \(soundLabel(alarm.vibrates))\(isStale(alarm) ? " STALE" : "")  \(alarm.title)"
+        }
+        return ActivityLog.exportText(header: header, entries: entries)
+    }
+
     private func logLine(time: String, kind: ActivityLog.Kind, text: String) -> some View {
+        logLine(time: time, label: kind.label, color: color(for: kind), text: text)
+    }
+
+    private func logLine(time: String, label: String, color: Color, text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(time)
                 .foregroundStyle(theme.textPrimary)
                 .frame(width: 64, alignment: .leading)
-            Text(kind.label)
-                .foregroundStyle(color(for: kind))
+            Text(label)
+                .foregroundStyle(color)
             Text(text)
                 .foregroundStyle(theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -15,6 +15,20 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-28
+
+### Added
+
+- **Settings → Status lists every armed alarm with the sound it will play** (`VIB`, `RING`,
+  `TEST`), soonest first. A sound is fixed when an alarm is scheduled, so an alarm that has
+  not caught up with the current vibrate setting shows in red as *not updated yet*. The line
+  under it names the current mode and what asked for it (`vibrate · focus`).
+- **Share log** on Settings → Status exports build, checks, armed alarms and the full
+  activity log as timestamped plain text, so a test run can be read off the phone.
+- RESCHED log lines name the sound mode (`4 alarms · vibrate · setting · next 9:55`), and a
+  Focus change that reaches CALarm without a running store says *not applied until CALarm
+  opens*.
+
 ## Build 20260927.1620 — 2026-09-27
 
 ### Fixed

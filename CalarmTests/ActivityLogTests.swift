@@ -8,6 +8,19 @@ final class ActivityLogTests: XCTestCase {
         ActivityLog.Entry(date: now.addingTimeInterval(-seconds), kind: kind, text: text)
     }
 
+    func testExportListsHeaderThenEntriesOldestFirst() {
+        let entries = [entry(.rang, "Standup", ago: 0), entry(.focus, "on · vibrate", ago: 60)]
+        let text = ActivityLog.exportText(header: ["Build 1"], entries: entries, timeZone: TimeZone(identifier: "UTC")!)
+
+        XCTAssertEqual(text, """
+        Build 1
+
+        2026-09-21 14:12:20 Z  FOCUS  on · vibrate
+        2026-09-21 14:13:20 Z  RANG  Standup
+
+        """)
+    }
+
     func testRepeatWithinWindowReplacesNewestEntry() {
         let first = entry(.resched, "11 alarms", ago: 300)
         let repeatEntry = entry(.resched, "11 alarms", ago: 0)

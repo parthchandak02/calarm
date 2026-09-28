@@ -94,9 +94,11 @@ Read from the iOS 27.0 SDK `AlarmKit.swiftinterface`. **CONFIRMED.**
   sound; bundle `.caf` files work in later builds, `Library/Sounds` did not
   ([802620](https://developer.apple.com/forums/thread/802620),
   [798140](https://developer.apple.com/forums/thread/798140)). **REPORTED**
-- **Whether a silent `.named` sound still vibrates is unverified.** Clock's "None" sound
-  vibrates only in silent mode. calarm's vibrate mode depends on this; verify with the test
-  alarm on device.
+- **A silent `.named` sound still vibrates.** **CONFIRMED** on device 2026-09-24 (owner,
+  test alarm with vibrate on); this line said "unverified" until 2026-09-28. Still untested:
+  whether that vibration obeys Settings → Sounds & Haptics → Haptics ("Never Play", "Don't
+  Play in Silent Mode") or Accessibility → Touch → Vibration off. If it does, vibrate mode
+  there is a fully silent alarm.
 - **A `SetFocusFilterIntent` runs in the background only if it also conforms to
   `LiveActivityIntent`**; a plain one runs only while the app is in the foreground.
   **REPORTED** ([home-assistant/iOS#5656](https://github.com/home-assistant/iOS/pull/5656),

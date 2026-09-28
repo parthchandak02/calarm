@@ -506,8 +506,11 @@ final class ScheduleStore: ObservableObject {
     /// Awaits the reschedule: iOS may suspend the process as soon as the intent returns.
     static func applyFocusVibrate(_ enabled: Bool) async {
         CalarmPersistence.setBool(enabled, forKey: CalarmPersistence.Key.focusVibrate)
+        guard let store = active else {
+            ActivityLog.record(.focus, (enabled ? "on · vibrate" : "off · ring") + " · not applied until CALarm opens")
+            return
+        }
         ActivityLog.record(.focus, enabled ? "on · vibrate" : "off · ring")
-        guard let store = active else { return }
         store.focusVibrate = enabled
         store.lastScheduledFingerprint = nil
         await store.rescheduleCoordinator.requestRescheduleImmediate { [weak store] in
@@ -630,7 +633,7 @@ final class ScheduleStore: ObservableObject {
         lastRescheduleSummary = summary
         if !result.skippedDuringAlerting {
             let next = nextUpcomingAlarm?.nextAlarmDate.map { " · next \(CalarmTheme.eventTimeString($0))" } ?? ""
-            ActivityLog.record(.resched, "\(result.scheduledCount) alarms\(next)")
+            ActivityLog.record(.resched, "\(result.scheduledCount) alarms · \(AlarmSoundPolicy.labelNow)\(next)")
         }
         for failure in result.failures {
             ActivityLog.record(.fail, "\(failure.eventTitle): \(failure.message)")

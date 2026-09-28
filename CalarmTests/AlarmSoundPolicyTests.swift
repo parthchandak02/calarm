@@ -13,6 +13,20 @@ final class AlarmSoundPolicyTests: XCTestCase {
         XCTAssertTrue(AlarmSoundPolicy.vibrates(manualSetting: false, focusActive: true))
     }
 
+    func testLabelNamesWhichSwitchAskedForVibration() {
+        XCTAssertEqual(AlarmSoundPolicy.label(manualSetting: false, focusActive: false), "ring")
+        XCTAssertEqual(AlarmSoundPolicy.label(manualSetting: true, focusActive: false), "vibrate · setting")
+        XCTAssertEqual(AlarmSoundPolicy.label(manualSetting: false, focusActive: true), "vibrate · focus")
+        XCTAssertEqual(AlarmSoundPolicy.label(manualSetting: true, focusActive: true), "vibrate · setting + focus")
+    }
+
+    func testSignatureRevealsTheScheduledSound() {
+        XCTAssertEqual(AlarmSoundPolicy.vibrates(signature: "Standup|vibrate"), true)
+        XCTAssertEqual(AlarmSoundPolicy.vibrates(signature: "Standup|ring"), false)
+        XCTAssertNil(AlarmSoundPolicy.vibrates(signature: "Standup"))
+        XCTAssertNil(AlarmSoundPolicy.vibrates(signature: nil))
+    }
+
     func testFallbackIDIsStableAndDistinct() {
         let id = AlarmSchedulingHelpers.stableAlarmID(occurrenceID: "evt", offsetRawValue: "oneMinute")
         XCTAssertEqual(AlarmSchedulingHelpers.fallbackAlarmID(for: id), AlarmSchedulingHelpers.fallbackAlarmID(for: id))

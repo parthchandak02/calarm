@@ -23,10 +23,38 @@ nonisolated enum AlarmSoundPolicy {
         manualSetting || focusActive
     }
 
+    /// What the activity log and Status say, including which switch asked for vibration.
+    static func label(manualSetting: Bool, focusActive: Bool) -> String {
+        switch (manualSetting, focusActive) {
+        case (false, false): "ring"
+        case (true, false): "vibrate · setting"
+        case (false, true): "vibrate · focus"
+        case (true, true): "vibrate · setting + focus"
+        }
+    }
+
+    /// The sound an alarm was scheduled with, read from its stored `title|ring` or
+    /// `title|vibrate` signature. Nil for an alarm scheduled without one, like the test alarm.
+    static func vibrates(signature: String?) -> Bool? {
+        guard let signature else { return nil }
+        if signature.hasSuffix("|vibrate") { return true }
+        if signature.hasSuffix("|ring") { return false }
+        return nil
+    }
+
     @MainActor static var vibratesNow: Bool {
-        vibrates(
-            manualSetting: CalarmPersistence.bool(forKey: CalarmPersistence.Key.vibrateInsteadOfRinging),
-            focusActive: CalarmPersistence.bool(forKey: CalarmPersistence.Key.focusVibrate)
-        )
+        vibrates(manualSetting: manualSetting, focusActive: focusActive)
+    }
+
+    @MainActor static var labelNow: String {
+        label(manualSetting: manualSetting, focusActive: focusActive)
+    }
+
+    @MainActor private static var manualSetting: Bool {
+        CalarmPersistence.bool(forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
+    }
+
+    @MainActor private static var focusActive: Bool {
+        CalarmPersistence.bool(forKey: CalarmPersistence.Key.focusVibrate)
     }
 }

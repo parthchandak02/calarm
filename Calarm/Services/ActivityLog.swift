@@ -79,6 +79,19 @@ enum ActivityLog {
         return days
     }
 
+    /// Plain text for Share log: the header lines, then every entry oldest first with a full
+    /// timestamp, so a pasted log reads the same in any time zone or locale.
+    nonisolated static func exportText(header: [String], entries: [Entry], timeZone: TimeZone = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss ZZZZZ"
+        let lines = entries.sorted { $0.date < $1.date }.map {
+            "\(formatter.string(from: $0.date))  \($0.kind.label)  \($0.text)"
+        }
+        return (header + [""] + lines).joined(separator: "\n") + "\n"
+    }
+
     static func record(_ kind: Kind, _ text: String, at date: Date = Date()) {
         let entries = appending(Entry(date: date, kind: kind, text: text), to: load())
         CalarmPersistence.encode(entries, forKey: CalarmPersistence.Key.activityLog)

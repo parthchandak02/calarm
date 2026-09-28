@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-27** — update this date whenever you change this file.
+**Last updated: 2026-09-28** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -17,7 +17,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Where work happens** | On the Mac mini itself (from 2026-09-27), Xcode 26.6 = the release toolchain. Two clones exist there: `/Volumes/ExternalSSD/Projects/calarm` and `~/projects/calarm` (the one `ship.sh` and herdr use); keep both pulled |
 | **Latest build** | `20260927.1620` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
-| **Tests** | 190 passing (`CalarmTests`, 2026-09-27) |
+| **Tests** | 190 passing (`CalarmTests`, 2026-09-27). The 2026-09-28 Status-page change (+3 tests) is **not compiled or tested yet**: the owner removed the iOS simulator runtime from the Mac mini that day, so neither tests nor `ship.sh` can run there until it is reinstalled |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, sign-in with the new client works in the Simulator (2026-09-27), **on device not yet retested** |
 | **Backend** | None. No Worker, no relay deployed |
@@ -84,9 +84,16 @@ several events (e.g. 1:00 PM "Busy" + "Meeting Free Block") should ring once, ti
 "<event> + N more", and the list should no longer show a "Busy" block next to a titled event
 at the same time.
 
-**Test the Focus filter with CALarm force-quit.** Add CALarm to a Focus, force-quit the app,
-turn the Focus on, and fire the next alarm. If it rings instead of vibrating, the Focus change
-did not reach a terminated app (RESEARCH.md § Known problems) — expected, but confirm.
+**Run the vibrate test matrix (next build).** Settings → Status now lists each armed alarm's
+sound (`VIB`/`RING`; red = not updated to the current mode) and has *Share log*. For each case,
+check Status before the alarm, note what actually happened, then share the log:
+1. Manual toggle on, app open → VIB, vibrates. 2. Same with the silent switch off → vibrates.
+3. Toggle on, force-quit before the alarm → vibrates. 4. Focus filter on, app open → FOCUS
+`on · vibrate`, VIB. 5. Focus turned on with CALarm backgrounded → does a FOCUS line appear
+without opening the app? 6. Focus on with CALarm force-quit → expected to ring (known gap).
+7. Focus **off** with CALarm force-quit → expected silent (known gap, the dangerous one).
+8. A scheduled Focus ending on its own → is the FOCUS `off` line logged? 9. Haptics "Never
+Play" → vibration or nothing? 10. Vibrate on, snooze, turn vibrate off before the re-ring.
 
 **Confirm the work free/busy share is allowed.** Work-calendar busy blocks reach the app
 through the personal Google account. The owner chose to keep it on and check policy

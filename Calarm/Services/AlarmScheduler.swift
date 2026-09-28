@@ -717,6 +717,26 @@ final class AlarmScheduler {
         titles()[id.uuidString]
     }
 
+    nonisolated struct ArmedAlarm: Equatable {
+        let fireDate: Date?
+        let title: String
+        let vibrates: Bool?
+    }
+
+    /// Every alarm AlarmKit holds, soonest first, with the sound it was scheduled with. The
+    /// sound is fixed when an alarm is scheduled, so this is what will actually play.
+    static func armedAlarms() -> [ArmedAlarm] {
+        let alarms = (try? AlarmManager.shared.alarms) ?? []
+        return alarms.map { alarm in
+            ArmedAlarm(
+                fireDate: intendedFireDate(for: alarm),
+                title: displayTitle(for: alarm.id),
+                vibrates: AlarmSoundPolicy.vibrates(signature: title(for: alarm.id))
+            )
+        }
+        .sorted { ($0.fireDate ?? .distantFuture) < ($1.fireDate ?? .distantFuture) }
+    }
+
     /// The event title an alarm was scheduled with, for the activity log. The stored value
     /// is a signature, `title|ring` or `title|vibrate`.
     static func displayTitle(for id: UUID) -> String {
