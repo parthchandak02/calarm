@@ -16,7 +16,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 |---|---|
 | **Branch** | `main`, pushed; the only branch in use. Untracked `reference-photos/` is gitignored |
 | **Where work happens** | On the Mac mini itself (from 2026-09-27), Xcode 26.6 = the release toolchain. Two clones exist there: `/Volumes/ExternalSSD/Projects/calarm` and `~/projects/calarm` (the one `ship.sh` and herdr use); keep both pulled |
-| **Latest build** | `20260927.1620` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
+| **Latest build** | `20260928.1333` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
 | **Tests** | 190 passing (`CalarmTests`, 2026-09-27). The 2026-09-28 Status-page change (+3 tests) is **not compiled or tested yet**: the owner removed the iOS simulator runtime from the Mac mini that day, so neither tests nor `ship.sh` can run there until it is reinstalled |
 | **Doctor** | 0 warnings |
 | **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, sign-in with the new client works in the Simulator (2026-09-27), **on device not yet retested** |
