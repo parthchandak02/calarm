@@ -451,6 +451,23 @@ one daily standup becomes thousands of rows. The token-minting call must use
 - **No public latency measurement exists.** See
   [Disproved claims](#claims-made-and-then-disproved).
 
+### OAuth verification (researched 2026-09-27)
+
+- `calendar.readonly` is a **sensitive** scope, not restricted: verification needs a demo
+  video and a justification, but no CASA security assessment. Unverified, sign-in shows
+  "Google hasn't verified this app" and the project has a lifetime 100-user cap. **CONFIRMED**
+  (Data Access and Verification Center pages in the console).
+- The demo video must show the end-to-end flow including the OAuth grant, the same app name
+  and branding, the complete consent screen with the exact scopes, the consent screen
+  language set to English, and the app features that use the data. It does not have to show
+  Google Calendar itself. The console adds that it must include every OAuth client in the
+  project. ([Google Cloud Help](https://support.google.com/cloud/answer/13464321)) **CONFIRMED**
+- **An account that already granted access skips the unverified-app screen** and shows an
+  abbreviated "already has some access" consent. Revoke at myaccount.google.com/connections
+  before recording. **CONFIRMED** (observed in the Simulator, 2026-09-27).
+- YouTube files a vertical clip under a minute as a Short; submit the `watch?v=` form of the
+  link. **INFERRED** that reviewers prefer it; both URLs play.
+
 ---
 
 ## Google Apps Script
