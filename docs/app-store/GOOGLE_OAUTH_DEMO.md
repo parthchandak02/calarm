@@ -12,7 +12,7 @@ on the iPhone (section 5).
 | Google Cloud project | `calarmapp-ios` (Calendar API only, no billing) |
 | OAuth client | iOS client "CALarm iOS" for `com.calarmapp.calarm` |
 | Consent screen | External, **In production**, branding verified (name, logo, domain) |
-| Scope | `calendar.readonly` only; **data access not yet verified** |
+| Scope | `calendar.readonly` only; **submitted for verification 2026-09-27, under review** |
 | Homepage / privacy | `https://calarm.parthchandak.info/` · `/privacy.html` |
 | Minimum code | `main` at or after the commit that added this file |
 | Minimum TestFlight build | `20260927.1620` |
@@ -72,6 +72,11 @@ Have the owner dismiss any first-run tips so the recording starts on a clean sch
 xcrun simctl io "$UDID" recordVideo --codec=h264 --force /tmp/calarm-demo-raw.mp4
 ```
 
+If the account has granted CALarm access before, Google skips the unverified-app screen and
+the full consent screen. Revoke it first at
+[myaccount.google.com/connections](https://myaccount.google.com/connections) → CALarm →
+Delete all connections, and Disconnect in the app.
+
 Run it in the background. While it records, the owner does this, pausing about 3 seconds on
 each Google screen:
 
@@ -116,7 +121,8 @@ from Photos. No editing is required.
 ## 6. Submit
 
 1. [studio.youtube.com](https://studio.youtube.com) → Create → Upload. Title
-   `CALarm - Google Calendar OAuth demo`, visibility **Unlisted** (not Private).
+   `CALarm - Google Calendar OAuth demo`, visibility **Unlisted** (not Private). A vertical clip under a minute becomes a Short;
+   submit it as `https://www.youtube.com/watch?v=<id>`, not the `/shorts/` link.
 2. [Data Access](https://console.cloud.google.com/auth/scopes?project=calarmapp-ios) →
    paste the YouTube link. The justification box takes:
 

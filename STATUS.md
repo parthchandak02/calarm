@@ -19,7 +19,7 @@ session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
 | **Latest build** | `20260927.1620` — `VALID`, `IN_BETA_TESTING` (verified by `ship.sh`) |
 | **Tests** | 190 passing (`CalarmTests`, 2026-09-27) |
 | **Doctor** | 0 warnings |
-| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, **sign-in on device not yet retested** |
+| **Google sync** | **Working on device.** Signed in on the phone as the personal account (2026-09-24); returns events, including work-calendar busy blocks via a free/busy share. Client now in project `calarmapp-ios` (2026-09-27); new plist installed in both Mac mini clones, sign-in with the new client works in the Simulator (2026-09-27), **on device not yet retested** |
 | **Backend** | None. No Worker, no relay deployed |
 
 The app is installable from TestFlight and works off EventKit alone. Everything in
@@ -235,9 +235,12 @@ These need credentials or console access an agent should not have:
 - ~~Consent screen "In production"~~ — already was (External, 1/100 user cap, unverified).
 - ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
 - **Google branding:** `parthchandak.info` is verified in Search Console for parth.chandak02@gmail.com (Domain property, via Cloudflare, 2026-09-27). **Never delete its `google-site-verification` TXT records.** Site: `calarm.parthchandak.info` (GitHub Pages, Cloudflare CNAME, DNS only).
-- **Publish the `calarmapp-ios` consent screen** (Audience → Publish app) if it still says Testing, then delete the old "CALarm iOS" client in the previous project once sign-in works on device.
-- **Google verification** before any public release: calendar read is a sensitive scope, so
-  unverified means a warning screen and a lifetime 100-user cap.
+- **Delete the old "CALarm iOS" client** in project `useful-field-497119-k5` once sign-in works on device. The `calarmapp-ios` consent screen is already In production.
+- **Google data-access verification: submitted 2026-09-27, under review.** Demo video
+  (Unlisted) `https://www.youtube.com/watch?v=1O6eJmY1BPc`, recorded per
+  [GOOGLE_OAUTH_DEMO.md](docs/app-store/GOOGLE_OAUTH_DEMO.md). Google replies to
+  parth.chandak02@gmail.com; until approved, sign-in shows the unverified warning and the
+  100-user cap holds.
 - **Cloudflare account** — existing or new? Free tier suffices.
 
 ## Open questions
