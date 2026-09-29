@@ -10,6 +10,18 @@ import Foundation
 nonisolated enum DepartureBoard {
     static let countdownUnits = ["DAYS", "HRS", "MIN", "SEC"]
 
+    struct Ring: Equatable {
+        let eventID: String
+        let title: String
+        let fireDate: Date
+    }
+
+    /// The first ring still ahead of `now`. The board asks every second, so it moves on to
+    /// the following alarm the moment one rings, without waiting for the store to publish.
+    static func nextRing(_ rings: [Ring], now: Date) -> Ring? {
+        rings.filter { $0.fireDate > now }.min { $0.fireDate < $1.fireDate }
+    }
+
     /// Flight-board countdown groups, `DD HH MM SS`, each two digits. Days cap at 99.
     static func countdownGroups(until fireDate: Date, now: Date) -> [String] {
         let seconds = max(0, Int(fireDate.timeIntervalSince(now)))

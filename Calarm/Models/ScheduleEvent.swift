@@ -37,12 +37,11 @@ struct ScheduleEvent: Identifiable, Equatable {
         startDate > Date()
     }
 
-    /// Next upcoming fire time across all configured alarms.
-    /// Falls back to event start when the reminder window closed but the event has not started.
+    /// Next upcoming fire time across all configured alarms. Nil once they have all rung,
+    /// even before the event starts: the start is not a ring, and the next-alarm board
+    /// counted down to it after the real alarm had gone off.
     var nextAlarmDate: Date? {
-        if let fire = scheduledAlarms.first?.fireDate { return fire }
-        if alarmEnabled, isEventUpcoming { return startDate }
-        return nil
+        scheduledAlarms.first?.fireDate
     }
 
     /// Legacy helper used by list highlighting.

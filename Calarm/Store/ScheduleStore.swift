@@ -62,13 +62,15 @@ final class ScheduleStore: ObservableObject {
     }
 
     var nextUpcomingAlarm: ScheduleEvent? {
-        listedEvents
-            .filter { $0.alarmEnabled && $0.isEventUpcoming }
-            .min { lhs, rhs in
-                let lhsDate = lhs.nextAlarmDate ?? lhs.startDate
-                let rhsDate = rhs.nextAlarmDate ?? rhs.startDate
-                return lhsDate < rhsDate
-            }
+        let next = DepartureBoard.nextRing(upcomingRings, now: Date())
+        return next.flatMap { ring in listedEvents.first { $0.id == ring.eventID } }
+    }
+
+    /// Every alarm still to ring in the listed schedule.
+    var upcomingRings: [DepartureBoard.Ring] {
+        listedEvents.flatMap { event in
+            event.scheduledAlarms.map { DepartureBoard.Ring(eventID: event.id, title: event.title, fireDate: $0.fireDate) }
+        }
     }
 
     var groupedDays: [DaySection] {

@@ -11,25 +11,32 @@ import SwiftUI
 struct NextAlarmBoard: View {
     @Environment(\.calarmTheme) private var theme
 
-    let event: ScheduleEvent?
-    let fireDate: Date?
-    let onOpen: () -> Void
+    let rings: [DepartureBoard.Ring]
+    let onOpen: (String) -> Void
 
     var body: some View {
-        Button(action: onOpen) {
+        // Measured against the clock, not `context.date`: SwiftUI re-renders the content with
+        // its last entry's date when the store publishes, and after a stretch in the
+        // background that date can be hours old.
+        TimelineView(.periodic(from: .now, by: 1)) { _ in
+            let now = Date()
+            board(next: DepartureBoard.nextRing(rings, now: now), now: now)
+        }
+    }
+
+    private func board(next: DepartureBoard.Ring?, now: Date) -> some View {
+        Button { if let next { onOpen(next.eventID) } } label: {
             VStack(alignment: .leading, spacing: 10) {
-                Text(event == nil ? "NO ALARM SET" : "NEXT ALARM")
+                Text(next == nil ? "NO ALARM SET" : "NEXT ALARM")
                     .font(CalarmFont.boardLabel)
                     .tracking(2)
-                    .foregroundStyle(event == nil ? theme.textSecondary : theme.accent)
+                    .foregroundStyle(next == nil ? theme.textSecondary : theme.accent)
 
-                if event != nil, let fireDate {
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        FlapCountdown(
-                            groups: DepartureBoard.countdownGroups(until: fireDate, now: context.date),
-                            isLit: true
-                        )
-                    }
+                if let next {
+                    FlapCountdown(
+                        groups: DepartureBoard.countdownGroups(until: next.fireDate, now: now),
+                        isLit: true
+                    )
                 } else {
                     FlapCountdown(groups: ["--", "--", "--", "--"], isLit: false)
                     Text("Tap a square to arm an event.")
@@ -44,7 +51,7 @@ struct NextAlarmBoard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(event == nil)
+        .disabled(next == nil)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .overlay(alignment: .bottom) {
             Rectangle()
@@ -52,13 +59,8 @@ struct NextAlarmBoard: View {
                 .frame(height: 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityHint(event == nil ? "" : "Opens the event")
-    }
-
-    private var accessibilityText: String {
-        guard let event, let fireDate else { return "No alarm set" }
-        return "Next alarm: \(event.title), rings at \(CalarmTheme.eventTimeString(fireDate))"
+        .accessibilityLabel(next.map { "Next alarm: \($0.title), rings at \(CalarmTheme.eventTimeString($0.fireDate))" } ?? "No alarm set")
+        .accessibilityHint(next == nil ? "" : "Opens the event")
     }
 }
 

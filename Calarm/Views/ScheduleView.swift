@@ -62,11 +62,8 @@ struct ScheduleView: View {
                 statusBanners
 
                 if !showsCalendarAccessPrompt {
-                    let next = store.nextUpcomingAlarm
-                    NextAlarmBoard(event: next, fireDate: next?.nextAlarmDate) {
-                        if let next {
-                            navigationPath.append(EventRoute(id: next.id))
-                        }
+                    NextAlarmBoard(rings: store.upcomingRings) { eventID in
+                        navigationPath.append(EventRoute(id: eventID))
                     }
                 }
 

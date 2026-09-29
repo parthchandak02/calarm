@@ -15,6 +15,21 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-29
+
+### Fixed
+
+- **The next-alarm board shows only real rings.** Owner report, 2026-09-29: a 4:00 meeting
+  armed at −10m rang on time at 3:50, but the board read `18:39:43` a minute before, and
+  `09:48` after the ring, counting to the meeting start. The start was a fallback in
+  `ScheduleEvent.nextAlarmDate` for an event whose alarms had all rung; nothing rings then.
+  The board now picks the next ring itself every second (`DepartureBoard.nextRing`), so it
+  moves to the following alarm the moment one rings, and measures against the clock rather
+  than the `TimelineView` entry date. The list highlighted the right event in the same frame,
+  so the 18h reading was the board alone; the stale entry date after a stretch in the
+  background is the inferred cause (the reading matches 3:50 counted from 9:10:17 PM the
+  night before), not proven on device.
+
 ## Build 20260928.1333 — 2026-09-28
 
 ### Added

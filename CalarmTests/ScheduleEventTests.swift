@@ -26,7 +26,7 @@ final class ScheduleEventTests: XCTestCase {
         XCTAssertTrue(item.isReminderPassed)
         XCTAssertFalse(item.isAlarmInPast)
         XCTAssertEqual(item.alarmSummary, "Reminder passed")
-        XCTAssertEqual(item.nextAlarmDate, item.startDate)
+        XCTAssertNil(item.nextAlarmDate)
     }
 
     func testPastAfterEventStart() {

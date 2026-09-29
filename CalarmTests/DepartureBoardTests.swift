@@ -28,6 +28,15 @@ final class DepartureBoardTests: XCTestCase {
         XCTAssertEqual(DepartureBoard.countdownGroups(until: now.addingTimeInterval(-5), now: now), ["00", "00", "00", "00"])
     }
 
+    func testNextRingMovesOnOnceAnAlarmRings() {
+        let today = DepartureBoard.Ring(eventID: "meet", title: "Meet", fireDate: now.addingTimeInterval(40))
+        let tomorrow = DepartureBoard.Ring(eventID: "1on1", title: "1:1", fireDate: now.addingTimeInterval(67_140))
+        XCTAssertEqual(DepartureBoard.nextRing([tomorrow, today], now: now), today)
+        // After the ring, the next alarm is tomorrow's, not the meeting's start ten minutes on.
+        XCTAssertEqual(DepartureBoard.nextRing([tomorrow, today], now: now.addingTimeInterval(41)), tomorrow)
+        XCTAssertNil(DepartureBoard.nextRing([today], now: now.addingTimeInterval(41)))
+    }
+
     func testCountdownDaysCapAtNinetyNine() {
         XCTAssertEqual(DepartureBoard.countdownGroups(until: now.addingTimeInterval(200 * 86_400), now: now).first, "99")
     }
