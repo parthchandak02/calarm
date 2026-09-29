@@ -64,7 +64,10 @@ xcrun simctl delete "$UDID"
 ```
 
 **Shipping is one script, `scripts/ship.sh`; its steps are functions in
-`scripts/lib/pipeline.sh`.** Per-app settings live in `ios-app.config.sh`, credentials in the
+`scripts/lib/pipeline.sh`.** `SKIP_SIM_TESTS=1 ./scripts/ship.sh beta` skips the Simulator
+test run, for when the owner says the Mac cannot spare the disk or RAM; compile the tests first
+with `xcodebuild build-for-testing … -destination "generic/platform=iOS Simulator"
+CODE_SIGNING_ALLOWED=NO`, which boots no Simulator. Per-app settings live in `ios-app.config.sh`, credentials in the
 gitignored `fastlane/.env` (see `fastlane/.env.example`). `ship.sh beta` runs on whichever Mac
 holds the distribution identity and API key: it refuses if anything but the build stamp is
 uncommitted, fast-forwards to `main` and re-runs the updated copy, unlocks the login keychain

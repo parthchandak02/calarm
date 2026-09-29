@@ -30,6 +30,12 @@ this file exists so an agent can see the shape of the project's history without 
   background is the inferred cause (the reading matches 3:50 counted from 9:10:17 PM the
   night before), not proven on device.
 
+### Changed
+
+- **`SKIP_SIM_TESTS=1 ./scripts/ship.sh beta`** ships without the Simulator test run, for when
+  the Mac cannot spare the disk or RAM. This build used it, after a `build-for-testing`
+  compile of the app and tests; the 194 unit tests did not run.
+
 ## Build 20260928.1333 — 2026-09-28
 
 ### Added

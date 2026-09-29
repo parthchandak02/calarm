@@ -4,6 +4,7 @@
 #
 #   ./scripts/ship.sh beta            Ship to TestFlight. Run on the Mac that holds the
 #                                     distribution identity and API key.
+#                                     SKIP_SIM_TESTS=1 skips the Simulator test run.
 #   ./scripts/ship.sh finish <build>  Resume after the upload: wait for Apple, add testers,
 #                                     verify, record, push. Use when `beta` failed late.
 #   ./scripts/ship.sh doctor          Tools, credentials, signing, App Store Connect.
@@ -80,8 +81,14 @@ case "${1:-}" in
     unlock_keychain
     step "Doctor"
     run_doctor
-    step "Unit tests"
-    run_calarm_unit_tests
+    if [[ "${SKIP_SIM_TESTS:-}" == 1 ]]; then
+      # The owner's call when the Mac is short on disk or RAM: a Simulator run can exhaust
+      # both. The archive still compiles everything; only the test run is skipped.
+      step "Unit tests SKIPPED (SKIP_SIM_TESTS=1)"
+    else
+      step "Unit tests"
+      run_calarm_unit_tests
+    fi
     step "Stamp, archive, upload"
     stamp_build_number
     archive_and_upload
