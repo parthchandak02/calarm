@@ -85,5 +85,28 @@ struct SettingsAlarmsPage: View {
             .padding(.bottom, 24)
         }
         .boardNavigationTitle("Alarms")
+        .confirmationDialog(
+            alignmentTitle,
+            isPresented: Binding(
+                get: { store.pendingDefaultAlignment != nil },
+                set: { if !$0 { store.dismissDefaultAlignment() } }
+            ),
+            titleVisibility: .visible,
+            presenting: store.pendingDefaultAlignment
+        ) { offer in
+            Button("Change \(offer.eventCount) event\(offer.eventCount == 1 ? "" : "s")") {
+                store.applyDefaultToArmedEvents()
+            }
+            Button("Only new events", role: .cancel) {
+                store.dismissDefaultAlignment()
+            }
+        } message: { offer in
+            Text("\(offer.eventCount) armed event\(offer.eventCount == 1 ? " has" : "s have") a different alarm. Set \(offer.eventCount == 1 ? "it" : "all") to \(offer.offset.title)?")
+        }
+    }
+
+    private var alignmentTitle: String {
+        guard let offer = store.pendingDefaultAlignment else { return "" }
+        return "Use \(offer.offset.title) everywhere?"
     }
 }

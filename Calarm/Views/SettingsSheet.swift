@@ -45,10 +45,19 @@ struct SettingsSheet: View {
                         BoardValue(text: calendarsValue, showsChevron: true)
                     }
                     link(.look, title: "Look") {
-                        BoardValue(
-                            text: "\(themeStore.accent.title.lowercased()) · \(themeStore.appearance.title.lowercased())",
-                            showsChevron: true
-                        )
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(themeStore.accent.color)
+                                .frame(width: 18, height: 18)
+                            Image(systemName: themeStore.appearance.symbolName)
+                                .font(.subheadline)
+                                .foregroundStyle(theme.textSecondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(themeStore.accent.title), \(themeStore.appearance.title)")
                     }
                     link(.status, title: "Status") {
                         let problems = store.statusProblems

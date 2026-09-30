@@ -64,6 +64,10 @@ Durable rules from the owner's reviews. Every UI change must satisfy all of them
   headers are `BoardDayLabel`: relative day ("TODAY" / "TOMORROW") in `boardLabel`, then the
   date as flap tiles (`DepartureBoard.dayParts`), today's tiles lit in the accent. Chosen by
   the owner over a plain rail and a full-width band (2026-09-26).
+- **Show a setting, don't spell it.** The Settings Look row is an accent-colour square plus a
+  sun/moon/half-circle symbol (`CalarmAppearance.symbolName`), not "purple · dark" (2026-09-29).
+- **One rule per boundary.** `NextAlarmBoard` has no bottom rule; the first day header's rule
+  sits right under it (2026-09-29).
 
 ---
 

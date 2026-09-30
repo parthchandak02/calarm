@@ -25,6 +25,7 @@ final class ScheduleStore: ObservableObject {
     @Published private(set) var missedAlarms: [AlarmFireOutcome] = []
     @Published private(set) var deepLinkFailureMessage: String?
     @Published var showBulkEnableConfirmation = false
+    @Published private(set) var pendingDefaultAlignment: DefaultAlarmChange.Offer?
     @Published private(set) var eventsIdentityToken: String = ""
     @Published private(set) var vibrateInsteadOfRinging = CalarmPersistence.bool(forKey: CalarmPersistence.Key.vibrateInsteadOfRinging)
     @Published private(set) var focusVibrate = CalarmPersistence.bool(forKey: CalarmPersistence.Key.focusVibrate)
@@ -380,6 +381,25 @@ final class ScheduleStore: ObservableObject {
             events[index].alarmOffsets = preferences.alarmOffsets(for: events[index].id)
         }
         requestReschedule()
+        let count = DefaultAlarmChange.eventIDsToAlign(events, to: offset).count
+        pendingDefaultAlignment = count > 0 ? DefaultAlarmChange.Offer(offset: offset, eventCount: count) : nil
+    }
+
+    /// Gives every upcoming armed event the new default as its only alarm.
+    func applyDefaultToArmedEvents() {
+        guard let offer = pendingDefaultAlignment else { return }
+        pendingDefaultAlignment = nil
+        let ids = DefaultAlarmChange.eventIDsToAlign(events, to: offer.offset)
+        guard !ids.isEmpty else { return }
+        for index in events.indices where ids.contains(events[index].id) {
+            preferences.setAlarmOffsets([offer.offset], for: events[index].id)
+            events[index].alarmOffsets = preferences.alarmOffsets(for: events[index].id)
+        }
+        requestReschedule()
+    }
+
+    func dismissDefaultAlignment() {
+        pendingDefaultAlignment = nil
     }
 
     func updateDefaultSnooze(_ snooze: SnoozeDurationOption) {

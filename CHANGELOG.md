@@ -15,6 +15,24 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased — 2026-09-29
+
+### Changed
+
+Owner feedback, 2026-09-29:
+
+- **Changing the default alarm offers to apply it to armed events.** A per-event setting
+  outlives the default, so events armed under an earlier default (or the 10-minute fallback
+  when the default was Off) kept ringing at −10m after the default became 1. After a change,
+  Settings → Alarms asks "Use … everywhere?" and, on confirm, gives every upcoming armed event
+  the new default as its only alarm (`DefaultAlarmChange`, the owner's choice over only
+  events on the old default). Choosing "No alarm" never offers: it would disarm meetings.
+- **The Look row shows the theme instead of naming it:** a square in the accent colour and a
+  sun, moon or half-circle for Light, Dark or System.
+- **No rule under the next-alarm countdown.** The first day header draws its own right below.
+
+Compiled with `build-for-testing` (no Simulator); 2 new unit tests, not run.
+
 ## Build 20260929.1602 — 2026-09-29
 
 ### Fixed

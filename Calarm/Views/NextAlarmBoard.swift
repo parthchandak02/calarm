@@ -53,11 +53,6 @@ struct NextAlarmBoard: View {
         .buttonStyle(.plain)
         .disabled(next == nil)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(theme.surfaceStroke)
-                .frame(height: 1)
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(next.map { "Next alarm: \($0.title), rings at \(CalarmTheme.eventTimeString($0.fireDate))" } ?? "No alarm set")
         .accessibilityHint(next == nil ? "" : "Opens the event")

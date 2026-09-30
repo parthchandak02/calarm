@@ -34,6 +34,11 @@ for a while, reopen it: the board counts to that ring, not hours ahead. When it 
 board moves straight to the following alarm; it must never count to a meeting's start. If
 it still reads wrong, Settings → Status → *Share log* right away.
 
+**Check the default-alarm offer (next build).** Settings → Alarms, tap another default: a prompt
+names how many armed events use a different time. *Change N events* sets them all (the −10m
+rows become the new default); *Only new events* leaves them. The Look row shows an accent
+square plus a sun/moon/half icon, and there is no line under the countdown.
+
 **Check the owner-feedback UI round on device (next build).** Home: the countdown has no event
 line under it, and day headers are flap tiles that stay opaque when pinned while scrolling (the
 Simulator demo list is too short to pin). Settings → Look: Light → System (phone in dark)
