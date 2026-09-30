@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-29** — update this date whenever you change this file.
+**Last updated: 2026-09-30** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
