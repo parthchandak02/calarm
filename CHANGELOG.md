@@ -15,6 +15,17 @@ this file exists so an agent can see the shape of the project's history without 
 
 ---
 
+## Unreleased
+
+### Changed
+
+- **Privacy policy states how Google user data is protected.** Google's verification review
+  (2026-09-29) failed the policy on "does not specify any data protection mechanisms for
+  sensitive data". `docs/privacy.html` gains a *How we protect your data* section (HTTPS only,
+  OAuth tokens in the Keychain via the Google Sign-In SDK, sandboxed storage under iOS Data
+  Protection, no backend, read-only scope), a retention section that says what Disconnect
+  deletes, and the no-AI/ML-training affirmation Google asks Workspace API apps for.
+
 ## Build 20260929.1707 — 2026-09-29
 
 ### Changed

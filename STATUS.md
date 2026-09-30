@@ -253,7 +253,11 @@ These need credentials or console access an agent should not have:
 - ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
 - **Google branding:** `parthchandak.info` is verified in Search Console for parth.chandak02@gmail.com (Domain property, via Cloudflare, 2026-09-27). **Never delete its `google-site-verification` TXT records.** Site: `calarm.parthchandak.info` (GitHub Pages, Cloudflare CNAME, DNS only).
 - **Delete the old "CALarm iOS" client** in project `useful-field-497119-k5` once sign-in works on device. The `calarmapp-ios` consent screen is already In production.
-- **Google data-access verification: submitted 2026-09-27, under review.** Demo video
+- **Google data-access verification: submitted 2026-09-27; 2026-09-29 review passed all
+  items except the privacy policy** ("no data protection mechanisms for sensitive data").
+  `docs/privacy.html` now has a data-protection section; **owner: reply to the Trust and
+  Safety email thread saying the policy is updated** (the URL is unchanged, so no console
+  edit). Demo video
   (Unlisted) `https://www.youtube.com/watch?v=1O6eJmY1BPc`, recorded per
   [GOOGLE_OAUTH_DEMO.md](docs/app-store/GOOGLE_OAUTH_DEMO.md). Google replies to
   parth.chandak02@gmail.com; until approved, sign-in shows the unverified warning and the
