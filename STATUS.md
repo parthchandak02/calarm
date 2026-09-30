@@ -255,9 +255,9 @@ These need credentials or console access an agent should not have:
 - **Delete the old "CALarm iOS" client** in project `useful-field-497119-k5` once sign-in works on device. The `calarmapp-ios` consent screen is already In production.
 - **Google data-access verification: submitted 2026-09-27; 2026-09-29 review passed all
   items except the privacy policy** ("no data protection mechanisms for sensitive data").
-  `docs/privacy.html` now has a data-protection section; **owner: reply to the Trust and
-  Safety email thread saying the policy is updated** (the URL is unchanged, so no console
-  edit). Demo video
+  `docs/privacy.html` now has a data-protection section; replied on the Google thread
+  ("[Action Needed] OAuth Verification Request Acknowledgement") 2026-09-30. Policy URL
+  unchanged, so no console resubmission. **Waiting on Google.** Demo video
   (Unlisted) `https://www.youtube.com/watch?v=1O6eJmY1BPc`, recorded per
   [GOOGLE_OAUTH_DEMO.md](docs/app-store/GOOGLE_OAUTH_DEMO.md). Google replies to
   parth.chandak02@gmail.com; until approved, sign-in shows the unverified warning and the
