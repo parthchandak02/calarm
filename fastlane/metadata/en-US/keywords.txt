@@ -1,1 +1,1 @@
-calendar,alarm,reminder,schedule,AlarmKit,Live Activity,Dynamic Island,countdown,events,CALarm
+calendar,alarm,meeting,reminder,countdown,schedule,events,agenda,wake,google calendar,timer

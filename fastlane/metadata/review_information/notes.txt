@@ -1,13 +1,14 @@
-CALarm requires iOS 26 or later for AlarmKit.
+CALarm requires iOS 26 or later for AlarmKit. Alarms ring only on a physical device; the iOS Simulator cannot ring AlarmKit alarms.
 
-No Calarm account is required. By default the app reads the reviewer’s on-device calendar (EventKit); nothing is uploaded to our servers.
-
-Optional: Settings → Google Calendar → Sign in with Google to sync events from a Google account via the Google Calendar API. This is not required for review.
+There is no CALarm account and no server. The app reads the on-device calendar (EventKit) and everything stays on the device.
 
 To test:
 1. Grant Calendar access when prompted.
-2. Grant Alarms permission when prompted (Settings → CALarm if denied).
-3. Open the week schedule, tap an event, and add one or more alarm offsets.
-4. Observe the countdown in a Live Activity on the Lock Screen or Dynamic Island.
+2. Add an event to the device calendar a few minutes from now if none is upcoming.
+3. Tap the square next to the event to arm its alarm. CALarm asks for Alarms permission the first time.
+4. The countdown appears on the Lock Screen and in the Dynamic Island, and the alarm rings before the event.
+Settings → Test alarm rings a sample alarm in about 16 seconds.
 
-There is no demo account. The app works with the reviewer’s on-device calendar without Google sign-in.
+Optional Google Calendar connection: Settings → Calendars → Connect Google Calendar. This is not a login to CALarm and is not needed for review. It is a read-only (calendar.readonly) connection that lets the app read the user's Google calendars directly from the device. Because CALarm has no user accounts, Sign in with Apple does not apply (Guideline 4.8).
+
+By default no event has an alarm. Alarms are scheduled only for events the user arms, or for new events once the user picks a default alarm in Settings → Alarms.

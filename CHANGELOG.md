@@ -19,6 +19,15 @@ this file exists so an agent can see the shape of the project's history without 
 
 ### Changed
 
+- **App Store prep: iPhone only, no data collected.** `TARGETED_DEVICE_FAMILY` is now `1`
+  (there were no iPad screenshots or iPad testing, and iPad can be added later but not
+  removed). `PrivacyInfo.xcprivacy` declares no collected data types: it listed
+  `…Calendars`, which is not an Apple data type, and Email, but both stay on the device and
+  the privacy policy already says so. The calendar permission string drops an unprovable
+  "faster Google sync" claim. Store metadata rewritten: description (8 days, not 7),
+  keywords, promotional text, marketing URL, copyright, categories, and review notes with the
+  real Settings path and why Sign in with Apple does not apply. Stale release notes removed;
+  a first version takes none.
 - **Privacy policy states how Google user data is protected.** Google's verification review
   (2026-09-29) failed the policy on "does not specify any data protection mechanisms for
   sensitive data". `docs/privacy.html` gains a *How we protect your data* section (HTTPS only,

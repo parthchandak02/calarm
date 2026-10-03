@@ -29,6 +29,15 @@ The app is installable from TestFlight and works off EventKit alone. Everything 
 
 ## Waiting on the owner
 
+**App Store release prep (2026-10-03).** Repo side is ready: iPhone only, privacy manifest
+declares no collected data, metadata and review notes rewritten. Before submitting:
+1. **Sign the expired Apple agreement** (App Store Connect → Business). Every `asc` API call
+   fails with "A required agreement is missing or has expired", so `ship.sh beta` will too.
+2. App Privacy in App Store Connect: **Data Not Collected**, matching `PrivacyInfo.xcprivacy`.
+3. Regenerate screenshots (the current ones predate the UI) and upload metadata.
+4. Submit only after Gate 1 and the device checks below pass (owner's call, 2026-10-03).
+Full checklist: [YOUR_ACTIONS.md](docs/app-store/YOUR_ACTIONS.md).
+
 **Check the next-alarm board (next build).** Arm an event a few minutes out, background CALarm
 for a while, reopen it: the board counts to that ring, not hours ahead. When it rings, the
 board moves straight to the following alarm; it must never count to a meeting's start. If

@@ -68,13 +68,6 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -82,7 +75,7 @@
 	<key>NSAlarmKitUsageDescription</key>
 	<string>CALarm schedules countdown alarms for your upcoming events and shows them in Live Activities and the Dynamic Island.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>CALarm reads your calendar to show upcoming events and let you set reminder alarms before each event. iCloud and other on-device calendars stay local; connect Google Calendar separately for faster Google sync.</string>
+	<string>CALarm reads your calendars to list upcoming events and ring the alarms you set for them. Event data stays on this iPhone.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

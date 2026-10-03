@@ -1,3 +1,0 @@
-Calendars you never switched off no longer go missing. The per-calendar filter used to remember only the calendars that existed when you last touched it, so anything subscribed later — or anything iOS gave a new identifier after an account resync — was quietly left out of the schedule. Settings now tells you how many calendars are switched off and offers a one-tap reset.
-
-The Dynamic Island countdown also stops stretching the pill: it now reserves room for the digits it can actually show instead of a fixed width, so a minutes-and-seconds countdown sits against the edge where it belongs.

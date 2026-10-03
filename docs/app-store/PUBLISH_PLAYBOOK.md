@@ -84,7 +84,7 @@ After pushing doc changes, wait 1–2 minutes for Pages to rebuild.
 In the CALarm app record:
 
 1. **App Privacy** — must match `PrivacyInfo.xcprivacy`:
-   - Data collected: **Calendars** · Not linked · Not used for tracking · App Functionality
+   - **Data Not Collected.** Calendar data and the Google email never leave the device.
    - Tracking: **No**
 2. **Age rating** — complete the iOS 26 questionnaire (no mature content).
 3. **Pricing** — Free (unless you add IAP later).
@@ -205,7 +205,8 @@ Or in App Store Connect: select the TestFlight build → **Submit for Review**.
 
 - Deployment target is **iOS 26.0** — state this in description and review notes (already in `review_information/notes.txt`).
 - Reviewers need iOS 26 simulator or device.
-- No login, no server — calendar stays on device.
+- No app account, no server; calendar stays on device. The optional Google Calendar
+  connection is a read-only data source, not a login, so Sign in with Apple does not apply.
 - AlarmKit permission must degrade gracefully if denied.
 
 ---
