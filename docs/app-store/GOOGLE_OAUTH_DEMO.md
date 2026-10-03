@@ -1,5 +1,7 @@
 # Google OAuth demo video (data access verification)
 
+**Done: CALarm's data access is verified.** Re-run this only if a scope is added or changed.
+
 Google will not verify CALarm's `calendar.readonly` scope without an unlisted YouTube video
 showing the sign-in flow and how the data is used. This is the playbook for recording it.
 Run it on a Mac with RAM to spare, **not the Mac mini**, or skip the Mac entirely and record
@@ -12,7 +14,7 @@ on the iPhone (section 5).
 | Google Cloud project | `calarmapp-ios` (Calendar API only, no billing) |
 | OAuth client | iOS client "CALarm iOS" for `com.calarmapp.calarm` |
 | Consent screen | External, **In production**, branding verified (name, logo, domain) |
-| Scope | `calendar.readonly` only; **submitted for verification 2026-09-27, under review** |
+| Scope | `calendar.readonly` only; **verified** (submitted 2026-09-27, verified by 2026-10-03) |
 | Homepage / privacy | `https://calarm.parthchandak.info/` · `/privacy.html` |
 | Minimum code | `main` at or after the commit that added this file |
 | Minimum TestFlight build | `20260927.1620` |

@@ -467,6 +467,11 @@ one daily standup becomes thousands of rows. The token-minting call must use
 - **An account that already granted access skips the unverified-app screen** and shows an
   abbreviated "already has some access" consent. Revoke at myaccount.google.com/connections
   before recording. **CONFIRMED** (observed in the Simulator, 2026-09-27).
+- **The review checks the privacy policy for data protection.** CALarm's first review
+  (2026-09-29) failed only on "no data protection mechanisms for sensitive data"; adding a
+  section on HTTPS, Keychain token storage, iOS Data Protection and retention, then replying
+  on the email thread without resubmitting, got it verified within a week of first
+  submission. **CONFIRMED** (observed, 2026-09-27 to 2026-10-03).
 - YouTube files a vertical clip under a minute as a Short; submit the `watch?v=` form of the
   link. **INFERRED** that reviewers prefer it; both URLs play.
 

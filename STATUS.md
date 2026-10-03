@@ -1,6 +1,6 @@
 # Status: where the project stands and what comes next
 
-**Last updated: 2026-09-30** — update this date whenever you change this file.
+**Last updated: 2026-10-03** — update this date whenever you change this file.
 
 This is the living "pick up where the last agent left off" document. If you are starting a
 session, read this first, then [AGENTS.md](AGENTS.md) for the working rules.
@@ -249,19 +249,16 @@ Google round trips are the suspect, not the webhook. Run it ~100 times across a 
 
 These need credentials or console access an agent should not have:
 
-- ~~Consent screen "In production"~~ — already was (External, 1/100 user cap, unverified).
+- ~~Consent screen "In production"~~ — External, In production, verified.
 - ~~`REVERSED_CLIENT_ID` URL scheme~~ — done 2026-09-23 via `Config/Calarm.xcconfig`.
 - **Google branding:** `parthchandak.info` is verified in Search Console for parth.chandak02@gmail.com (Domain property, via Cloudflare, 2026-09-27). **Never delete its `google-site-verification` TXT records.** Site: `calarm.parthchandak.info` (GitHub Pages, Cloudflare CNAME, DNS only).
 - **Delete the old "CALarm iOS" client** in project `useful-field-497119-k5` once sign-in works on device. The `calarmapp-ios` consent screen is already In production.
-- **Google data-access verification: submitted 2026-09-27; 2026-09-29 review passed all
-  items except the privacy policy** ("no data protection mechanisms for sensitive data").
-  `docs/privacy.html` now has a data-protection section; replied on the Google thread
-  ("[Action Needed] OAuth Verification Request Acknowledgement") 2026-09-30. Policy URL
-  unchanged, so no console resubmission. **Waiting on Google.** Demo video
-  (Unlisted) `https://www.youtube.com/watch?v=1O6eJmY1BPc`, recorded per
-  [GOOGLE_OAUTH_DEMO.md](docs/app-store/GOOGLE_OAUTH_DEMO.md). Google replies to
-  parth.chandak02@gmail.com; until approved, sign-in shows the unverified warning and the
-  100-user cap holds.
+- ~~Google data-access verification~~ — **verified** (Verification Center shows branding and
+  data access verified, seen 2026-10-03). Submitted 2026-09-27; the 2026-09-29 review failed
+  only the privacy policy, fixed with a data-protection section in `docs/privacy.html`.
+  No more unverified-app warning and no 100-user cap. Keep the scope set unchanged: adding
+  a sensitive scope means re-verifying. Demo video (Unlisted)
+  `https://www.youtube.com/watch?v=1O6eJmY1BPc`.
 - **Cloudflare account** — existing or new? Free tier suffices.
 
 ## Open questions
