@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Shared helpers for iOS release pipeline scripts.
 set -euo pipefail
+# fastlane needs Ruby 3.2+; prefer Homebrew Ruby over the macOS system Ruby 2.6.
+if [ -x /opt/homebrew/opt/ruby/bin/ruby ]; then export PATH="/opt/homebrew/opt/ruby/bin:$PATH"; fi
 
 find_repo_root() {
   local dir="$1"

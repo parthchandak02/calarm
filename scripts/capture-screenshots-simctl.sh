@@ -6,6 +6,8 @@
 # Output: fastlane/screenshots/en-US/*.png (1320×2868 on iPhone 17 Pro Max)
 
 set -euo pipefail
+# fastlane needs Ruby 3.2+; prefer Homebrew Ruby over the macOS system Ruby 2.6.
+if [ -x /opt/homebrew/opt/ruby/bin/ruby ]; then export PATH="/opt/homebrew/opt/ruby/bin:$PATH"; fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
